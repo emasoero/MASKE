@@ -388,7 +388,7 @@ void Krun::proceed(double deltat)
         }
         
         if (me==MASTER) {
-            delete [] DtCall;
+            delete [] DtCall;
             delete [] CplocID;
             delete [] pcolAll;
         }
