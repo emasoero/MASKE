@@ -15,9 +15,9 @@
 Download MASKE source code using Git:
 ```
 $ cd <path> 
-$ git clone --recursive-submodules https://github.com/emasoero/MASKE
+$ git clone --recurse-submodules https://github.com/emasoero/MASKE
 ```
-<path> should be the place where you want the source code downloaded.
+*path* should be the place where you want the source code to be downloaded.
 
 ## Folder layout
 
