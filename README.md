@@ -40,7 +40,7 @@ $ ls
 
 We rely on [CMake](https://cmake.org) to provide cross-platform build support.
 
-### Linux
+### Linux and MacOS
 
 ```
 $ cd lammps
@@ -53,4 +53,31 @@ $ mkdir build
 $ cd build
 $ cmake ..
 $ make -j
+```
+
+### Troubleshooting
+
+- CMake can't find MPI compiler.
+
+In the build folder type the following command:
+```
+$ cmake -DMPI_CXX_COMPILER=<path> ..
+$ make -j
+```
+with *path* being the path to the desired MPI compiler.
+
+- Compiler complains about c++11 standard.
+
+In the build folder type the following command:
+```
+$ cmake -DCMAKE_CXX_FLAGS="-std=c++11" ..
+$ make -j
+```
+
+## Running
+
+Let's try running an example located at the tests folder:
+```
+$ cd tests/test12-Lay_Nucl_2Grp_Sm_Mono_1pr
+$ mpiexec -np 4 ../../build/maske input_read.dat 
 ```
