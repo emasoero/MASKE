@@ -57,8 +57,8 @@ lammps all 	pair_write 2 2 1245 r 1.00E-030 0.697787634 tableOUT.txt ENRICO
 
 lammps all  neighbor	.05 bin
 lammps all  neigh_modify	delay 0
-lammps all min_style quickmin
-lammps all min_modify dmax .001 5 5 5
+lammps all min_style maske
+lammps all min_modify dmax .001 #5 5 5
 
 
 # ===========   FREEZE BOTTOM LAYER
@@ -172,8 +172,8 @@ dump Antonello D1 1 all     custom  dump.all id type x y z radius c_PEall
 
 
 # relax every_Nsteps mode args (for minimize, etol ftol maxiter maxeval min_style min_modify_args;  for nvt, all args admitted by an nvt fix in lammps)
-#example:      relax 10 minimize 0 0 1000 1000 quickmin dmax .01 20 20 20 
-relax R1 1 minimize 0 0 1000 1000 quickmin dmax 0.001 5 5 5 
+#example:      relax 10 minimize 0 0 1000 1000 maske dmax .01 20 20 20 
+relax R1 1 minimize 0 0 1000 1000 maske dmax 0.001 5 5 5 
 
 
 

@@ -241,7 +241,7 @@ void Fix_nucleate::sample(int pos)
     
     
     // minimise
-    tolmp = "min_style quickmin";   // only quickmin admitted for nucleation to date
+    tolmp = "min_style maske";   // only quickmin admitted for nucleation to date
     lammpsIO->lammpsdo(tolmp);
     
     int minid = fix->fKMCminid[pos];
