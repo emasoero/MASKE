@@ -1,3 +1,6 @@
 [submodule "lammps"]
 	path = lammps
-	url = https://github.com/lammps/lammps.git
+	url = https://github.com/emasoero/lammps.git
+[submodule "NUFEB"]
+	path = NUFEB
+	url = https://github.com/nufeb/NUFEB.git
