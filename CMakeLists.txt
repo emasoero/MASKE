@@ -8,9 +8,16 @@ if (MPI_FOUND)
 endif()
 find_package(JPEG REQUIRED)
 find_package(PNG REQUIRED)
+if (WITH_VTK)
+  find_package(VTK)
+endif()
 
-find_library(LAMMPS_LIBRARIES lammps PATHS ${CMAKE_SOURCE_DIR}/lammps/build NO_DEFAULT_PATH)
-
+if (WITH_NUFEB)
+  file(COPY ${CMAKE_SOURCE_DIR}/lammps/src/min.cpp ${CMAKE_SOURCE_DIR}/lammps/src/min.h ${CMAKE_SOURCE_DIR}/lammps/src/USER-MASKE DESTINATION ${CMAKE_SOURCE_DIR}/NUFEB/lammps/src)
+  find_library(LAMMPS_LIBRARIES lammps PATHS ${CMAKE_SOURCE_DIR}/NUFEB/lammps/src NO_DEFAULT_PATH)
+else()
+  find_library(LAMMPS_LIBRARIES lammps PATHS ${CMAKE_SOURCE_DIR}/lammps/build NO_DEFAULT_PATH)
+endif()
 add_executable(maske
   src/block.cpp
   src/chemistry.cpp
@@ -36,7 +43,7 @@ add_executable(maske
   src/store.cpp
   src/universe.cpp)
 target_include_directories(maske PUBLIC ${MPI_CXX_INCLUDE_PATH} lammps/src)
-target_link_libraries(maske ${MPI_CXX_LIBRARIES} ${LAMMPS_LIBRARIES} ${JPEG_LIBRARIES} ${PNG_LIBRARIES})
+target_link_libraries(maske ${MPI_CXX_LIBRARIES} ${LAMMPS_LIBRARIES} ${JPEG_LIBRARIES} ${PNG_LIBRARIES} ${VTK_LIBRARIES})
 if (${MASKE_WAIT_ATTACH})
   target_compile_definitions(maske PUBLIC MASKE_WAIT_ATTACH)
 endif()
