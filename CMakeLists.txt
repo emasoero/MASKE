@@ -13,7 +13,12 @@ if (WITH_VTK)
 endif()
 
 if (WITH_NUFEB)
-  file(COPY ${CMAKE_SOURCE_DIR}/lammps/src/min.cpp ${CMAKE_SOURCE_DIR}/lammps/src/min.h ${CMAKE_SOURCE_DIR}/lammps/src/USER-MASKE DESTINATION ${CMAKE_SOURCE_DIR}/NUFEB/lammps/src)
+  file(COPY
+    ${CMAKE_SOURCE_DIR}/lammps/src/min.cpp
+    ${CMAKE_SOURCE_DIR}/lammps/src/min.h
+    ${CMAKE_SOURCE_DIR}/lammps/src/USER-MASKE/min_maske.h
+    ${CMAKE_SOURCE_DIR}/lammps/src/USER-MASKE/min_maske.cpp
+    DESTINATION ${CMAKE_SOURCE_DIR}/NUFEB/lammps/src)
   find_library(LAMMPS_LIBRARIES lammps PATHS ${CMAKE_SOURCE_DIR}/NUFEB/lammps/src NO_DEFAULT_PATH)
 else()
   find_library(LAMMPS_LIBRARIES lammps PATHS ${CMAKE_SOURCE_DIR}/lammps/build NO_DEFAULT_PATH)
