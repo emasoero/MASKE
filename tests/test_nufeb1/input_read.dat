@@ -34,7 +34,7 @@ lammps all atom_style bio
 # *************   additional settings needed for NUFEB only 
 lammps Canova atom_modify     map array sort 100 5.0e-7    
 lammps Canova newton          off
-lammps Canova comm_modify     vel yes
+lammps all comm_modify     vel yes
 # ****************
 
 lammps all  boundary p p f
@@ -45,8 +45,8 @@ lammps	all	variable scale equal 1.41421356*1e-6
 lammps all lattice fcc $(v_scale)
 
 lammps all region r_bot block INF INF INF INF  -0.0000095 -0.0000072  units box
-lammps all region r_midL block INF INF INF 0  -0.0000072 -0.000006  units box
-lammps all region r_midR block INF INF 0 INF  -0.0000072 -0.000006  units box
+lammps all region r_midL block INF INF INF 1.41e-6  -0.0000072 -0.000006  units box
+lammps all region r_midR block INF INF 1.41e-6 INF  -0.0000072 -0.000006  units box
 lammps all region r_top block INF INF INF INF  -0.000006 -0.0000055  units box
 
 lammps all create_atoms 1 region r_bot
@@ -79,7 +79,9 @@ lammps all run 1
 
 #===== Potentials, neighbours, and minimiser style
 
-lammps all   pair_style table linear 1000 gran/hooke/history 1e-4 NULL 1e-4 NULL 0 1
+lammps all   pair_style hybrid table linear 16 gran/hooke/history 1e-4 NULL 1e-4 NULL 0 1
+
+lammps all   pair_coeff * * table table.potential ENRICO
 
 lammps all   pair_coeff 1 1 table table.potential ENRICO
 lammps all   pair_coeff 1 2 table table.potential ENRICO
@@ -154,13 +156,13 @@ lammps all fix freezeBot gBot setforce 0.0 0.0 0.0
 
 #  ===========   DISSOLVE TYPES 2 and 3 BY PARTICLE DELETION
 
-sol_start uniform 4 H2O 55 Ca .000 CO3 0.0000 OH 0.0000 Temp 298 DH_A 0.51 DH_B 3.29e9 voidV 0 dV iso 0 dVvoidV 0  unitC 1000
+sol_start uniform 4 H2O 55 Ca .000 CO3 1.0 OH 0.0000 Temp 298 DH_A 0.51 DH_B 3.29e9 voidV 0 dV iso 0 dVvoidV 0  unitC 1000
 
 #lammps all print "Solution started ok"   
 
 
-fix KMC-free delete DelCH2 Antonello 2 mech C3Sdel_apnet sol_in fixed uniform box sol_out uniform box+dV
-fix KMC-free delete DelCH3 Antonello 3 mech C3Sdel_apnet sol_in fixed uniform box sol_out uniform box+dV
+fix KMC-free delete DelCH2 Antonello 2 mech CHdel_apnet sol_in fixed uniform box sol_out uniform box+dV
+fix KMC-free delete DelCH3 Antonello 3 mech CHdel_apnet sol_in fixed uniform box sol_out uniform box+dV
 
 
 
@@ -189,7 +191,7 @@ lammps	all	variable DzMax equal 1000
 store minimize minNuc	0 0 1000 1000 min_modify dmax	$(v_Qdmax) $(v_DxMax) $(v_DyMax) $(v_DzMax) 
 
 
-fix KMC-free nucleate NucCaCO3 Bernini RegNuc latNuc minNuc 4 5 sphere 1.5e-6 wei simple 1 mech C3Snuc_apnet sol_in fixed uniform box sol_out uniform box+dV
+fix KMC-free nucleate NucCaCO3 Bernini RegNuc latNuc minNuc 4 5 preal sphere 1.5e-6 wei simple 1 mech CaCO3nuc_apnet sol_in fixed uniform box sol_out uniform box+dV
 
 
 
