@@ -426,7 +426,7 @@ void Fix_nucleate::sample(int pos)
         std::ostringstream ss;    ss << naP;   msg = msg+ss.str();
         output->toplog(msg);
         msg="";   ss.str("");   ss.clear();
-        output->toplog("\npos tiD tiDarr tR tE");
+        output->toplog("\npos tiD tiDarr tE");
         for (int i=0; i<naP; i++){
             ss << i;        msg = ss.str()+" ";   ss.str("");   ss.clear();
             ss << tID[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
@@ -716,7 +716,7 @@ void Fix_nucleate::comp_rates_allpar(int pos)
         }
 
         int nrt = 1;    //number of reaction in series in chain
-        int nrv = 1;    // number of unit reactions or unit chains in particle volume
+        double nrv = 1;    // number of unit reactions or unit chains in particle volume
         
         int chID = -1;  // chain ID: will be > -1 only if mechanism calls indeed a chain
         int rxid = -1;  // reaction ID: will be used now but later in loop too
@@ -1255,13 +1255,17 @@ void Fix_nucleate::execute(int pID, int EVafixID, int EVpTYPE,double EVpDIAM,dou
     yl = EVpYpos - 1e-200;     yr = EVpYpos + 1e-200;
     zl = EVpZpos - 1e-200;     zr = EVpZpos + 1e-200;
     
-    tolmp = "region tempregg block ";
+    /*
+     tolmp = "region tempregg block ";
     ss << xl;   tolmp += ss.str(); ss.str(""); ss.clear(); tolmp += " ";
     ss << xr;   tolmp += ss.str(); ss.str(""); ss.clear(); tolmp += " ";
     ss << yl;   tolmp += ss.str(); ss.str(""); ss.clear(); tolmp += " ";
     ss << yr;   tolmp += ss.str(); ss.str(""); ss.clear(); tolmp += " ";
     ss << zl;   tolmp += ss.str(); ss.str(""); ss.clear(); tolmp += " ";
     ss << zr;   tolmp += ss.str(); ss.str(""); ss.clear();
+     */
+    
+    tolmp = "region tempregg block $(xlo) $(xhi) $(ylo) $(yhi) $(zlo) $(zhi)";
     lammpsIO->lammpsdo(tolmp);
     
     tolmp = "group gtempin empty";
@@ -1327,35 +1331,34 @@ void Fix_nucleate::execute(int pID, int EVafixID, int EVpTYPE,double EVpDIAM,dou
     lammpsIO->lammpsdo(tolmp);
     lammpsIO->lammpsdo("run 0");
 
-    
-    tolmp = "group "+fix->afKMCpgroup[EVafixID]+" union "+fix->afKMCpgroup[EVafixID]+" gtempin";
+    tolmp = "undump tdID";     // removing temporary dump
     lammpsIO->lammpsdo(tolmp);
+    
     
     lammpsIO->lammpsdo("unfix fix_dep_temp");
     lammpsIO->lammpsdo("variable vidtt delete");
-    lammpsIO->lammpsdo("uncompute cidtt");
-    lammpsIO->lammpsdo("uncompute cidtemp");
-    lammpsIO->lammpsdo("region tempregg delete");
-    lammpsIO->lammpsdo("group gtempin delete");
     
     lammpsIO->lammpsdo(lammpsIO->lmpThSt);    //restore original lammps thermo
     
-    //lammpsIO->lammpsdo("variable natt delete");
+    lammpsIO->lammpsdo("uncompute cidtt");
+    lammpsIO->lammpsdo("uncompute cidtemp");
+    lammpsIO->lammpsdo("region tempregg delete");
+    lammpsIO->lammpsdo("group gtempin clear");
+    lammpsIO->lammpsdo("group gtempin delete");
+   
+    //fprintf(screen,"\n PROC %d restoring lammps thermo command \"%s\"\n",me,lammpsIO->lmpThSt.c_str());
+    //   sleep(2);
     
-    //lammpsIO->lammpsdo("run 0");
- 
-    tolmp = "undump tdID";     // removing temporary dump
-    lammpsIO->lammpsdo(tolmp);
+    //lammpsIO->lammpsdo("variable natt delete");
     
     
     if (msk->wplog) {
         std::string msg = "\n Succesfully created particle in lammps \n";
         output->toplog(msg);
     }
+            
     
     //tolmp = "compute tempRAD sub property/atom radius";
-    //lammpsIO->lammpsdo(tolmp);
-    //tolmp = "run 0";
     //lammpsIO->lammpsdo(tolmp);
     //double *tempRad;
     //tempRad = new double[1];

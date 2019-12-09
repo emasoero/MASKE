@@ -405,12 +405,12 @@ void Inputmsk::execline(std::string read_string)
             chem->readDB(read_string);
         }
         else if (strcmp(word.c_str(), "kB") == 0) {
-            lss >> msk->kB;
-            if (me == MASTER) fprintf(screen, "\n kB = %f", msk->kB);
+            lss >> std::scientific >> msk->kB;
+            if (me == MASTER) fprintf(screen, "\n kB = %e", msk->kB);
         }
         else if (strcmp(word.c_str(), "hpl") == 0) {
             lss >> msk->hpl;
-            if (me == MASTER) fprintf(screen, "\n hpl = %f", msk->hpl);
+            if (me == MASTER) fprintf(screen, "\n hpl = %e", msk->hpl);
         }
         else if (strcmp(word.c_str(), "lammps") ==0)  {
             if (lammpsIO->lammps_active) {

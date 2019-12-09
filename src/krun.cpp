@@ -242,7 +242,7 @@ void Krun::proceed(double deltat)
             // here the rate x Dt is split between already cumulated one (QkTint) and future one, Qktot x DtKMC (the latter being the time from now until the next event, not the time from previous to next event: some of the time from the previous event has already been accumulated in QkTint)
             // So the generating equation is QkTint + DtKMC x Qktot = log(1/u), which is solved for DtKMC
             DtKMC = ( log(1./u) - QkTint ) / Qktot;
-            fprintf(screen,"\n\n DtKMc at tempo %f is: %f\n",msk->tempo,DtKMC);
+            fprintf(screen,"\n\n DtKMc at tempo %e is: %e\n",msk->tempo,DtKMC);
         }
         
         
@@ -721,7 +721,7 @@ void Krun::proceed(double deltat)
                     lammpsIO->lammpsdo("run 0");
                     fix_nucl->execute(EVpID,EVafixID,EVpTYPE,EVpDIAM,EVpXpos,EVpYpos,EVpZpos);   // FOR SPHERICAL... another function with more arguments would be needed for ellipsoids
                     pV = fix_nucl->partVol;
-                    fprintf(screen,"\n PROC %d Volume of particle to be nucleated: %f\n",me,pV);
+                    fprintf(screen,"\n PROC %d Volume of particle to be nucleated: %e\n",me,pV);
                     
                     // if current processor is submaster of first subcomm with lammps active, it sends around the particle volume
                     if (me==universe->flampID) {
@@ -741,7 +741,9 @@ void Krun::proceed(double deltat)
                 MPI_Barrier(MPI_COMM_WORLD);
                 
                 // all processors update the solution
-                 solution->update(EVafixID,pV,EVtype);
+                fprintf(screen,"\n PROC %d (submaster) Updating the solution \n",me);
+                solution->update(EVafixID,pV,EVtype);
+                fprintf(screen,"\n PROC %d (submaster) solution updated\n",me);
 
             }
             
@@ -761,7 +763,7 @@ void Krun::proceed(double deltat)
         }
         
 
-        
+
         
         
         // if a continuous process was chosen, then SC2exec will be equal to some color (subcom ID) and procs in that subcom update the last eval time of that fix. The process will also need to be carried out here..
@@ -779,7 +781,7 @@ void Krun::proceed(double deltat)
                 }
             }
             lammpsIO->lammpsdo("run 0");
-            
+       
             // execute all continuous processes up to now
             // To be implemeneted because to date there are no continuou processes implemented..
             // Not sure what to do with cumulated KMC rates till here: Loosing them is a pity/error, but keeping them is risky because the user can unfix and do things before the next Krun, leading to inconsistencies..
@@ -788,6 +790,7 @@ void Krun::proceed(double deltat)
         // number of just completed step
         msk->step = msk->step+1;
         
+
         
         // relax if at appropriate step
         for (int i = 0; i<relax->rlxID.size();i++){
@@ -796,6 +799,7 @@ void Krun::proceed(double deltat)
             }
         }
         
+        
         // If a KMC event was not executed
         // (must stay here after relax, in case a continuous event was carried out and then the relax changed the box)
         if (KMCexecute == 0){
@@ -803,12 +807,10 @@ void Krun::proceed(double deltat)
             // A loop considering all fixes on processor and, if the fix is a nucleate, call a function within fix_nucleate to reset the poision of the trial particles duly
         }
         
-        
         // write thermo output at appropriate step
         if (output->th_every>0 && msk->step % output->th_every == 0) {
             output->writethermo();
         }
-    
         // write dump output at appropriate step
         for (int i = 0; i<output->dumpID.size();i++){
             if (msk->step % output->dump_every[i] == 0) {
@@ -816,8 +818,6 @@ void Krun::proceed(double deltat)
                 output->dump_first[i]=false;  // from not on, not the first time the dump is written anymore
             }
         }
-        
-        
         
         
         MPI_Barrier(MPI_COMM_WORLD);

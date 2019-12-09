@@ -46,7 +46,7 @@ void Fix::add(std::string instr)
     std::string PROCtype;  //process type can be fKMC, Krelax, or Cont
     std::istringstream ss(instr);
     
-    std::string temp_type, temp_name, temp_scom,keyword, temp_mech,temp_wtype, temp_sinST , temp_sinUL, temp_sinbox , temp_soutUL ,temp_soutbox, temp_reg, temp_latt, temp_pgeom, temp_min, temp_pgroup;
+    std::string temp_type, temp_name, temp_scom,keyword, temp_mech,temp_wtype, temp_sinST , temp_sinUL, temp_sinbox , temp_soutUL ,temp_soutbox, temp_reg, temp_latt, temp_pgeom, temp_min;
     int temp_ptype, temp_ptypeTRY;
     double temp_pdiam;
 
@@ -84,10 +84,9 @@ void Fix::add(std::string instr)
             temp_ptypeTRY = -1;
             temp_pgeom = "none";
             temp_pdiam = -1;
-            temp_pgroup = "none";
         }
         else if (strcmp(temp_type.c_str(),"nucleate")==0) {
-            ss >> temp_reg >> temp_latt >> temp_min >> temp_ptypeTRY >> temp_ptype >> temp_pgroup >> temp_pgeom;
+            ss >> temp_reg >> temp_latt >> temp_min >> temp_ptypeTRY >> temp_ptype >> temp_pgeom;
             
             for (int i=0; i<store->Nreg; i++) {
                 if (strcmp(temp_reg.c_str(),(store->RegNames[i]).c_str())==0) temp_rid=i;
@@ -194,8 +193,6 @@ void Fix::add(std::string instr)
         afKMCptype.push_back(temp_ptype);
         afKMCpgeom.push_back(temp_pgeom);
         afKMCpdiam.push_back(temp_pdiam);
-        
-        afKMCpgroup.push_back(temp_pgroup);
         
         afKMC_DV.push_back(0.);
         

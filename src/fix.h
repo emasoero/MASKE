@@ -88,8 +88,6 @@ namespace MASKE_NS {
         std::vector<int> afKMClid;
         std::vector<int> afKMCminid;
         
-        std::vector<std::string> afKMCpgroup;
-        
         std::vector<double> afKMC_DV;
         
         std::vector<int> afKMCptypeTRY;

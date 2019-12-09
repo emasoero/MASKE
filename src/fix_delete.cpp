@@ -539,7 +539,8 @@ void Fix_delete::comp_rates_allpar(int pos)
         
         if (msk->wplog) {
             std::string msg = "\nPARTICLE ";
-            std::ostringstream ss;    ss << tID[i];   msg = msg+ss.str();
+            std::ostringstream ss;    ss << tID[i];     msg = msg+ss.str()+" ";
+            ss.str("");     ss.clear();   ss << tR[i];  msg = msg+ss.str();
             output->toplog(msg);
         }
         
@@ -548,7 +549,7 @@ void Fix_delete::comp_rates_allpar(int pos)
         double Ps = 4. * M_PI * tR[i] * tR[i];  // particle surface   FOR SPHERICAL
         
         int nrt = 1;    //number of reaction in series in chain
-        int nrv = 1;    // number of unit reactions or unit chains in particle volume
+        double nrv = 1;    // number of unit reactions or unit chains in particle volume
         
         int chID = -1;  // chain ID: will be > -1 only if mechanism calls indeed a chain
         int rxid = -1;  // reaction ID: will be used now but later in loop too
@@ -571,6 +572,7 @@ void Fix_delete::comp_rates_allpar(int pos)
             } else {errflag = true; fgdV=chem -> rx_dV_fgd[rxid];}
         }
         
+        
         if (errflag == true) {
             std::ostringstream wd1,wd2,wd3,wd4;
             wd1<<me; wd2<<universe->color; wd3<<msk->tempo,wd4<<fgdV;
@@ -579,7 +581,10 @@ void Fix_delete::comp_rates_allpar(int pos)
         }
         
         std::string msg;
-        if (msk->wplog) { msg = "\n nrv "; std::ostringstream ss;    ss << nrv;   msg = msg+ss.str(); }
+  
+        
+        
+        
         
          // change of surface energy and interaction energy per reaction unit (single reaction or chain: to be further subdivided per step in chain later on)
         double DSpu = -Ps/((double)nrv);    // negative becasue delation removes energy
@@ -720,7 +725,7 @@ void Fix_delete::comp_rates_allser(int pos)
     
     std::ostringstream wd1,wd2,wd3;
     wd1<<me; wd2<<universe->color; wd3<<msk->tempo;
-    std::string msg = "****************************************************\n***********************************************\n PROC "+wd1.str()+" SUBCOM "+wd2.str()+" tempo "+wd3.str()+" \n ERROR: I have changed fix_delete and not updated the serial mechanism yet, also because I am not sure whether the serial mechanism makes physically sense at all - better mechanisms for coarse graining should be implemented... \n****************************************************\n***********************************************\n";
+    std::string msg = "****************************************************\n***********************************************\n PROC "+wd1.str()+" SUBCOM "+wd2.str()+" tempo "+wd3.str()+" \n ERROR: I have changed fix_delete and not updated the serial mechanism yet, also because I am not sure whether the serial mechanism makes physically sense at all - better mechanisms for coarse graining should be implemented...   If you decide to update the serial mechanism, make sure you pay attention to nrv that, if too big, will overflow the integer. This can happen if using large paritcle, e.g. 1 micrometre in diameter. In such case, the serial mechanism is nonsense. You should therefore put a constraint to the maximum nrv for which it is reasonable to assume a serial mechanism \n****************************************************\n***********************************************\n";
     fprintf(screen,"%s",msg.c_str());
     
    /*
