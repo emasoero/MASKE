@@ -93,68 +93,42 @@ lammps all set	type * diameter $(v_Diam)
 
 #===== Potentials, neighbours, and minimiser style
 
-#lammps all   pair_style hybrid table linear 4000 gran/hooke/history 1e-4 NULL 1e-4 NULL 0 1
-lammps all pair_style table linear 4000
+lammps all   pair_style hybrid table linear 4000 gran/hooke/history 1e-4 NULL 1e-4 NULL 0 1
+#lammps all   pair_style table linear 4000
 
-lammps all   pair_coeff * * table.potential_SI Spring_CH-CH
+lammps all   pair_coeff * * table table.potential_SI Spring_CH-CH
 
-lammps all   pair_coeff 1 1 table.potential_SI Spring_CH-CH
-lammps all   pair_coeff 1 2 table.potential_SI Spring_CH-CH
-lammps all   pair_coeff 1 3 table.potential_SI Spring_CH-CH
-lammps all   pair_coeff 1 4 table.potential_SI Spring_CH-CaCO3	
-lammps all   pair_coeff 1 5 table.potential_SI Spring_CH-CaCO3	
-lammps all   pair_coeff 2 2 table.potential_SI Spring_CH-CH
-lammps all   pair_coeff 2 3 table.potential_SI Spring_CH-CH
-lammps all   pair_coeff 2 4 table.potential_SI Spring_CH-CaCO3	
-lammps all   pair_coeff 2 5 table.potential_SI Spring_CH-CaCO3	
-lammps all   pair_coeff 3 3 table.potential_SI Spring_CH-CH
-lammps all   pair_coeff 3 4 table.potential_SI Spring_CH-CaCO3	
-lammps all   pair_coeff 3 5 table.potential_SI Spring_CH-CaCO3	
-lammps all   pair_coeff 4 4 table.potential_SI Spring_CaCO3-CaCO3
-lammps all   pair_coeff 4 5 table.potential_SI Spring_CaCO3-CaCO3
-lammps all   pair_coeff 5 5 table.potential_SI Spring_CaCO3-CaCO3
+lammps all   pair_coeff 1 1 table table.potential_SI Spring_CH-CH
+lammps all   pair_coeff 1 2 table table.potential_SI Spring_CH-CH
+lammps all   pair_coeff 1 3 table table.potential_SI Spring_CH-CH
+lammps all   pair_coeff 1 4 table table.potential_SI Spring_CH-CaCO3	
+lammps all   pair_coeff 1 5 table table.potential_SI Spring_CH-CaCO3	
+lammps all   pair_coeff 2 2 table table.potential_SI Spring_CH-CH
+lammps all   pair_coeff 2 3 table table.potential_SI Spring_CH-CH
+lammps all   pair_coeff 2 4 table table.potential_SI Spring_CH-CaCO3	
+lammps all   pair_coeff 2 5 table table.potential_SI Spring_CH-CaCO3	
+lammps all   pair_coeff 3 3 table table.potential_SI Spring_CH-CH
+lammps all   pair_coeff 3 4 table table.potential_SI Spring_CH-CaCO3	
+lammps all   pair_coeff 3 5 table table.potential_SI Spring_CH-CaCO3	
+lammps all   pair_coeff 4 4 table table.potential_SI Spring_CaCO3-CaCO3
+lammps all   pair_coeff 4 5 table table.potential_SI Spring_CaCO3-CaCO3
+lammps all   pair_coeff 5 5 table table.potential_SI Spring_CaCO3-CaCO3
 
-#lammps all   pair_coeff 1 1 table.potential_SI Spring_CH-CH
+lammps all   pair_coeff 6 6 gran/hooke/history
+lammps all   pair_coeff 1 6 gran/hooke/history
+lammps all   pair_coeff 2 6 gran/hooke/history
+lammps all   pair_coeff 3 6 gran/hooke/history
+lammps all   pair_coeff 4 6 gran/hooke/history
+lammps all   pair_coeff 5 6 gran/hooke/history
 
+lammps Antonello pair_write 1 1 4000 r 1.00E-030 9.22594E-007 tableOUT.txt Spring_CH-CH
 
-#lammps all   pair_coeff * * table table.potential_SI Spring_CH-CH
-
-#lammps all   pair_coeff 1 1 table table.potential_SI Spring_CH-CH
-#lammps all   pair_coeff 1 2 table table.potential_SI Spring_CH-CH
-#lammps all   pair_coeff 1 3 table table.potential_SI Spring_CH-CH
-#lammps all   pair_coeff 1 4 table table.potential_SI Spring_CH-CaCO3	
-#lammps all   pair_coeff 1 5 table table.potential_SI Spring_CH-CaCO3	
-#lammps all   pair_coeff 2 2 table table.potential_SI Spring_CH-CH
-#lammps all   pair_coeff 2 3 table table.potential_SI Spring_CH-CH
-#lammps all   pair_coeff 2 4 table table.potential_SI Spring_CH-CaCO3	
-#lammps all   pair_coeff 2 5 table table.potential_SI Spring_CH-CaCO3	
-#lammps all   pair_coeff 3 3 table table.potential_SI Spring_CH-CH
-#lammps all   pair_coeff 3 4 table table.potential_SI Spring_CH-CaCO3	
-#lammps all   pair_coeff 3 5 table table.potential_SI Spring_CH-CaCO3	
-#lammps all   pair_coeff 4 4 table table.potential_SI Spring_CaCO3-CaCO3
-#lammps all   pair_coeff 4 5 table table.potential_SI Spring_CaCO3-CaCO3
-#lammps all   pair_coeff 5 5 table table.potential_SI Spring_CaCO3-CaCO3
-
-#lammps all   pair_coeff 6 6 gran/hooke/history
-
-#lammps all   pair_coeff 1 6 gran/hooke/history
-#lammps all   pair_coeff 2 6 gran/hooke/history
-#lammps all   pair_coeff 3 6 gran/hooke/history
-#lammps all   pair_coeff 4 6 gran/hooke/history
-#lammps all   pair_coeff 5 6 gran/hooke/history
-
-lammps Antonello 	pair_write 1 1 4000 r 1.00E-030 9.22594E-007 tableOUT.txt Spring_CH-CH
-
-
-lammps all  neighbor	5e-7 bin
+lammps all  neighbor	        5e-7 bin
 lammps all  neigh_modify	delay 0
 lammps all  neigh_modify	exclude type 4 4
 
 lammps all min_style maske
 lammps all min_modify dmax 1e-10 10000 10000 10000
-
-
-
 
 # ======== CONSTANTS IN LAMMPS UNITS
 #kB  0.0138064852       # Boltzmann, in nm2 ag ns-2 K-1
@@ -235,22 +209,22 @@ store minimize minNuc	0 0 2000 2000 min_modify dmax	$(v_Qdmax) $(v_DxMax) $(v_Dy
 
 fix KMC-free nucleate NucCaCO3 Bernini RegNuc latNuc minNuc 4 5 sphere 1.e-6 wei simple 1 mech CaCO3nuc_apnet sol_in fixed uniform box sol_out uniform box+dV
 
-
-
-
-
-
 # =========== NUFEB FIX
 
-#lammps Canova 	fixes for NUFEB
-#lammps Canova 	fixes for NUFEB
-#lammps Canova 	fixes for NUFEB
-#lammps Canova 	fixes for NUFEB
-
-#fix Cont   nufeb name Canova keywords...
+lammps Canova variable EPSdens equal 30
+lammps Canova variable divDia equal 0.78e-6
+lammps Canova variable diffT equal 1e-4
+lammps Canova variable tol equal 5e-8
+lammps Canova variable etaHET equal 0.0
+lammps Canova variable layer equal -1
 
 lammps Canova read_data_bio atom.in add append
-
+lammps Canova fix ki1 all kinetics 1 10 10 10 v_diffT v_layer demflag 0 niter 10000
+lammps Canova fix ki2 all kinetics/thermo
+lammps Canova fix ki3 all kinetics/ph fix 
+lammps Canova fix ki4 all kinetics/growth/energy v_EPSdens	
+lammps Canova fix g1 all kinetics/diffusion v_tol pp pp nd mol
+lammps Canova fix d1 all divide 1 v_EPSdens v_divDia 31231 demflag 0
 
 # ========= DEFINE LAMMPS DUMPS AND THERMOS + VARIABLES ALSO FOR MASKE OUTPUT
 
