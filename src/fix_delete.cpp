@@ -9,6 +9,7 @@
 #include "output.h"
 #include "krun.h"
 #include "solution.h"
+#include <math.h>       /* for the pow function used here
 /*#include <stdlib.h>
 #include <stdio.h>
 #include <iostream>
@@ -111,6 +112,7 @@ void Fix_delete::sample(int pos)
     //tolmp = "variable tempNgroup equal count("+fix->fKMCgroup[pos]+")";  // temp variable counting atoms of type in fix
     lammpsIO->lammpsdo(tolmp);
     
+    // NB: IF POTENTIAL IS NOT PAIRWISE, but e.g. three body, will need to change relationship between pe/atom extracted here and DU computed later for the rate. If potential is a mix of pair and other terms, e.g. a generic one for molecular interactions, I will need to compute energies per particle or molecule in a different way, by actually deleting it, measuring DUtot, and then putting it back - more expensive
     tolmp = "compute tempPE all pe/atom";  // temp compute reading energy per atom
     lammpsIO->lammpsdo(tolmp);
     
@@ -561,6 +563,7 @@ void Fix_delete::comp_rates_allpar(int pos)
             chID = chem -> mechrcID[mid];
             nrt = (chem->ch_rxID[chID]).size();
             if (chem -> ch_dV_fgd[chID] < 0) {
+                // default for allpar mechanism is linear changes in surface and energy with number of molecules in particle volume, i.e. int_lin
                 nrv = round( - Pv / chem -> ch_dV_fgd[chID]);   // minus because a proper dissolution reax should have negative fgd changes in chemDB
             } else {errflag = true; fgdV=chem -> ch_dV_fgd[chID];}
         }
@@ -587,8 +590,22 @@ void Fix_delete::comp_rates_allpar(int pos)
         
         
          // change of surface energy and interaction energy per reaction unit (single reaction or chain: to be further subdivided per step in chain later on)
-        double DSpu = -Ps/((double)nrv);    // negative becasue delation removes energy
-        double DUpu = -2.*tE[i]/((double)nrv);  // change in energy caused by removing the particle
+        double DSpu;  // negative becasue delation removes energy
+        double DUpu;;  // change in energy caused by removing the particle
+        
+        if (strcmp(chem->mechinter[mid].c_str(),"int_1lin")==0)  {
+            DSpu = -Ps/pow((double)nrv,1./3.);
+            DUpu = -2.*tE[i]/pow((double)nrv,1./3.);
+        }
+        else if (strcmp(chem->mechinter[mid].c_str(),"int_2lin")==0) {
+            DSpu = -Ps/pow((double)nrv,69./100.);      // power artificailly tuned to get hetero nucleation in cg sim.
+            DUpu = -2.*tE[i]/pow((double)nrv,69./100.);
+        }
+        else{
+            DSpu = -Ps/((double)nrv);
+            DUpu = -2.*tE[i]/((double)nrv);
+        }
+        
         
         // number of repetitions of reaction of chain to delete particle. For "allpar" just 1.
         int nrx = 1;
@@ -644,7 +661,6 @@ void Fix_delete::comp_rates_allpar(int pos)
                 
                 double DUi = 0.;
                 if (strcmp(chem->mechinter[mid].c_str(),"int_no")!=0) {
-                    //for "allpar" mecanisms only, energy is linear to volume contributions. For other mechanisms, the actual part size change should be taken
                     DUi = DUpu;
                     if (chem->mechchain[mid]) DUi *= (chem->ch_rdV_fgd[chID][k]);
                 }

@@ -282,6 +282,7 @@ void Fix_nucleate::sample(int pos)
     //tolmp = "variable tempNgroup equal count("+fix->fKMCgroup[pos]+")";  // temp variable counting atoms of type in fix
     lammpsIO->lammpsdo(tolmp);
     
+    // NB: IF POTENTIAL IS NOT PAIRWISE, but e.g. three body, will need to change relationship between pe/atom extracted here and DU computed later for the rate. If potential is a mix of pair and other terms, e.g. a generic one for molecular interactions, I will need to compute energies per particle or molecule in a different way, by first minimising all trial particles, then assiging all but one trial to a group with deactivated interactions, computing the DUtot with only one active trial, and then looping over all trials - more expensive
     tolmp = "compute tempPE all pe/atom";  // temp compute reading energy per atom
     lammpsIO->lammpsdo(tolmp);
     
@@ -749,8 +750,21 @@ void Fix_nucleate::comp_rates_allpar(int pos)
         if (msk->wplog) { msg = "\n nrv "; std::ostringstream ss;    ss << nrv;   msg = msg+ss.str(); }
         
         // change of surface energy and interaction energy per reaction unit (single reaction or chain: to be further subdivided per step in chain later on)
-        double DSpu = Ps/((double)nrv);    // positive becasue nucleation creates surface and interaction energy
-        double DUpu = 2.*tE[i]/((double)nrv);   // two is assuming pairwise energy
+        double DSpu;  // positive becasue nucleation
+        double DUpu;;  //
+        
+        if (strcmp(chem->mechinter[mid].c_str(),"int_1lin")==0)  {
+            DSpu = Ps/pow((double)nrv,1./3.);
+            DUpu = 2.*tE[i]/pow((double)nrv,1./3.);
+        }
+        else if (strcmp(chem->mechinter[mid].c_str(),"int_2lin")==0) {
+            DSpu = Ps/pow((double)nrv,68.5/100.); // power artificailly tuned to get hetero nucleation in cg sim.
+            DUpu = 2.*tE[i]/pow((double)nrv,68.5/100.);
+        }
+        else{
+            DSpu = Ps/((double)nrv);
+            DUpu = 2.*tE[i]/((double)nrv);
+        }
         
         // number of repetitions of reaction of chain to delete particle. For "allpar" just 1.
         int nrx = 1;
@@ -804,7 +818,6 @@ void Fix_nucleate::comp_rates_allpar(int pos)
                 
                 double DUi = 0.;
                 if (strcmp(chem->mechinter[mid].c_str(),"int_no")!=0) {
-                    //for "allpar" mecanisms only, energy is linear to volume contributions. For other mechanisms, the actual part size change should be taken
                     DUi = DUpu;
                     if (chem->mechchain[mid]) DUi *= (chem->ch_rdV_fgd[chID][k]);
                 }

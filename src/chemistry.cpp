@@ -644,8 +644,8 @@ void Chemistry::addmech()
     
     // read interaction energy scaling rule with particle size
     ss >> newname;
-    if (strcmp(newname.c_str(), "int_no") != 0 && strcmp(newname.c_str(), "int_lin") != 0 && strcmp(newname.c_str(), "int_size") != 0 ) {
-        std::string msg = "ERROR: Unknown energy scaling rule of  \""+mechnames.back()+"\". Known styles are int_no, int_lin, or int_size, instead \""+newname+"\" was found \n";
+    if (strcmp(newname.c_str(), "int_no") != 0 && strcmp(newname.c_str(), "int_lin") != 0 && strcmp(newname.c_str(), "int_1lin") != 0 && strcmp(newname.c_str(), "int_2lin") != 0 && strcmp(newname.c_str(), "int_size") != 0 ) {
+        std::string msg = "ERROR: Unknown energy scaling rule of  \""+mechnames.back()+"\". Known styles are int_no, int_lin, or int_size, or int_1Dlin, instead \""+newname+"\" was found \n";
         error->errsimple(msg);
     }
     mechinter.push_back(newname);
