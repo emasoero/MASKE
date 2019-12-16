@@ -94,8 +94,8 @@ lammps all set	type * diameter $(v_Diam)
 #===== Potentials, neighbours, and minimiser style
 
 #lammps all   pair_style hybrid table linear 4000 gran/hooke/history 1e-4 NULL 1e-4 NULL 0 1
-
 lammps all pair_style table linear 4000
+
 lammps all   pair_coeff * * table.potential_SI Spring_CH-CH
 
 lammps all   pair_coeff 1 1 table.potential_SI Spring_CH-CH
@@ -249,7 +249,7 @@ fix KMC-free nucleate NucCaCO3 Bernini RegNuc latNuc minNuc 4 5 sphere 1.e-6 wei
 
 #fix Cont   nufeb name Canova keywords...
 
-
+lammps Canova read_data_bio atom.in add append
 
 
 # ========= DEFINE LAMMPS DUMPS AND THERMOS + VARIABLES ALSO FOR MASKE OUTPUT
