@@ -46,7 +46,7 @@ void Fix::add(std::string instr)
     std::string PROCtype;  //process type can be fKMC, Krelax, or Cont
     std::istringstream ss(instr);
     
-    std::string temp_type, temp_name, temp_scom,keyword, temp_mech,temp_wtype, temp_sinST , temp_sinUL, temp_sinbox , temp_soutUL ,temp_soutbox, temp_reg, temp_latt, temp_pgeom, temp_min;
+    std::string temp_type, temp_name, temp_scom,keyword, temp_mech,temp_wtype, temp_sinST , temp_sinUL, temp_sinbox , temp_soutUL ,temp_soutbox, temp_reg, temp_latt, temp_pgeom, temp_min, temp_store, temp_group;
     int temp_ptype, temp_ptypeTRY;
     double temp_pdiam;
 
@@ -57,7 +57,7 @@ void Fix::add(std::string instr)
     temp_soutUL = "uniform";
     temp_soutbox = "box";
     double temp_evt=0., temp_leval=0., temp_dt=0.;
-    int temp_mid=-1, temp_rid=-1, temp_lid=-1, temp_minid=-1;
+    int temp_mid=-1, temp_rid=-1, temp_lid=-1, temp_minid=-1, temp_sid=-1, temp_steps=-1;
 
     
     std::vector<double> wargs;
@@ -286,7 +286,21 @@ void Fix::add(std::string instr)
         check_name_unique(temp_name);
         allFixNames.push_back(temp_name);
         ss >> temp_scom;
+	if (temp_type == "nufeb") {
+	  ss >> temp_store;
+	  temp_sid = -1;
+	  for (int i=0; i<store->MulNames.size(); i++) {
+	    if (store->MulNames[i] == temp_store)
+	      temp_sid = i;
+	  }
+	  if (temp_sid < 0) {
+	    error->errsimple("ERROR: couldn't find multiple-line store for nufeb fix");
+	  }
+	} else {
+	  temp_store = "none";
+	}
         bool commt_found = false;
+	temp_steps = -1;
         while (!ss.eof() && !commt_found) {
             ss >> keyword;
             if (strcmp(keyword.c_str(),"leval")==0) {
@@ -294,6 +308,12 @@ void Fix::add(std::string instr)
             }
             else if (strcmp(keyword.c_str(),"dt")==0) {
                 ss >> temp_dt;
+            }
+            else if (strcmp(keyword.c_str(),"steps")==0) {
+                ss >> temp_steps;
+            }
+            else if (strcmp(keyword.c_str(),"group")==0) {
+                ss >> temp_group;
             }
             else if (keyword[0]=='#'){
                 commt_found = true;
@@ -309,7 +329,12 @@ void Fix::add(std::string instr)
         aCname.push_back(temp_name);
         aCscom.push_back(temp_scom);
         aCdt.push_back(temp_dt);
-        
+	aCleval.push_back(temp_leval);
+	aCstore.push_back(temp_store);
+	aCsid.push_back(temp_sid);
+	aCsteps.push_back(temp_steps);
+	aCgroups.push_back(temp_group);
+
         bool added_local_fix = false;
         //inndividual processors in fix-invoked subcomm adding fix to their local list
         if (strcmp(temp_scom.c_str(),(universe->SCnames[universe->color]).c_str())==0) {
@@ -318,6 +343,10 @@ void Fix::add(std::string instr)
             Cscom.push_back(temp_scom);
             Cdt.push_back(temp_dt);
             Cleval.push_back(temp_leval);
+	    Cstore.push_back(temp_store);
+	    Csid.push_back(temp_sid);
+	    Csteps.push_back(temp_steps);
+	    Cgroups.push_back(temp_group);
             CglobID.push_back(aCtype.size()-1);
             added_local_fix = true;
         }

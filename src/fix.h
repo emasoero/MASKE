@@ -71,10 +71,11 @@ namespace MASKE_NS {
         std::vector<double> Cdt;            // time increment of each cont proc
         std::vector<int> CglobID; //    position of local process in global list of all cont processes
         std::vector<double> Cleval; // vector with time of last exectution of this process
+	std::vector<std::string> Cstore;
+	std::vector<int> Csid;
+	std::vector<int> Csteps;
+	std::vector<std::string> Cgroups;
 
-
-
-        
         std::vector<std::string> afKMCtype;   // same as above but gathering all events and used by MASTER only
         std::vector<std::string> afKMCname;
         std::vector<std::string> afKMCscom;
@@ -116,8 +117,11 @@ namespace MASKE_NS {
         std::vector<std::string> aCname;
         std::vector<std::string> aCscom;
         std::vector<double> aCdt;
-
-        
+	std::vector<double> aCleval;
+	std::vector<std::string> aCstore;
+	std::vector<int> aCsid;
+	std::vector<int> aCsteps;
+	std::vector<std::string> aCgroups;
         
         void add(std::string);
         void printall();

@@ -34,6 +34,7 @@ public:
     solution(ptr->solution),
     fix(ptr->fix),
     fix_del(ptr->fix_del),
+    fix_nufeb(ptr->fix_nufeb),
     krun(ptr->krun),
     randm(ptr->randm),
     output(ptr->output),
@@ -65,6 +66,7 @@ protected:
     Fix *&fix;
     Fix_delete *&fix_del;
     Fix_Cfoo *&fix_cfoo;
+    Fix_nufeb *&fix_nufeb;
     Relax *&relax;
     Krun *&krun;
     Randm *&randm;
@@ -72,15 +74,10 @@ protected:
     Fix_nucleate *&fix_nucl;
     Block *&block;
     Store *&store;
-
-	FILE *&screen;
+    FILE *&screen;
     FILE *&plog;
     FILE *&thermo;
-
-     
-
 };
-
      
 }
 

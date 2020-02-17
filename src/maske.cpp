@@ -22,6 +22,7 @@
 #include "fix.h"
 #include "fix_delete.h"
 #include "fix_Cfoo.h"
+#include "fix_nufeb.h"
 #include "relax.h"
 #include "krun.h"
 #include "randm.h"
@@ -37,10 +38,11 @@ using namespace MASKE_NS;
 // Initialize class
 MASKE::MASKE(int narg, char **arg)
 {
-	screen = NULL;
+    screen = NULL;
     plog = NULL;
-	screen=stdout;
+    screen=stdout;
     wplog = true;
+    nulog_flag = true;
 
     MPI_Comm_rank(MPI_COMM_WORLD, &me);
     
@@ -77,6 +79,7 @@ MASKE::MASKE(int narg, char **arg)
     solution = new Solution(this);
     fix = new Fix(this);
     fix_del = new Fix_delete(this);
+    fix_nufeb = new Fix_nufeb(this);
     krun = new Krun(this);
     randm = new Randm(this);
     output = new Output(this);
@@ -85,11 +88,7 @@ MASKE::MASKE(int narg, char **arg)
     fix_nucl = new Fix_nucleate(this);
     block = new Block(this);
     store = new Store(this);
-
- }
-
-
-
+}
 
 // ---------------------------------------------------------------
 // Class destructor
@@ -181,7 +180,13 @@ MASKE::~MASKE()
     MPI_Barrier(MPI_COMM_WORLD);
     delete fix_cfoo;
     if (me==MASTER) {
-        fprintf(screen,"Deleting Relax class\n");
+        fprintf(screen,"Deleting fix_cfoo class\n");
+        relax->printall();
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    delete fix_nufeb;
+    if (me==MASTER) {
+        fprintf(screen,"Deleting fix_nufeb class\n");
         relax->printall();
     }
     MPI_Barrier(MPI_COMM_WORLD);
@@ -204,10 +209,6 @@ MASKE::~MASKE()
     }
     MPI_Barrier(MPI_COMM_WORLD);
     delete store;
-    //
-    
-    
-    
     
     if (me==MASTER) {
         fprintf(screen,"Deleting universe class\n");
@@ -328,16 +329,8 @@ void MASKE::mainloop()
         
         
         // Within a loop of incremental time steps, each processor runs all the continuum processes that are active at the current step, or active between the previous and just-updated time
-        
-        
     }
-    
-    
-    
-    
 }
-
-
 
 // ---------------------------------------------------------------
 // Print stuff

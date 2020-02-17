@@ -44,7 +44,7 @@ namespace MASKE_NS {
         MPI_Status status;
         MPI_Request request;
 
-		
+	std::vector<double> nufeb_buf; // buffer for exchange of atoms when running nufeb
 	};
 	
 }
