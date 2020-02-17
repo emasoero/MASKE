@@ -280,6 +280,37 @@ void Inputmsk::file()
                 }
                 
             }
+	    // Check for store multi command because we need to parse multiple lines
+            else if (strcmp(firstWord.c_str(), "store") == 0) {
+	      std::string type;
+	      ss >> type;
+	      if (type == "multi") {
+		std::string name;
+		ss >> name;
+		store->MulNames.push_back(name);
+		std::string triple_quote;
+		ss >> triple_quote;
+		if (triple_quote != "\"\"\"")
+		  error->errsimple("ERROR: couldn't find triple quote in multi-line store command");
+		int nline = 0;
+		std::vector<std::string> cmds;
+		while (true) {
+		  std::string line;
+		  std::getline(inFile, line);
+		  if (line.empty())
+		    continue;
+		  if (line.rfind("\"\"\"", 0) == 0)
+		    break;
+		  cmds.push_back(line);
+		  ++nline;
+		  if (nline > 1000000)
+		    error->errsimple("ERROR: too many lines in multi-line store command");
+		}
+		store->MulCmd.push_back(cmds);
+	      }
+	      else
+		execline(read_string);
+	    }
             else {
                 execline(read_string);
             }

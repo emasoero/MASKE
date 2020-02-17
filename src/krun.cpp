@@ -4,6 +4,7 @@
 #include "fix_delete.h"
 #include "fix_nucleate.h"
 #include "fix_Cfoo.h"
+#include "fix_nufeb.h"
 //#include <sstream>
 #include "universe.h"
 //#include "error.h"
@@ -17,10 +18,27 @@
 #include <iostream>
 #include <fstream>
 */
+#include <algorithm>
+#include <numeric>
+#include <iomanip>
+
+#include <group.h>
+#include <atom_vec.h>
+#include <memory.h>
+#include <domain.h>
+#include <comm.h>
 
 #include <string.h>
  
 using namespace MASKE_NS;
+
+union ubuf {
+  double d;
+  int64_t i;
+  ubuf(double arg) : d(arg) {}
+  ubuf(int64_t arg) : i(arg) {}
+  ubuf(int arg) : i(arg) {}
+};
 
 Krun::Krun(MASKE *maske) : Pointers(maske)
 {
@@ -34,6 +52,7 @@ Krun::Krun(MASKE *maske) : Pointers(maske)
     QkTint = 0.;
     resetQkTint = true;
 
+    nufeb_buf.resize(1024);
 }
 
 
@@ -79,9 +98,11 @@ void Krun::proceed(double deltat)
     bool write_first_thermo = true;
     bool write_first_dumps = true;
 
-    
-    
-    
+    for (int i=0; i<fix->Ctype.size(); i++) {
+      if (fix->Ctype[i] == "nufeb") {
+	fix_nufeb->init(i);
+      }
+    }
     
     //**********************************
     // FROM NOW ON, TIME WILL ADVANCE
@@ -165,6 +186,7 @@ void Krun::proceed(double deltat)
                 }
                 // same to be added for any other KMC event...
             }
+
             fMC_justreset = true;   // to tell the fix whether new rate vectors need be created or existing ones to be read
         }
         reset_event_vec = false;   // to avoid resetting vectors again and next step, unless something happens to turn the reset on again
@@ -275,11 +297,13 @@ void Krun::proceed(double deltat)
                         DtC[i+1] = fix->Cleval[i] + temp_Dt - msk->tempo;
                     }
                 }
-                
-                if (strcmp(fix->fKMCtype[i].c_str(),"diffuse-box")==0) {
-                    //do nothing for now.. just a placeholder
-                }
-                
+
+		if (strcmp(fix->Ctype[i].c_str(),"nufeb")==0) {
+		  double temp_Dt = fix_nufeb->getDT(i);
+		  if (universe->key==0) {
+		    DtC[i+1] = fix->Cleval[i] + temp_Dt - msk->tempo;
+		  }
+		}
             }
         }
         
@@ -362,22 +386,29 @@ void Krun::proceed(double deltat)
         
         // Master selects smallest FOT among all KMC and continuous types above  --> next event type
         double Dt = 0.;
-        int KMCexecute = 0;     // a bool actually, 0 = false, 1 = true
-        int Cpid2exec = -1;   //local ID of continuous process to execute
-        int SC2exec = -1;   // ID of subomm supposed to carry out the continuous event
-        int endofrun = 0;  // a bool actually, 0 = false, 1 = true
-        
+        int KMCexecute = 0;  // a bool actually, 0 = false, 1 = true
+	int Cexecute = 0;    // flags the execution of a countinous process
+        int Cpid2exec = -1;  // local ID of continuous process to execute
+        int SC2exec = -1;    // ID of subomm supposed to carry out the continuous event
+        int endofrun = 0;    // a bool actually, 0 = false, 1 = true
+	std::string type;
+	
         if (me == MASTER) {
             Dt = DtKMC;
-            if (Qktot > 0.) KMCexecute = 1;
+            if (Qktot > 0.) {
+	      KMCexecute = 1;
+	      Cexecute = 0;
+	    }
             if (Dt < 0.)  Dt = 0.;    // the KMC process is chosen because associated to time < tempo.. acceptable.. but a warning should be generated..
             else {
                 for (int i=0; i<Dtsize; i++) {
                     if (DtCall[i] >= 0. && DtCall[i]<Dt) {
                         Dt = DtCall[i];  //the corresponding subcom color is in position i of pcolAll array
                         KMCexecute = 0;
+			Cexecute = 1;
                         Cpid2exec = CplocID[i];
                         SC2exec = pcolAll[i];
+			type = fix->aCtype[Cpid2exec];
                     }
                 }
             }
@@ -399,18 +430,29 @@ void Krun::proceed(double deltat)
             for (int dest=1; dest<universe->nprocs; dest++) {
                 MPI_Send(&Dt, 1, MPI_DOUBLE, dest, 1, MPI_COMM_WORLD);
                 MPI_Send(&KMCexecute, 1, MPI_INT, dest, 2, MPI_COMM_WORLD);
-                MPI_Send(&Cpid2exec, 1, MPI_INT, dest, 3, MPI_COMM_WORLD);
-                MPI_Send(&SC2exec, 1, MPI_INT, dest, 4, MPI_COMM_WORLD);
-                MPI_Send(&endofrun, 1, MPI_INT, dest, 5, MPI_COMM_WORLD);
+                MPI_Send(&Cexecute, 1, MPI_INT, dest, 3, MPI_COMM_WORLD);
+                MPI_Send(&Cpid2exec, 1, MPI_INT, dest, 4, MPI_COMM_WORLD);
+                MPI_Send(&SC2exec, 1, MPI_INT, dest, 5, MPI_COMM_WORLD);
+                MPI_Send(&endofrun, 1, MPI_INT, dest, 6, MPI_COMM_WORLD);
+		MPI_Send(type.c_str(), type.length()+1, MPI_CHAR, dest, 7, MPI_COMM_WORLD);
             }
         }
         if (me > 0) {
             int source = 0;
             MPI_Recv(&Dt, 1, MPI_DOUBLE, source, 1, MPI_COMM_WORLD, &status);
             MPI_Recv(&KMCexecute, 1, MPI_INT, source, 2, MPI_COMM_WORLD, &status);
-            MPI_Recv(&Cpid2exec, 1, MPI_INT, source, 3, MPI_COMM_WORLD, &status);
-            MPI_Recv(&SC2exec, 1, MPI_INT, source, 4, MPI_COMM_WORLD, &status);
-            MPI_Recv(&endofrun, 1, MPI_INT, source, 5, MPI_COMM_WORLD, &status);
+            MPI_Recv(&Cexecute, 1, MPI_INT, source, 3, MPI_COMM_WORLD, &status);
+            MPI_Recv(&Cpid2exec, 1, MPI_INT, source, 4, MPI_COMM_WORLD, &status);
+            MPI_Recv(&SC2exec, 1, MPI_INT, source, 5, MPI_COMM_WORLD, &status);
+            MPI_Recv(&endofrun, 1, MPI_INT, source, 6, MPI_COMM_WORLD, &status);
+	    MPI_Status status;
+	    MPI_Probe(source, 7, MPI_COMM_WORLD, &status);
+	    int length;
+	    MPI_Get_count(&status, MPI_CHAR, &length);
+	    char *type_recv = new char[length];
+	    MPI_Recv(type_recv, length, MPI_CHAR, source, 7, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+	    type = std::string(type_recv);
+	    delete [] type_recv;
         }
         
         MPI_Barrier(MPI_COMM_WORLD);
@@ -761,18 +803,212 @@ void Krun::proceed(double deltat)
             delete [] QkTCall;
             delete [] QkTCallC;
         }
-        
+	
+	if (Cexecute) {
+	  // exchange subdomain sizes
+	  std::vector<double> sublo(3*universe->nprocs);
+	  std::vector<double> subhi(3*universe->nprocs);
+	  // Each process will send 3 doubles, pertaining subdomain's lower or upper bounds.
+	  // sublo vector will contain, in every process, the gathered lower bounds of the subdomains in MPI rank order:
+	  // (rank0_x, rank0_y, rank0_z, rank1_x, rank2_y, rank1_z, ... , rankn_x, rankn_y, rankn_z)
+	  MPI_Allgather(lammpsIO->lmp->domain->sublo, 3, MPI_DOUBLE, sublo.data(), 3, MPI_DOUBLE, MPI_COMM_WORLD);
+	  MPI_Allgather(lammpsIO->lmp->domain->subhi, 3, MPI_DOUBLE, subhi.data(), 3, MPI_DOUBLE, MPI_COMM_WORLD);
+	  // std::cout << "[" << me << "] :"; 
+	  // for (int i = 0; i < universe->nprocs; i++) {
+	  //   std::cout << " [" << i << "](" << std::setprecision(9) << sublo[3*i] << "," << sublo[3*i+1] << "," << sublo[3*i+2] << ")";
+	  // }
+	  // std::cout << std::endl;
+	  // for (int i = 0; i < universe->nprocs; i++) {
+	  //   std::cout << " [" << i << "](" << std::setprecision(9) << subhi[3*i] << "," << subhi[3*i+1] << "," << subhi[3*i+2] << ")";
+	  // }
+	  // std::cout << std::endl;
+	  // check intersections between subdomains
+	  std::vector<bool> intersect(universe->nprocs, true);
+	  for (int i = 0; i < universe->nprocs; i++) {
+	    for (int axis = 0; axis < 3; axis++) {
+	      if (sublo[3*me+axis] >= subhi[3*i+axis] || subhi[3*me+axis] <= sublo[3*i+axis])
+		intersect[i] = false;
+	    }
+	  }
+	  // std::cout << "[" << me << "] intersections: "; 
+	  // std::for_each(intersect.begin(), intersect.end(), [](const int& i) { std::cout << " " << i; });
+	  // std::cout << std::endl;
 
+	  LAMMPS_NS::tagint maxtag_pre = 0;
+	  LAMMPS_NS::tagint maxtag_all = 0;
+	  LAMMPS_NS::tagint maxtag_sub = 0; // sub-communicator maximum tag
+	  if (type == "nufeb") {
+	    LAMMPS_NS::Atom *atom = lammpsIO->lmp->atom;
+	    int *tag = atom->tag;
+	    for (int i = 0; i < atom->nlocal; i++) maxtag_pre = std::max(maxtag_pre,tag[i]);
+	    MPI_Allreduce(&maxtag_pre,&maxtag_all,1,MPI_LMP_TAGINT,MPI_MAX,MPI_COMM_WORLD);
+	    MPI_Allreduce(&maxtag_pre,&maxtag_sub,1,MPI_LMP_TAGINT,MPI_MAX,universe->subcomm);
+	    std::cout << "[" << me << "] maxtag_pre=" << maxtag_pre << " maxtag_all=" << maxtag_all << " maxtag_sub=" << maxtag_sub << std::endl;
+	  }
 
-        
-        
-        // if a continuous process was chosen, then SC2exec will be equal to some color (subcom ID) and procs in that subcom update the last eval time of that fix. The process will also need to be carried out here..
-        if (universe->color == SC2exec) {
-            fix->Cleval[Cpid2exec] = msk->tempo;
-        }
-        
+	  // if a continuous process was chosen, then SC2exec will be equal to some color (subcom ID) and procs in that subcom update the last eval time of that fix. The process will also need to be carried out here..
+	  if (universe->color == SC2exec) {
+	    if (type == "nufeb") {
+	      LAMMPS_NS::Atom *atom = lammpsIO->lmp->atom;
+	      int *tag = atom->tag;
+	      std::cout << "[" << me << "] executing nufeb" << std::endl; 
+	      fix_nufeb->execute(Cpid2exec);
 
-        
+	      // LAMMPS_NS::tagint maxtag_post = 0;
+	      // for (int i = 0; i < atom->nlocal; i++) maxtag_post = std::max(maxtag_post,tag[i]);
+	      // std::cout << "[" << me << "] maxtag_pre: " << maxtag_pre << " maxtag_post: " << maxtag_post << std::endl; 
+	      // if (maxtag_post > maxtag_pre) { // bacteria division took place
+	      // 	for (int i = 0; i < atom->nlocal; i++) {
+	      // 	  if (tag[i] > maxtag_pre) {
+	      // 	    std::cout << "[" << me << "] retagging " << tag[i];
+	      // 	    tag[i] = maxtag_all + (tag[i] - maxtag_sub);
+	      // 	    std::cout << " --> " << tag[i] << std::endl;
+	      // 	    if (tag[i] > 6000)
+	      // 	      std::cout << " +++ " << tag[i] << std::endl;
+	      // 	  }
+	      // 	}
+	      // }
+	      // // remapping requires collective communication so every process in this subcomm needs to remap
+	      // if (atom->map_style) {
+	      // 	atom->map_init();
+	      // 	atom->map_set();
+	      // }
+	      
+	      // find out processes to send particles (the ones not belonging to the subcommunicator executing nufeb)
+	      std::vector<int> procs;
+	      for (int i = 0; i < universe->nprocs; i++) {
+		if (universe->color_each[i] != SC2exec && intersect[i]) {
+		  procs.push_back(i);
+		}
+	      }
+	      // std::cout << "[" << me << "] sending to: "; 
+	      // std::for_each(procs.begin(), procs.end(), [](const int& i) { std::cout << " " << i; });
+	      // std::cout << std::endl;
+	      // pack atoms inside the subdomain of other processes
+	      std::vector<int> nsend(procs.size(), 0);
+	      int group = lammpsIO->lmp->group->find(fix->Cgroups[Cpid2exec].c_str());
+	      int bitmask = lammpsIO->lmp->group->bitmask[group];
+	      int *mask = atom->mask;
+	      double **x = atom->x;
+	      std::vector<MPI_Request> requests(procs.size());
+	      int total = 0; // total number of doubles to be sent
+	      for (int p = 0; p < procs.size(); p++) {
+		int r = procs[p]; // process rank
+		for (int i = 0; i < atom->nlocal; i++) {
+		  if (x[i][0] >= sublo[3*r] && x[i][0] < subhi[3*r]
+		      && x[i][1] >= sublo[3*r+1] && x[i][1] < subhi[3*r+1]
+		      && x[i][2] >= sublo[3*r+2] && x[i][2] < subhi[3*r+2]) {
+		    if (mask[i] & bitmask) {
+		      if (nufeb_buf.size() < total + 1024) {
+			nufeb_buf.resize(2*nufeb_buf.size());
+		      }
+		      int n = atom->avec->pack_exchange(i,&nufeb_buf[total]);
+		      nsend[p] += n;
+		      total += n;
+		    }
+		  }
+		}
+		// send the number of doubles to be sent
+		MPI_Isend(&nsend[p], 1, MPI_INT, r, 0, MPI_COMM_WORLD, &requests[p]);
+	      }
+	      MPI_Waitall(requests.size(), requests.data(), MPI_STATUS_IGNORE);
+	      // std::cout << "[" << me << "] nsend: ";
+	      // for (int p = 0; p < procs.size(); p++) {
+	      // 	std::cout << nsend[p] << " ";
+	      // }
+	      // std::cout << std::endl;
+	      // exchange atoms
+	      int begin = 0;
+	      for (int p = 0; p < procs.size(); p++) {
+		int r = procs[p]; // process rank
+		MPI_Send(&nufeb_buf[begin], nsend[p], MPI_DOUBLE, r, 0, MPI_COMM_WORLD);
+		begin += nsend[p];
+	      }
+	    }
+	    fix->Cleval[Cpid2exec] = msk->tempo;
+	  } else {
+	    if (type == "nufeb") {
+	      // find out processes to receive particles from
+	      std::vector<int> procs;
+	      for (int i = 0; i < universe->nprocs; i++) {
+		if (universe->color_each[i] == SC2exec && intersect[i]) {
+		  procs.push_back(i);
+		}
+	      }
+	      // std::cout << "[" << me << "] receiving from: "; 
+	      // std::for_each(procs.begin(), procs.end(), [](const int& i) { std::cout << " " << i; });
+	      // std::cout << std::endl;
+	      // Receive the number of doubles to be sent
+	      std::vector<int> nrecv(procs.size());
+	      std::vector<MPI_Request> requests(procs.size());
+	      for (int i = 0; i < procs.size(); i++) {
+		MPI_Irecv(&nrecv[i], 1, MPI_INT, procs[i], 0, MPI_COMM_WORLD, &requests[i]);
+	      }
+	      MPI_Waitall(requests.size(), requests.data(), MPI_STATUS_IGNORE);
+	      // std::cout << "[" << me << "] receiving: "; 
+	      // for (int i = 0; i < procs.size(); i++) {
+	      // std::cout << "(" << procs[i] << ":" << nrecv[i] << ") ";
+	      // }
+	      // std::cout << std::endl;
+	      // ensure nufeb_buf is big enough to host incoming data
+	      int total = std::accumulate(nrecv.begin(), nrecv.end(), 0); // total number of doubles to receive
+	      // std::cout << "[" << me << "] total: " << total << std::endl; 
+	      if (nufeb_buf.size() < total)
+		nufeb_buf.resize(1.5*total);
+	      // std::cout << "[" << me << "] buffer size: " << nufeb_buf.size() << std::endl;
+	      // exchange atoms
+	      int begin = 0;
+	      for (int p = 0; p < procs.size(); p++) {
+		int r = procs[p]; // process rank
+		MPI_Irecv(&nufeb_buf[begin], nrecv[p], MPI_DOUBLE, r, 0, MPI_COMM_WORLD, &requests[p]);
+		begin += nrecv[p];
+	      }
+	      if (requests.size() > 0) MPI_Waitall(requests.size(), requests.data(), MPI_STATUS_IGNORE);
+	      // clear ghost count and any ghost bonus data internal to AtomVec
+	      // same logic as beginning of Comm::exchange()
+	      // do it now b/c creating atoms will overwrite ghost atoms
+	      LAMMPS_NS::Atom *atom = lammpsIO->lmp->atom;
+	      // atom->nghost = 0;
+	      // atom->avec->clear_bonus();
+	      // delete bacteria atoms
+	      std::stringstream ss;
+	      ss << "delete_atoms group " << fix->aCgroups[Cpid2exec] << " compress no";
+	      lammpsIO->lammpsdo(ss.str());
+	      // unpack received atoms
+	      int m = 0;
+	      while (m < total) {
+	      	// LAMMPS_NS::tagint tag = (LAMMPS_NS::tagint)ubuf(nufeb_buf[m+7]).i;
+	      	// int type = (int)ubuf(nufeb_buf[m+8]).i;
+		// int i = -1;
+		// if (tag <= maxtag_sub)
+		//   i = atom->map(tag);
+		// if (i > atom->nlocal)
+		//   std::cout << "[" << me << "] tag=" << tag << " index=" << i << " nlocal=" << atom->nlocal << " is probably a ghost particle!" <<  std::endl; 
+	      	// if (i > 0) {
+		//   // std::cout << "[" << me << "] found: tag=" << tag << std::endl; 
+	      	//   m += atom->avec->unpack_exchange(&nufeb_buf[m]);
+	      	//   atom->avec->copy(i, atom->nlocal-1, 1);
+	      	//   --atom->nlocal;
+	      	// } else {
+		//   std::cout << "[" << me << "] not found: tag=" << tag << std::endl; 
+		m += atom->avec->unpack_exchange(&nufeb_buf[m]);
+		atom->tag[atom->nlocal-1] = 0;
+		// }
+	      }
+	      // update atom->natoms: total number of atoms
+	      LAMMPS_NS::bigint nblocal = atom->nlocal;
+	      MPI_Allreduce(&nblocal,&atom->natoms,1,MPI_LMP_BIGINT,MPI_SUM,universe->subcomm);
+	      // update map
+	      atom->tag_extend();
+	      if (atom->map_style) {
+	      	atom->map_init(1);
+	      	atom->map_set();
+	      }
+	      // lammpsIO->lmp->comm->borders();
+	    }
+	  }
+	} // if (Cexecute)        
+
         if (endofrun==1){
             // delete all trial particles associated with nucleation fixes
             for (int i=0; i<fix->fKMCtype.size(); i++){
@@ -790,15 +1026,12 @@ void Krun::proceed(double deltat)
         // number of just completed step
         msk->step = msk->step+1;
         
-
-        
         // relax if at appropriate step
         for (int i = 0; i<relax->rlxID.size();i++){
             if (msk->step % relax->rlx_every[i] == 0) {
                 relax->dorelax(i);
             }
         }
-        
         
         // If a KMC event was not executed
         // (must stay here after relax, in case a continuous event was carried out and then the relax changed the box)
@@ -819,9 +1052,7 @@ void Krun::proceed(double deltat)
             }
         }
         
-        
         MPI_Barrier(MPI_COMM_WORLD);
-        
         
         //   ***** END OF LOOP
 

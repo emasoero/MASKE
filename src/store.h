@@ -29,14 +29,17 @@ namespace MASKE_NS {
         std::vector<std::string> RegNames;  // names of all regions stored by user
         std::vector<std::string> LatNames;    // names of all lattices stored by user
         std::vector<std::string> MinNames;  // names of all minimisers stored by user
-        
+	std::vector<std::string> MulNames;
+
         std::vector<std::string> RegCmd;  // vector with all region commants stored by user
         std::vector<std::string> LatCmd;    // same for lattices
         std::vector<std::string> LatDVnames;   // see below
         std::vector<std::string> LatDVcmd; // vectors with LAMMPS variable names and commands to compute DV associated to a lattice point, to be used in fix_nucleate sampling
         std::vector<std::string> MinCmd;  // same for minimize
         std::vector<std::string> MinModCmd;  // same for min_modify
-        
+
+        std::vector<std::vector<std::string>> MulCmd;
+
         /*
         std::vector<std::string> tempSvec;  // temp vector to store all lammps commands associated to block before pushing them back into vector of vectors
         

@@ -30,7 +30,7 @@ namespace MASKE_NS {
         
 	public:
 		
-		class Memory *memory;          // memory allocation functions
+	class Memory *memory;          // memory allocation functions
         class Error *error;
         class Inputmsk *inputmsk;
         class Universe *universe;
@@ -51,7 +51,7 @@ namespace MASKE_NS {
         class Fix_nucleate *fix_nucl;
         class Block *block;
         class Store *store;
-		
+	class Fix_nufeb *fix_nufeb;
         
         int Nsteps;     // the total number of fundametnal simulation steps to run (each transition is called every multiple of this step)
         int step;       // the current simulation step
@@ -60,7 +60,7 @@ namespace MASKE_NS {
         double kB;      // Boltzmann constant (user-defined in input, otherwise initialised to 1)
         double hpl;      // Planck constant (user-defined in input, otherwise initialised to 1)
         
-		FILE *screen;                  // screen output
+	FILE *screen;                  // screen output
         bool wplog;      // if true, each processor writes a processor specific log for debug
         FILE *plog;                  // processor-specific log file output
         std::string plogfname;
@@ -71,10 +71,10 @@ namespace MASKE_NS {
         std::vector<int> Rtypes;    // vector of types associated to real particles
         std::vector<int> Ttypes;    // vector of types associated to trial particles
         
-		MASKE(int,char**);  // constructor
-		~MASKE();           // destructor
+	MASKE(int,char**);  // constructor
+	~MASKE();           // destructor
 		
-		void printall();
+	void printall();
         void mainloop();   //OBSOLETE
         
     private:

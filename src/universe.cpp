@@ -128,21 +128,10 @@ void Universe::create()
         output->createplog(fname);
     }
     
-    // All processor tell the master their color (subcomm id): the master records them into an array for later use (when sending subcomm-specific stuff, e.g. random number seed)
+    // All processors tell every other processor their color (subcomm id) for later use (when sending subcomm-specific stuff, e.g. random number seed)
     color_each = new int[nprocs];
     color_each[me] = color;
-    if (me > MASTER) {
-        //send "me" to master in subcID vector at position = color
-        int dest = MASTER;
-        MPI_Send(&color_each[me], 1, MPI_INT, dest, 1, MPI_COMM_WORLD);
-    }
-    if (me == MASTER) {
-        for (int source=1; source<nprocs; source++) {
-            MPI_Recv(&color_each[source], 1, MPI_INT, source, 1, MPI_COMM_WORLD, &status);
-        }
-    }
-    MPI_Barrier(MPI_COMM_WORLD);
-    
+    MPI_Allgather(&color_each[me],1,MPI_INT,color_each,1,MPI_INT,MPI_COMM_WORLD);
     
     // Seeding random generator for each processor
     randm->seedit(SCseme[color]);
