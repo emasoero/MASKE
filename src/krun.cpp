@@ -813,15 +813,19 @@ void Krun::proceed(double deltat)
 	  // (rank0_x, rank0_y, rank0_z, rank1_x, rank2_y, rank1_z, ... , rankn_x, rankn_y, rankn_z)
 	  MPI_Allgather(lammpsIO->lmp->domain->sublo, 3, MPI_DOUBLE, sublo.data(), 3, MPI_DOUBLE, MPI_COMM_WORLD);
 	  MPI_Allgather(lammpsIO->lmp->domain->subhi, 3, MPI_DOUBLE, subhi.data(), 3, MPI_DOUBLE, MPI_COMM_WORLD);
-	  // std::cout << "[" << me << "] :"; 
-	  // for (int i = 0; i < universe->nprocs; i++) {
-	  //   std::cout << " [" << i << "](" << std::setprecision(9) << sublo[3*i] << "," << sublo[3*i+1] << "," << sublo[3*i+2] << ")";
-	  // }
-	  // std::cout << std::endl;
-	  // for (int i = 0; i < universe->nprocs; i++) {
-	  //   std::cout << " [" << i << "](" << std::setprecision(9) << subhi[3*i] << "," << subhi[3*i+1] << "," << subhi[3*i+2] << ")";
-	  // }
-	  // std::cout << std::endl;
+	  // nufeb log output
+	  if (msk->nulog_flag) {
+	    msk->nulog << "[rank](domain->sublo): "; 
+	    for (int i = 0; i < universe->nprocs; i++) {
+	      msk->nulog << " [" << i << "](" << std::setprecision(9) << sublo[3*i] << "," << sublo[3*i+1] << "," << sublo[3*i+2] << ")";
+	    }
+	    msk->nulog << std::endl;
+	    msk->nulog << "[rank](domain->subhi): "; 
+	    for (int i = 0; i < universe->nprocs; i++) {
+	      msk->nulog << " [" << i << "](" << std::setprecision(9) << subhi[3*i] << "," << subhi[3*i+1] << "," << subhi[3*i+2] << ") ";
+	    }
+	    msk->nulog << std::endl;
+	  }
 	  // check intersections between subdomains
 	  std::vector<bool> intersect(universe->nprocs, true);
 	  for (int i = 0; i < universe->nprocs; i++) {
@@ -830,49 +834,18 @@ void Krun::proceed(double deltat)
 		intersect[i] = false;
 	    }
 	  }
-	  // std::cout << "[" << me << "] intersections: "; 
-	  // std::for_each(intersect.begin(), intersect.end(), [](const int& i) { std::cout << " " << i; });
-	  // std::cout << std::endl;
-
-	  LAMMPS_NS::tagint maxtag_pre = 0;
-	  LAMMPS_NS::tagint maxtag_all = 0;
-	  LAMMPS_NS::tagint maxtag_sub = 0; // sub-communicator maximum tag
-	  if (type == "nufeb") {
-	    LAMMPS_NS::Atom *atom = lammpsIO->lmp->atom;
-	    int *tag = atom->tag;
-	    for (int i = 0; i < atom->nlocal; i++) maxtag_pre = std::max(maxtag_pre,tag[i]);
-	    MPI_Allreduce(&maxtag_pre,&maxtag_all,1,MPI_LMP_TAGINT,MPI_MAX,MPI_COMM_WORLD);
-	    MPI_Allreduce(&maxtag_pre,&maxtag_sub,1,MPI_LMP_TAGINT,MPI_MAX,universe->subcomm);
-	    std::cout << "[" << me << "] maxtag_pre=" << maxtag_pre << " maxtag_all=" << maxtag_all << " maxtag_sub=" << maxtag_sub << std::endl;
+	  // nufeb log output
+	  if (msk->nulog_flag) {
+	    msk->nulog << "intersections: "; 
+	    std::for_each(intersect.begin(), intersect.end(), [&](const int& i) { msk->nulog << " " << i; });
+	    msk->nulog << std::endl;
 	  }
-
 	  // if a continuous process was chosen, then SC2exec will be equal to some color (subcom ID) and procs in that subcom update the last eval time of that fix. The process will also need to be carried out here..
 	  if (universe->color == SC2exec) {
 	    if (type == "nufeb") {
 	      LAMMPS_NS::Atom *atom = lammpsIO->lmp->atom;
 	      int *tag = atom->tag;
-	      std::cout << "[" << me << "] executing nufeb" << std::endl; 
 	      fix_nufeb->execute(Cpid2exec);
-
-	      // LAMMPS_NS::tagint maxtag_post = 0;
-	      // for (int i = 0; i < atom->nlocal; i++) maxtag_post = std::max(maxtag_post,tag[i]);
-	      // std::cout << "[" << me << "] maxtag_pre: " << maxtag_pre << " maxtag_post: " << maxtag_post << std::endl; 
-	      // if (maxtag_post > maxtag_pre) { // bacteria division took place
-	      // 	for (int i = 0; i < atom->nlocal; i++) {
-	      // 	  if (tag[i] > maxtag_pre) {
-	      // 	    std::cout << "[" << me << "] retagging " << tag[i];
-	      // 	    tag[i] = maxtag_all + (tag[i] - maxtag_sub);
-	      // 	    std::cout << " --> " << tag[i] << std::endl;
-	      // 	    if (tag[i] > 6000)
-	      // 	      std::cout << " +++ " << tag[i] << std::endl;
-	      // 	  }
-	      // 	}
-	      // }
-	      // // remapping requires collective communication so every process in this subcomm needs to remap
-	      // if (atom->map_style) {
-	      // 	atom->map_init();
-	      // 	atom->map_set();
-	      // }
 	      
 	      // find out processes to send particles (the ones not belonging to the subcommunicator executing nufeb)
 	      std::vector<int> procs;
@@ -881,9 +854,12 @@ void Krun::proceed(double deltat)
 		  procs.push_back(i);
 		}
 	      }
-	      // std::cout << "[" << me << "] sending to: "; 
-	      // std::for_each(procs.begin(), procs.end(), [](const int& i) { std::cout << " " << i; });
-	      // std::cout << std::endl;
+	      // nufeb log output
+	      if (msk->nulog_flag) {
+		msk->nulog << "sending bacteria atoms to ranks: "; 
+		std::for_each(procs.begin(), procs.end(), [&](const int& i) { msk->nulog << " " << i; });
+		msk->nulog << std::endl;
+	      }
 	      // pack atoms inside the subdomain of other processes
 	      std::vector<int> nsend(procs.size(), 0);
 	      int group = lammpsIO->lmp->group->find(fix->Cgroups[Cpid2exec].c_str());
@@ -912,11 +888,14 @@ void Krun::proceed(double deltat)
 		MPI_Isend(&nsend[p], 1, MPI_INT, r, 0, MPI_COMM_WORLD, &requests[p]);
 	      }
 	      MPI_Waitall(requests.size(), requests.data(), MPI_STATUS_IGNORE);
-	      // std::cout << "[" << me << "] nsend: ";
-	      // for (int p = 0; p < procs.size(); p++) {
-	      // 	std::cout << nsend[p] << " ";
-	      // }
-	      // std::cout << std::endl;
+	      // nufeb log output
+	      if (msk->nulog_flag) {
+		msk->nulog << "[rank](number of doubles to send): ";
+		for (int p = 0; p < procs.size(); p++) {
+		  msk->nulog << "[" << p << "](" << nsend[p] << ") ";
+		}
+		msk->nulog << std::endl;
+	      }
 	      // exchange atoms
 	      int begin = 0;
 	      for (int p = 0; p < procs.size(); p++) {
@@ -935,9 +914,12 @@ void Krun::proceed(double deltat)
 		  procs.push_back(i);
 		}
 	      }
-	      // std::cout << "[" << me << "] receiving from: "; 
-	      // std::for_each(procs.begin(), procs.end(), [](const int& i) { std::cout << " " << i; });
-	      // std::cout << std::endl;
+	      // nufeb log output
+	      if (msk->nulog_flag) {
+		msk->nulog << "receiving bacteria atoms from ranks: "; 
+		std::for_each(procs.begin(), procs.end(), [&](const int& i) { msk->nulog << " " << i; });
+		msk->nulog << std::endl;
+	      }
 	      // Receive the number of doubles to be sent
 	      std::vector<int> nrecv(procs.size());
 	      std::vector<MPI_Request> requests(procs.size());
@@ -945,17 +927,18 @@ void Krun::proceed(double deltat)
 		MPI_Irecv(&nrecv[i], 1, MPI_INT, procs[i], 0, MPI_COMM_WORLD, &requests[i]);
 	      }
 	      MPI_Waitall(requests.size(), requests.data(), MPI_STATUS_IGNORE);
-	      // std::cout << "[" << me << "] receiving: "; 
-	      // for (int i = 0; i < procs.size(); i++) {
-	      // std::cout << "(" << procs[i] << ":" << nrecv[i] << ") ";
-	      // }
-	      // std::cout << std::endl;
+	      // nufeb log output
+	      if (msk->nulog_flag) {
+		msk->nulog << "[rank](number of doubles to receive): "; 
+		for (int i = 0; i < procs.size(); i++) {
+		  msk->nulog << "[" << procs[i] << "](" << nrecv[i] << ") ";
+		}
+		msk->nulog << std::endl;
+	      }
 	      // ensure nufeb_buf is big enough to host incoming data
 	      int total = std::accumulate(nrecv.begin(), nrecv.end(), 0); // total number of doubles to receive
-	      // std::cout << "[" << me << "] total: " << total << std::endl; 
 	      if (nufeb_buf.size() < total)
 		nufeb_buf.resize(1.5*total);
-	      // std::cout << "[" << me << "] buffer size: " << nufeb_buf.size() << std::endl;
 	      // exchange atoms
 	      int begin = 0;
 	      for (int p = 0; p < procs.size(); p++) {
@@ -964,12 +947,7 @@ void Krun::proceed(double deltat)
 		begin += nrecv[p];
 	      }
 	      if (requests.size() > 0) MPI_Waitall(requests.size(), requests.data(), MPI_STATUS_IGNORE);
-	      // clear ghost count and any ghost bonus data internal to AtomVec
-	      // same logic as beginning of Comm::exchange()
-	      // do it now b/c creating atoms will overwrite ghost atoms
 	      LAMMPS_NS::Atom *atom = lammpsIO->lmp->atom;
-	      // atom->nghost = 0;
-	      // atom->avec->clear_bonus();
 	      // delete bacteria atoms
 	      std::stringstream ss;
 	      ss << "delete_atoms group " << fix->aCgroups[Cpid2exec] << " compress no";
@@ -977,23 +955,8 @@ void Krun::proceed(double deltat)
 	      // unpack received atoms
 	      int m = 0;
 	      while (m < total) {
-	      	// LAMMPS_NS::tagint tag = (LAMMPS_NS::tagint)ubuf(nufeb_buf[m+7]).i;
-	      	// int type = (int)ubuf(nufeb_buf[m+8]).i;
-		// int i = -1;
-		// if (tag <= maxtag_sub)
-		//   i = atom->map(tag);
-		// if (i > atom->nlocal)
-		//   std::cout << "[" << me << "] tag=" << tag << " index=" << i << " nlocal=" << atom->nlocal << " is probably a ghost particle!" <<  std::endl; 
-	      	// if (i > 0) {
-		//   // std::cout << "[" << me << "] found: tag=" << tag << std::endl; 
-	      	//   m += atom->avec->unpack_exchange(&nufeb_buf[m]);
-	      	//   atom->avec->copy(i, atom->nlocal-1, 1);
-	      	//   --atom->nlocal;
-	      	// } else {
-		//   std::cout << "[" << me << "] not found: tag=" << tag << std::endl; 
 		m += atom->avec->unpack_exchange(&nufeb_buf[m]);
 		atom->tag[atom->nlocal-1] = 0;
-		// }
 	      }
 	      // update atom->natoms: total number of atoms
 	      LAMMPS_NS::bigint nblocal = atom->nlocal;
@@ -1004,7 +967,6 @@ void Krun::proceed(double deltat)
 	      	atom->map_init(1);
 	      	atom->map_set();
 	      }
-	      // lammpsIO->lmp->comm->borders();
 	    }
 	  }
 	} // if (Cexecute)        

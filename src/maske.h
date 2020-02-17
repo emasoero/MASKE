@@ -7,6 +7,7 @@
 #include "mpi.h"
 #include <unistd.h>   //just for the sleep() function
 #include <vector>
+#include <fstream>
 
 
 
@@ -70,7 +71,10 @@ namespace MASKE_NS {
 
         std::vector<int> Rtypes;    // vector of types associated to real particles
         std::vector<int> Ttypes;    // vector of types associated to trial particles
-        
+
+	bool nulog_flag;     // true if nufeb log is to be generated
+	std::ofstream nulog; // nufeb log file
+
 	MASKE(int,char**);  // constructor
 	~MASKE();           // destructor
 		

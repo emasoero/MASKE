@@ -127,6 +127,12 @@ void Universe::create()
         msk->plogfname=fname;
         output->createplog(fname);
     }
+
+    if (msk->nulog_flag) {
+      std::stringstream ss;
+      ss << "p" << me << ".nulog";
+      msk->nulog.open(ss.str());
+    }
     
     // All processors tell every other processor their color (subcomm id) for later use (when sending subcomm-specific stuff, e.g. random number seed)
     color_each = new int[nprocs];
