@@ -1,0 +1,408 @@
+# Running the code on Enrico's Mac Air
+#    /opt/local/bin/mpiexec-mpich-mp -np 4 ./lmp_mac_mpi -in input.dat
+
+units si
+
+atom_style sphere
+
+boundary p p p
+
+variable Nstep equal 388
+
+region boxfoo block -100 100 -100 100 -100 100 units box
+create_box  6 boxfoo
+read_dump ../dump.all_copy.Antonello  $(v_Nstep) x y z box yes add keep
+
+variable Diam equal 1e-6
+
+set	type 1 diameter $(v_Diam)
+set	type 2 diameter $(v_Diam)
+set	type 3 diameter $(v_Diam)
+set	type 5 diameter $(v_Diam)
+
+
+
+
+	# TYPE 1,2 	sigmaLJ =3 
+	# TYPE 3,4 	sigmaLJ =6
+	# TYPE 5,6 	sigmaLJ =9
+	# TYPE 7,8 	sigmaLJ =12
+	# TYPE 9,10 	sigmaLJ =15
+	# 1,3,5,7,9 exist - 2,4,6,8,10 new
+
+
+# ===========DUMP THERMO and VARIABLES==============
+
+
+variable press equal press
+variable Up equal epair
+
+compute rad all property/atom radius
+variable pvf atom 4./3.*PI*c_rad*c_rad*c_rad/vol
+compute packf all reduce sum v_pvf
+variable packf equal c_packf
+
+variable sxx equal -pxx
+variable syy equal -pyy
+variable szz equal -pzz
+variable sxy equal -pxy
+variable sxz equal -pxz
+variable syz equal -pyz
+
+
+
+compute         spa all stress/atom NULL
+variable 	mps atom (c_spa[1]+c_spa[2]+c_spa[3])/3.0
+
+variable 	pvol atom 4./3.*PI*c_rad*c_rad*c_rad
+
+variable	mpsPos atom (1.0+v_mps/abs(v_mps))/2.0*v_mps/vol*atoms
+variable	mpsNeg atom (1.0-v_mps/abs(v_mps))/2.0*v_mps/vol*atoms
+
+compute		aMPSpos all reduce ave v_mpsPos
+compute		aMPSneg all reduce ave v_mpsNeg
+
+
+
+
+
+thermo_style	custom step atoms ke vol epair press c_packf v_sxx v_syy v_szz v_sxy v_sxz v_syz c_aMPSpos c_aMPSneg
+thermo		100
+
+#dump		dumpXX all custom 100 3_dumpXX.elastic_post id type x y z radius c_rad
+
+
+
+variable imax equal 90		#=====Number of axial loading steps
+variable jmax equal 80		#=====Number of shear loading steps
+# THESE WERE 100 steps for i and 80 for j...
+
+variable ms equal 1000		# number of minimize steps
+
+
+
+# ===========POTENTIALS==============
+pair_style table linear 4000
+pair_coeff * * ../table.potential_SI Spring_CH-CH
+
+pair_coeff 1 1 ../table.potential_SI Spring_CH-CH
+pair_coeff 1 2 ../table.potential_SI Spring_CH-CH
+pair_coeff 1 3 ../table.potential_SI Spring_CH-CH
+pair_coeff 1 4 ../table.potential_SI Spring_CH-CaCO3	
+pair_coeff 1 5 ../table.potential_SI Spring_CH-CaCO3	
+pair_coeff 2 2 ../table.potential_SI Spring_CH-CH
+pair_coeff 2 3 ../table.potential_SI Spring_CH-CH
+pair_coeff 2 4 ../table.potential_SI Spring_CH-CaCO3	
+pair_coeff 2 5 ../table.potential_SI Spring_CH-CaCO3	
+pair_coeff 3 3 ../table.potential_SI Spring_CH-CH
+pair_coeff 3 4 ../table.potential_SI Spring_CH-CaCO3	
+pair_coeff 3 5 ../table.potential_SI Spring_CH-CaCO3	
+pair_coeff 4 4 ../table.potential_SI Spring_CaCO3-CaCO3
+pair_coeff 4 5 ../table.potential_SI Spring_CaCO3-CaCO3
+pair_coeff 5 5 ../table.potential_SI Spring_CaCO3-CaCO3
+
+
+
+
+neighbor	5e-7 bin
+neigh_modify	delay 0 check no one 10000
+
+run 0
+
+min_style cg
+min_modify dmax 1e-9
+#minimize 0 0 $(v_ms) $(v_ms)
+
+
+
+
+# ==== XX stress-strain curves
+
+
+write_dump	all custom 3_dumpXX.elastic_post id type x y z radius c_rad v_mps v_mpsPos v_mpsNeg modify append no
+
+print "eXX press epair packF sxx syy szz sxy sxz syz aveMPS+ aveMPS-" file 3_outXX_post.dat
+print "0.0 ${press} ${Up} $(c_packf) ${sxx} ${syy} ${szz} ${sxy} ${sxz} ${syz} $(c_aMPSpos) $(c_aMPSneg)" append 3_outXX_post.dat
+
+
+variable i loop ${imax}
+variable eps equal v_i*v_i/400000
+variable epre equal 0.0
+variable factor equal 1.0+v_eps-v_epre
+
+label loopXX
+
+change_box all x scale $(v_factor) remap
+minimize 0 0 $(v_ms) $(v_ms)
+
+print "${eps} ${press} ${Up} $(c_packf) ${sxx} ${syy} ${szz} ${sxy} ${sxz} ${syz} $(c_aMPSpos) $(c_aMPSneg)" append 3_outXX_post.dat
+
+variable factor delete
+variable epre delete
+
+variable epre equal $(v_eps)
+variable factor equal 1.0+v_eps-v_epre
+
+write_dump	all custom 3_dumpXX.elastic_post id type x y z radius c_rad v_mps v_mpsPos v_mpsNeg modify append yes
+
+next i
+jump SELF loopXX
+
+variable i delete
+variable factor delete
+variable epre delete
+
+#undump dumpXX
+
+
+
+
+# ==== YY stress-strain curves
+
+#dump		dumpYY all custom 100 3_dumpYY.elastic_post id type x y z radius c_rad
+
+read_dump ../dump.all_copy.Antonello  $(v_Nstep) x y z box yes
+set	type 1 diameter $(v_Diam)
+set	type 2 diameter $(v_Diam)
+set	type 3 diameter $(v_Diam)
+set	type 5 diameter $(v_Diam)
+run 0
+
+write_dump	all custom 3_dumpYY.elastic_post id type x y z radius c_rad v_mps v_mpsPos v_mpsNeg modify append no
+
+print "eYY press epair packF sxx syy szz sxy sxz syz aveMPS+ aveMPS-" file 3_outYY_post.dat
+print "0.0 ${press} ${Up} $(c_packf) ${sxx} ${syy} ${szz} ${sxy} ${sxz} ${syz} $(c_aMPSpos) $(c_aMPSneg)" append 3_outYY_post.dat
+
+
+variable i loop ${imax}
+variable epre equal 0.0
+variable factor equal 1.0+v_eps-v_epre
+
+label loopYY
+
+change_box all y scale $(v_factor) remap
+minimize 0 0 $(v_ms) $(v_ms)
+
+print "${eps} ${press} ${Up} $(c_packf) ${sxx} ${syy} ${szz} ${sxy} ${sxz} ${syz} $(c_aMPSpos) $(c_aMPSneg)" append 3_outYY_post.dat
+
+variable factor delete
+variable epre delete
+
+variable epre equal $(v_eps)
+variable factor equal 1.0+v_eps-v_epre
+
+write_dump	all custom 3_dumpYY.elastic_post id type x y z radius c_rad v_mps v_mpsPos v_mpsNeg modify append yes
+
+next i
+jump SELF loopYY
+
+variable i delete
+variable factor delete
+variable epre delete
+
+#undump dumpYY
+
+
+
+
+
+
+# ==== ZZ stress-strain curves
+
+#dump		dumpZZ all custom 100 3_dumpZZ.elastic_post id type x y z radius c_rad
+
+read_dump ../dump.all_copy.Antonello  $(v_Nstep) x y z box yes
+set	type 1 diameter $(v_Diam)
+set	type 2 diameter $(v_Diam)
+set	type 3 diameter $(v_Diam)
+set	type 5 diameter $(v_Diam)
+run 0
+
+write_dump	all custom 3_dumpZZ.elastic_post id type x y z radius c_rad v_mps v_mpsPos v_mpsNeg modify append no
+
+print "eZZ press epair packF sxx syy szz sxy sxz syz aveMPS+ aveMPS-" file 3_outZZ_post.dat
+print "0.0 ${press} ${Up} $(c_packf) ${sxx} ${syy} ${szz} ${sxy} ${sxz} ${syz} $(c_aMPSpos) $(c_aMPSneg)" append 3_outZZ_post.dat
+
+
+variable i loop ${imax}
+variable epre equal 0.0
+variable factor equal 1.0+v_eps-v_epre
+
+label loopZZ
+
+change_box all z scale $(v_factor) remap
+minimize 0 0 $(v_ms) $(v_ms)
+
+print "${eps} ${press} ${Up} $(c_packf) ${sxx} ${syy} ${szz} ${sxy} ${sxz} ${syz} $(c_aMPSpos) $(c_aMPSneg)" append 3_outZZ_post.dat
+
+variable factor delete
+variable epre delete
+
+variable epre equal $(v_eps)
+variable factor equal 1.0+v_eps-v_epre
+
+write_dump	all custom 3_dumpZZ.elastic_post id type x y z radius c_rad v_mps v_mpsPos v_mpsNeg modify append yes
+
+next i
+jump SELF loopZZ
+
+variable i delete
+variable factor delete
+variable epre delete
+
+#undump dumpZZ
+
+
+
+
+
+
+
+# ==== XY stress-strain curves
+
+read_dump ../dump.all_copy.Antonello  $(v_Nstep) x y z box yes
+change_box all triclinic
+
+
+set	type 1 diameter $(v_Diam)
+set	type 2 diameter $(v_Diam)
+set	type 3 diameter $(v_Diam)
+set	type 5 diameter $(v_Diam)
+run 0
+
+write_dump	all custom 3_dumpXY.elastic_post id type x y z radius c_rad v_mps v_mpsPos v_mpsNeg modify append no
+
+
+print "eXY press epair packF sxx syy szz sxy sxz syz aveMPS+ aveMPS-" file 3_outXY_post.dat
+print "0.0 ${press} ${Up} $(c_packf) ${sxx} ${syy} ${szz} ${sxy} ${sxz} ${syz} $(c_aMPSpos) $(c_aMPSneg)" append 3_outXY_post.dat
+
+
+variable j loop ${jmax}
+variable dgam equal v_j*v_j/500000
+variable dtilt equal v_dgam*(yhi-ylo)
+variable gamxy equal xy/(yhi-ylo)
+
+label loopXY
+
+change_box all xy delta $(v_dtilt) remap
+minimize 0 0 $(v_ms) $(v_ms)
+
+print "${gamxy} ${press} ${Up} $(c_packf) ${sxx} ${syy} ${szz} ${sxy} ${sxz} ${syz} $(c_aMPSpos) $(c_aMPSneg)" append 3_outXY_post.dat
+
+write_dump	all custom 3_dumpXY.elastic_post id type x y z radius c_rad v_mps v_mpsPos v_mpsNeg modify append yes
+
+next j
+jump SELF loopXY
+
+variable j delete
+variable dtilt delete
+variable dgam delete
+
+#undump dumpXY
+change_box all xy final 0.0 remap
+change_box all ortho
+
+
+
+
+
+
+# ==== XZ stress-strain curves
+
+read_dump ../dump.all_copy.Antonello  $(v_Nstep) x y z box yes
+change_box all triclinic
+
+
+set	type 1 diameter $(v_Diam)
+set	type 2 diameter $(v_Diam)
+set	type 3 diameter $(v_Diam)
+set	type 5 diameter $(v_Diam)
+run 0
+
+
+write_dump	all custom 3_dumpXZ.elastic_post id type x y z radius c_rad v_mps v_mpsPos v_mpsNeg modify append no
+
+
+print "eXZ press epair packF sxx syy szz sxy sxz syz aveMPS+ aveMPS-" file 3_outXZ_post.dat
+print "0.0 ${press} ${Up} $(c_packf) ${sxx} ${syy} ${szz} ${sxy} ${sxz} ${syz} $(c_aMPSpos) $(c_aMPSneg)" append 3_outXZ_post.dat
+
+
+variable j loop ${jmax}
+variable dgam equal v_j*v_j/500000
+variable dtilt equal v_dgam*(zhi-zlo)
+variable gamxz equal xz/(zhi-zlo)
+
+label loopXZ
+
+change_box all xz delta $(v_dtilt) remap
+minimize 0 0 $(v_ms) $(v_ms)
+
+print "${gamxz} ${press} ${Up} $(c_packf) ${sxx} ${syy} ${szz} ${sxy} ${sxz} ${syz} $(c_aMPSpos) $(c_aMPSneg)" append 3_outXZ_post.dat
+
+write_dump	all custom 3_dumpXZ.elastic_post id type x y z radius c_rad v_mps v_mpsPos v_mpsNeg modify append yes
+
+next j
+jump SELF loopXZ
+
+variable j delete
+
+variable dtilt delete
+variable dgam delete
+
+#undump dumpXZ
+change_box all xz final 0.0 remap
+change_box all ortho
+
+
+
+
+
+
+# ==== YZ stress-strain curves
+
+read_dump ../dump.all_copy.Antonello  $(v_Nstep) x y z box yes
+change_box all triclinic
+
+
+set	type 1 diameter $(v_Diam)
+set	type 2 diameter $(v_Diam)
+set	type 3 diameter $(v_Diam)
+set	type 5 diameter $(v_Diam)
+run 0
+
+
+write_dump	all custom 3_dumpYZ.elastic_post id type x y z radius c_rad v_mps v_mpsPos v_mpsNeg modify append no
+
+
+print "eYZ press epair packF sxx syy szz sxy sxz syz aveMPS+ aveMPS-" file 3_outYZ_post.dat
+print "0.0 ${press} ${Up} $(c_packf) ${sxx} ${syy} ${szz} ${sxy} ${sxz} ${syz} $(c_aMPSpos) $(c_aMPSneg)" append 3_outYZ_post.dat
+
+
+variable j loop ${jmax}
+variable dgam equal v_j*v_j/500000
+variable dtilt equal v_dgam*(zhi-zlo)
+variable gamyz equal yz/(zhi-zlo)
+
+
+label loopYZ
+
+change_box all yz delta $(v_dtilt) remap
+minimize 0 0 $(v_ms) $(v_ms)
+
+print "${gamyz} ${press} ${Up} $(c_packf) ${sxx} ${syy} ${szz} ${sxy} ${sxz} ${syz} $(c_aMPSpos) $(c_aMPSneg)" append 3_outYZ_post.dat
+
+write_dump	all custom 3_dumpYZ.elastic_post id type x y z radius c_rad v_mps v_mpsPos v_mpsNeg modify append yes
+
+next j
+jump SELF loopYZ
+
+variable j delete
+variable dtilt delete
+variable dgam delete
+
+#undump dumpYZ
+change_box all yz final 0.0 remap
+change_box all ortho
+
+
+
