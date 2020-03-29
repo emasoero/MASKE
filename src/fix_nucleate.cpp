@@ -822,7 +822,8 @@ void Fix_nucleate::comp_rates_allpar(int pos)
                     if (chem->mechchain[mid]) DUi *= (chem->ch_rdV_fgd[chID][k]);
                 }
                 
-                double r0 = kappa * KT / msk->hpl / gammax * cx * exp(-DGx / KT) * DV;
+                // prefactor. unitC * nAvo converts DV in user's units (e.g. nm3) to litres per mole (same as molar volume Vm in fix_delete... see notes on TST)
+                double r0 = kappa * KT / msk->hpl / gammax * cx * exp(-DGx / KT) * DV * solution->unitC * nAvo;
                 
                 if (msk->wplog) {
                     std::ostringstream ss;

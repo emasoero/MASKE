@@ -598,8 +598,8 @@ void Fix_delete::comp_rates_allpar(int pos)
             DUpu = -2.*tE[i]/pow((double)nrv,1./3.);
         }
         else if (strcmp(chem->mechinter[mid].c_str(),"int_2lin")==0) {
-            DSpu = -Ps/pow((double)nrv,69./100.);      // power artificailly tuned to get hetero nucleation in cg sim.
-            DUpu = -2.*tE[i]/pow((double)nrv,69./100.);
+            DSpu = -Ps/pow((double)nrv,68.5/100.);      // power artificailly tuned to get hetero nucleation in cg sim.
+            DUpu = -2.*tE[i]/pow((double)nrv,68.5/100.);
         }
         else{
             DSpu = -Ps/((double)nrv);

@@ -17,6 +17,7 @@
 
 #define MASTER 0
 #define M_PI 3.14159265358979323846
+#define nAvo 6.022e23
 
 namespace MASKE_NS {
 	
