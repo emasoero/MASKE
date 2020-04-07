@@ -190,7 +190,7 @@ double Solution::compQ(int rxid, std::string type, std::string sol_in_style, std
             if (Vcins[i]<0.) Vcins[i]=0.;
         }
         
-        // compute ionic strength
+        // compute ionic strength  (can be moved in update solution..)
         double Istr = 0.;
         for (int i=0; i<chem->Nmol; i++) {
             Istr +=  Vcins[i] * chem->mol_z[i] * chem->mol_z[i];

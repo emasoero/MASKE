@@ -137,7 +137,7 @@ void Universe::create()
     // All processors tell every other processor their color (subcomm id) for later use (when sending subcomm-specific stuff, e.g. random number seed)
     color_each = new int[nprocs];
     color_each[me] = color;
-    MPI_Allgather(&color_each[me],1,MPI_INT,color_each,1,MPI_INT,MPI_COMM_WORLD);
+    MPI_Allgather(MPI_IN_PLACE,1,MPI_INT,color_each,1,MPI_INT,MPI_COMM_WORLD);
     
     // Seeding random generator for each processor
     randm->seedit(SCseme[color]);
