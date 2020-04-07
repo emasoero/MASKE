@@ -4,15 +4,15 @@
 # bkg_vol is the apparent volume of one molecule when implicit in the background, typically in solution
 # bkg_ahyd is the hydrated ion size of the moleculule in solution = molecule + coorinated water    (I found 0.42 nm for Ca2+, and I guessed the others..)
 # charge_num  zi  is the charge number. E.g. for Ca2+ it is +2, and for H2SiO4 2- it is -2
-molecule C3S     0.49378  0.49378 0    0   0
-molecule CSHI    0.65 0.65 0   0   0
-molecule CSHII   0.65 0.65 0   0   0
-molecule CH      0.5  0.5 0     0   0
-molecule Ca      0  0 0.0741 0.42   2
-molecule H2SiO4  0    0   0.125 0.5   -2
-molecule OH      0.2  0.2 0.008 0.3   -1
-molecule H2O     0.3 0.3  0.027 0   0
-molecule H3SiO4  0    0   0.125  0.5  -1
+molecule C3S     0.49378  0.49378 0    0   0 -1
+molecule CSHI    0.65 0.65 0   0   0 -1
+molecule CSHII   0.65 0.65 0   0   0 -1
+molecule CH      0.5  0.5 0     0   0 -1
+molecule Ca      0  0 0.0741 0.42   2 -1
+molecule H2SiO4  0    0   0.125 0.5   -2 -1
+molecule OH      0.2  0.2 0.008 0.3   -1 -1
+molecule H2O     0.3 0.3  0.027 0   0 -1
+molecule H3SiO4  0    0   0.125  0.5  -1 -1
 
 
 
