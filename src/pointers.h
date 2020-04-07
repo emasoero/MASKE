@@ -21,7 +21,7 @@ public:
 
     Pointers(MASKE *ptr) :
     msk(ptr),
-	memory(ptr->memory),
+    memory(ptr->memory),
     error(ptr->error),
     inputmsk(ptr->inputmsk),
     interact(ptr->interact),
@@ -34,11 +34,13 @@ public:
     solution(ptr->solution),
     fix(ptr->fix),
     fix_del(ptr->fix_del),
+#ifdef MASKE_WITH_NUFEB
     fix_nufeb(ptr->fix_nufeb),
+#endif
     krun(ptr->krun),
     randm(ptr->randm),
     output(ptr->output),
-	screen(ptr->screen),
+    screen(ptr->screen),
     plog(ptr->plog),
     thermo(ptr->thermo),
     fix_cfoo(ptr->fix_cfoo),
@@ -46,13 +48,12 @@ public:
     block(ptr->block),
     store(ptr->store),
     fix_nucl(ptr->fix_nucl) {}
-    
-	
-	virtual ~Pointers() {}
-	
+        
+    virtual ~Pointers() {}
+        
 protected:
-	MASKE *msk;
-	Memory *&memory;
+    MASKE *msk;
+    Memory *&memory;
     Error *&error;
     Inputmsk *&inputmsk;
     Universe *&universe;
@@ -66,7 +67,9 @@ protected:
     Fix *&fix;
     Fix_delete *&fix_del;
     Fix_Cfoo *&fix_cfoo;
+#ifdef MASKE_WITH_NUFEB
     Fix_nufeb *&fix_nufeb;
+#endif
     Relax *&relax;
     Krun *&krun;
     Randm *&randm;

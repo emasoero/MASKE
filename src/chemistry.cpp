@@ -117,6 +117,9 @@ void Chemistry::addmolecule()
     mol_ahyd.push_back(size);
     ss >> size;
     mol_z.push_back(size);
+    int n;
+    ss >> n;
+    mol_nufeb.push_back(n);
     
     mol_cins.push_back(0.);  //initial concentration set to zero and later to be updated by solution.cpp
     mol_nins.push_back(0.);  //initial number of mols set to zero and later to be updated by solution.cpp
