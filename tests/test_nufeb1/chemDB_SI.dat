@@ -6,37 +6,38 @@
 # charge_num  zi  is the charge number. E.g. for Ca2+ it is +2, and for H2SiO4 2- it is -2
 
 # from kumaran's paper
-molecule Ca      0   	0  	-0.0274E-27 0.82E-9   2
-molecule H4SiO4  0   	0   	0.1512E-27  0.983E-9   0
-molecule OH      0   	0   	0.002E-27   0.416E-9  -1
+# TODO: add last column as nufeb chemical species name
+molecule Ca      0          0         -0.0274E-27 0.82E-9   2 -1
+molecule H4SiO4  0          0          0.1512E-27 0.983E-9  0 -1
+molecule OH      0          0          0.002E-27  0.416E-9 -1 -1
 
 # hydrated diameters from Nightingale, J. Phys. Chem. 1959. Ionic radii from same paper allow estimation of apparent volume as Vhyd - Vion, as per kumaran paper
-molecule Na	0	0	-123456	0.716	1
-molecule Ba	0	0	-123456	0.808	2
-molecule Sr	0	0	-123456	0.824	2
-molecule Mg	0	0	-123456	0.856	2
-molecule CO3	 0	0	 0.1021E-27 0.788E-9  -2
-molecule H      0   	0   	123456   0.564  -1
+molecule Na      0          0         -123456     0.716     1 -1
+molecule Ba      0          0         -123456     0.808     2 -1
+molecule Sr      0          0         -123456     0.824     2 -1
+molecule Mg      0          0         -123456     0.856     2 -1
+molecule CO3     0          0          0.1021E-27 0.788E-9 -2 -1
+molecule H       0          0          123456     0.564    -1 -1
 
 # water from molar volume
-molecule H2O     0 0  0.027E-27 0   0
+molecule H2O     0          0          0.027E-27  0         0 -1
 
 # solids from molar volume
-molecule CH      0.303E-9  0.303E-9 	0    	0     	0
-molecule CaCO3      0.3944E-9  0.3944E-9 	0    	0     	0
+molecule CH      0.303E-9   0.303E-9   0          0         0 -1
+molecule CaCO3   0.3944E-9  0.3944E-9  0          0         0 -1
 
 
 # older values of which I am not sure
-molecule C3S     0.49378E-9  0.49378E-9 0    0   0
-molecule CSHI    0.65E-9 0.65E-9 0   0   0
-molecule CSHII   0.65E-9 0.65E-9 0   0   0
-molecule H2SiO4  0    0   0.125E-27 0.5E-9   -2
-molecule H3SiO4  0    0   0.125E-27  0.5E-9  -1
+molecule C3S     0.49378E-9 0.49378E-9 0          0         0 -1
+molecule CSHI    0.65E-9    0.65E-9    0          0         0 -1
+molecule CSHII   0.65E-9    0.65E-9    0          0         0 -1
+molecule H2SiO4  0          0          0.125E-27  0.5E-9   -2 -1
+molecule H3SiO4  0          0          0.125E-27  0.5E-9   -1 -1
 
 
 
 # ACTIVITY COEFFICIENTS OF ACTIVATED COMPLEXES
-gammax gxSolid  const 1 	# dimensionless and equal to 1 if reference reaction is the dissolution of a charge-neutral solid
+gammax gxSolid  const 1         # dimensionless and equal to 1 if reference reaction is the dissolution of a charge-neutral solid
 
 
 
@@ -48,9 +49,9 @@ DGx DG_gC3Sprec_test const -8.6144e-20     # DGxdis above + kT ln(Keq_dis). kT i
 
 DGx DG_CaOHdis const 4.931801e-20     # Joules, from 29.7 kJ/mol in Johannnsen and Rademacher, Acta Hydrochim. hydrobiol. 27 (1999)
 
-DGx DG_CaCO3_dis const	5.8360641e-20	# from 8.4 kcal/mol = 35.1456 kJ/mol in Sjoberg 1976, Geochim Cosmochim Acta
+DGx DG_CaCO3_dis const  5.8360641e-20   # from 8.4 kcal/mol = 35.1456 kJ/mol in Sjoberg 1976, Geochim Cosmochim Acta
 
-DGx DG_CaCO3_prec const	-2.1555e-20	# DGxdis above + kT ln(Keq_dis). kT in kj/mol is 2.479, times 1.66 to convert to ag nm2 ns-2. Keq_diss, from corresponding equation below, is 3.7e-9, from  wikipedia referring to Lide, D. R., ed. (2005). CRC Handbook of Chemistry and Physics (86th ed.). Boca Raton (FL): CRC Press. ISBN 0-8493-0486-5
+DGx DG_CaCO3_prec const -2.1555e-20     # DGxdis above + kT ln(Keq_dis). kT in kj/mol is 2.479, times 1.66 to convert to ag nm2 ns-2. Keq_diss, from corresponding equation below, is 3.7e-9, from  wikipedia referring to Lide, D. R., ed. (2005). CRC Handbook of Chemistry and Physics (86th ed.). Boca Raton (FL): CRC Press. ISBN 0-8493-0486-5
 
 
 
@@ -62,9 +63,9 @@ DGx DG_CaCO3_prec const	-2.1555e-20	# DGxdis above + kT ln(Keq_dis). kT in kj/mo
 # For style simple, the 4 mandatory args are:  activity coeff of activated complex's calculator name (user defined above) ; activation energy of transition state's calculator name (user defined above);  equilibrium constant (user-given here);  ki-parameter, viz fractional contribution of interaction and surface energy (user-given here, between 0 and 1 - per classical TST, should be 0 for precipitation and 1 for dissolution reactions)
 # keywords can be bkg or fgd, followed by list of changes to background and foreground (particles) in terms of number of molecules, induced by the reaction
 
-reax CH_dis       simple gxSolid DG_CaOHdis 	5.5e-6  1      bkg Ca +1 OH +2   fgd CH -1
-reax CaCO3_dis   simple gxSolid DG_CaCO3_dis 	3.7e-9  0      bkg Ca +1 CO3 +1  fgd CaCO3 -1
-reax CaCO3_prec   simple gxSolid DG_CaCO3_prec 	270270270  0      bkg Ca -1 CO3 -1  fgd CaCO3 +1
+reax CH_dis       simple gxSolid DG_CaOHdis     5.5e-6  1      bkg Ca +1 OH +2   fgd CH -1
+reax CaCO3_dis   simple gxSolid DG_CaCO3_dis    3.7e-9  0      bkg Ca +1 CO3 +1  fgd CaCO3 -1
+reax CaCO3_prec   simple gxSolid DG_CaCO3_prec  270270270  0      bkg Ca -1 CO3 -1  fgd CaCO3 +1
 
 
 #reax CH_form    simple gxfoo DGfoo 1.1  0.5     bkg Ca -1 OH -2                     fgd CH +1   # a commment just for testing
