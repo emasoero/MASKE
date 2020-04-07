@@ -228,7 +228,7 @@ fix ki1 HET kinetics 1 10 10 10 v_diffT v_layer demflag 0 niter 10000
 fix ki2 HET kinetics/thermo
 fix ki3 HET kinetics/ph fix 
 fix ki4 HET kinetics/growth/energy v_EPSdens	
-fix g1 HET kinetics/diffusion v_tol pp pp nd mol
+fix g1 HET kinetics/diffusion v_tol pp pp nn mol
 fix d1 HET divide 1 v_EPSdens v_divDia 31231 demflag 0
 """
 

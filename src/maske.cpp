@@ -22,7 +22,6 @@
 #include "fix.h"
 #include "fix_delete.h"
 #include "fix_Cfoo.h"
-#include "fix_nufeb.h"
 #include "relax.h"
 #include "krun.h"
 #include "randm.h"
@@ -31,6 +30,9 @@
 #include "block.h"
 #include "store.h"
 
+#ifdef MASKE_WITH_NUFEB
+#include "fix_nufeb.h"
+#endif
 
 using namespace MASKE_NS;
 
@@ -79,7 +81,9 @@ MASKE::MASKE(int narg, char **arg)
     solution = new Solution(this);
     fix = new Fix(this);
     fix_del = new Fix_delete(this);
+#ifdef MASKE_WITH_NUFEB
     fix_nufeb = new Fix_nufeb(this);
+#endif
     krun = new Krun(this);
     randm = new Randm(this);
     output = new Output(this);
@@ -184,12 +188,14 @@ MASKE::~MASKE()
         relax->printall();
     }
     MPI_Barrier(MPI_COMM_WORLD);
+#ifdef MASKE_WITH_NUFEB
     delete fix_nufeb;
     if (me==MASTER) {
         fprintf(screen,"Deleting fix_nufeb class\n");
         relax->printall();
     }
     MPI_Barrier(MPI_COMM_WORLD);
+#endif
     delete relax;
     if (me==MASTER) {
         fprintf(screen,"Deleting fix_nucleate class\n");

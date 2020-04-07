@@ -52,8 +52,10 @@ namespace MASKE_NS {
         class Fix_nucleate *fix_nucl;
         class Block *block;
         class Store *store;
+#ifdef MASKE_WITH_NUFEB
 	class Fix_nufeb *fix_nufeb;
-        
+#endif
+
         int Nsteps;     // the total number of fundametnal simulation steps to run (each transition is called every multiple of this step)
         int step;       // the current simulation step
         double doublestep;  // same as step, but in double version, as needed to calculate the frequency of invoking transition (see isasctive functions in transition files)
