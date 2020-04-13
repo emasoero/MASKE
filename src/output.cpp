@@ -106,7 +106,7 @@ void Output::writethermo(void)
             
             // the first subcomm with lammps active records the lmp variable or compute value
             if (universe->flampSC == universe->color){
-                std::string tolmp = "run 0 pre no post no";
+                std::string tolmp = "run 0";
                 lammpsIO->lammpsdo(tolmp);
                  if (strcmp(vc.c_str(),"v")==0) {
                      fprintf(screen,"PROC %d varname %s",me,token.c_str());
@@ -193,7 +193,7 @@ void Output::writedump(int i)
     }
     
     // write enrty
-    lammpsIO->lammpsdo("run 0 pre no post no");
+    lammpsIO->lammpsdo("run 0");
     
     // close dump
     tolmp = "undump "+dumpID[i];
