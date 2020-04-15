@@ -7,8 +7,6 @@
 | Git    | Distributed version control system | Most recent versions should work |
 | CMake  | Cross-platform build tool          | 3.0 or above                     |
 | MPI    | Implementation of the MPI standard | Same requirements as LAMMPS      |
-| JPEG   | Image library                      | Most recent versions should work |
-| PNG    | Image library                      | Most recent versions should work |
 
 ## Download
 
@@ -46,14 +44,23 @@ We rely on [CMake](https://cmake.org) to provide cross-platform build support.
 $ cd lammps
 $ mkdir build
 $ cd build
-$ cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_LIB=on -DBUILD_OMP=off ../cmake
+$ cmake -DCMAKE_BUILD_TYPE=Release -DWITH_JPEG=Off -DWITH_PNG=Off -DWITH_FFMPEG=Off -DBUILD_LIB=On -DBUILD_OMP=Off -DPKG_MISC=yes -DPKG_USER-MASKE=yes ../cmake
 $ make -j
-$ cd ../../
+$ cd ../..
 $ mkdir build
 $ cd build
-$ cmake ..
+$ cmake -DCMAKE_BUILD_TYPE=Release ..
 $ make -j
 ```
+
+### Newcastle University Rocket cluster
+
+You will need first to load the required modules:
+```
+$ module load CMake
+$ module load OpenMPI
+```
+Then follow the Linux build instructions.
 
 ### Troubleshooting
 
@@ -79,5 +86,14 @@ $ make -j
 Let's try running an example located at the tests folder:
 ```
 $ cd tests/test12-Lay_Nucl_2Grp_Sm_Mono_1pr
+$ mpiexec -np 4 ../../build/maske input_read.dat 
+```
+
+### Running on Newcastle University Rocket cluster
+
+Follow the instructions on the [Rocket webpage](https://services.ncl.ac.uk/itservice/research/hpc/). For a quick interactive run do:
+```
+$ cd tests/test12-Lay_Nucl_2Grp_Sm_Mono_1pr
+$ srun -p interactive -n 4 --pty /bin/bash
 $ mpiexec -np 4 ../../build/maske input_read.dat 
 ```
