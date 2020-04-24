@@ -6,39 +6,34 @@
 # charge_num  zi  is the charge number. E.g. for Ca2+ it is +2, and for H2SiO4 2- it is -2
 
 # from kumaran's paper
-molecule Ca      0   	0  	-0.0274E-27 0.82E-9   2
-molecule H4SiO4  0   	0   	0.1512E-27  0.983E-9   0
-molecule OH      0   	0   	0.002E-27   0.416E-9  -1
+molecule Ca              0          0 -0.0274E-27  0.82E-9  2  2
+molecule H4SiO4          0          0  0.1512E-27 0.983E-9  0 -1
+molecule OH              0          0   0.002E-27 0.416E-9 -1 -1
 
 # hydrated diameters from Nightingale, J. Phys. Chem. 1959. Ionic radii from same paper allow estimation of apparent volume as Vhyd - Vion, as per kumaran paper
-molecule Na	0	0	-123456	0.716	1
-molecule Ba	0	0	-123456	0.808	2
-molecule Sr	0	0	-123456	0.824	2
-molecule Mg	0	0	-123456	0.856	2
-molecule CO3	 0	0	 0.1021E-27 0.788E-9  -2
-molecule H      0   	0   	123456   0.564  -1
+molecule Na              0          0     -123456    0.716  1 -1
+molecule Ba              0          0     -123456    0.808  2 -1
+molecule Sr              0          0     -123456    0.824  2 -1
+molecule Mg              0          0     -123456    0.856  2 -1
+molecule CO3             0          0  0.1021E-27 0.788E-9 -2  5
+molecule H               0          0      123456    0.564 -1 -1
 
 # water from molar volume
-molecule H2O     0 0  0.027E-27 0   0
+molecule H2O             0          0   0.027E-27        0  0 -1
 
 # solids from molar volume
-molecule CH      0.303E-9  0.303E-9 	0    	0     	0
-molecule CaCO3      0.3944E-9  0.3944E-9 	0    	0     	0
-
+molecule CH       0.303E-9   0.303E-9           0        0  0 -1
+molecule CaCO3   0.3944E-9  0.3944E-9           0        0  0 -1
 
 # older values of which I am not sure
-molecule C3S     0.49378E-9  0.49378E-9 0    0   0
-molecule CSHI    0.65E-9 0.65E-9 0   0   0
-molecule CSHII   0.65E-9 0.65E-9 0   0   0
-molecule H2SiO4  0    0   0.125E-27 0.5E-9   -2
-molecule H3SiO4  0    0   0.125E-27  0.5E-9  -1
-
-
+molecule C3S    0.49378E-9 0.49378E-9           0        0  0 -1
+molecule CSHI      0.65E-9    0.65E-9           0        0  0 -1
+molecule CSHII     0.65E-9    0.65E-9           0        0  0 -1
+molecule H2SiO4          0          0   0.125E-27   0.5E-9 -2 -1
+molecule H3SiO4          0          0   0.125E-27   0.5E-9 -1 -1
 
 # ACTIVITY COEFFICIENTS OF ACTIVATED COMPLEXES
-gammax gxSolid  const 1 	# dimensionless and equal to 1 if reference reaction is the dissolution of a charge-neutral solid
-
-
+gammax gxSolid  const 1         # dimensionless and equal to 1 if reference reaction is the dissolution of a charge-neutral solid
 
 # Standard activation free energy of chem reax -- rules to compute it, as I guess may depend not just on chemical reaction
 
@@ -46,15 +41,14 @@ DGx DG_gC3Sdis_Grant  const 8.30e-20 # Joules, from 50 kJ/mole in Grant 2006 and
 
 DGx DG_gC3Sprec_test const -8.6144e-20     # DGxdis above + kT ln(Keq_dis). kT in Joules is 6.9477E-21. Keq_diss, from corresponding equation below, is 1.41e-18.  It is weird to see a negative DG, but this is because the standard state of a solution is 1M, so very concentrated. The negative DGx will give a high exp(-DG/kT) in the rate, but then be compensated for precipitation by the activity product of the ions in solution
 
-DGx DG_CaOHdis const 4.931801e-20     # Joules, from 29.7 kJ/mol in Johannnsen and Rademacher, Acta Hydrochim. hydrobiol. 27 (1999)
+#DGx DG_CaOHdis const 4.931801e-20     # Joules, from 29.7 kJ/mol in Johannnsen and Rademacher, Acta Hydrochim. hydrobiol. 27 (1999)
+DGx DG_CaOHdis const 1.3809e-19     # Joules, from 29.7 kJ/mol in Johannnsen and Rademacher, Acta Hydrochim. hydrobiol. 27 (1999)
 
-DGx DG_CaCO3_dis const	5.8360641e-20	# from 8.4 kcal/mol = 35.1456 kJ/mol in Sjoberg 1976, Geochim Cosmochim Acta
+#DGx DG_CaCO3_dis const 5.8360641e-20   # from 8.4 kcal/mol = 35.1456 kJ/mol in Sjoberg 1976, Geochim Cosmochim Acta
+DGx DG_CaCO3_dis const 1.6341e-19   # from 8.4 kcal/mol = 35.1456 kJ/mol in Sjoberg 1976, Geochim Cosmochim Acta
 
-DGx DG_CaCO3_prec const	-2.1555e-20	# DGxdis above + kT ln(Keq_dis). kT in kj/mol is 2.479, times 1.66 to convert to ag nm2 ns-2. Keq_diss, from corresponding equation below, is 3.7e-9, from  wikipedia referring to Lide, D. R., ed. (2005). CRC Handbook of Chemistry and Physics (86th ed.). Boca Raton (FL): CRC Press. ISBN 0-8493-0486-5
-
-
-
-
+#DGx DG_CaCO3_prec const -2.1555e-20     # DGxdis above + kT ln(Keq_dis). kT in kj/mol is 2.479, times 1.66 to convert to ag nm2 ns-2. Keq_diss, from corresponding equation below, is 3.7e-9, from  wikipedia referring to Lide, D. R., ed. (2005). CRC Handbook of Chemistry and Physics (86th ed.). Boca Raton (FL): CRC Press. ISBN 0-8493-0486-5
+DGx DG_CaCO3_prec const 8.3494e-20     # DGxdis above + kT ln(Keq_dis). kT in kj/mol is 2.479, times 1.66 to convert to ag nm2 ns-2. Keq_diss, from corresponding equation below, is 3.7e-9, from  wikipedia referring to Lide, D. R., ed. (2005). CRC Handbook of Chemistry and Physics (86th ed.). Boca Raton (FL): CRC Press. ISBN 0-8493-0486-5
 
 #  CHEMICAL REACTIONS
 # reax name  style  args keywords
@@ -62,10 +56,9 @@ DGx DG_CaCO3_prec const	-2.1555e-20	# DGxdis above + kT ln(Keq_dis). kT in kj/mo
 # For style simple, the 4 mandatory args are:  activity coeff of activated complex's calculator name (user defined above) ; activation energy of transition state's calculator name (user defined above);  equilibrium constant (user-given here);  ki-parameter, viz fractional contribution of interaction and surface energy (user-given here, between 0 and 1 - per classical TST, should be 0 for precipitation and 1 for dissolution reactions)
 # keywords can be bkg or fgd, followed by list of changes to background and foreground (particles) in terms of number of molecules, induced by the reaction
 
-reax CH_dis       simple gxSolid DG_CaOHdis 	5.5e-6  1      bkg Ca +1 OH +2   fgd CH -1
-reax CaCO3_dis   simple gxSolid DG_CaCO3_dis 	3.7e-9  0      bkg Ca +1 CO3 +1  fgd CaCO3 -1
-reax CaCO3_prec   simple gxSolid DG_CaCO3_prec 	270270270  0      bkg Ca -1 CO3 -1  fgd CaCO3 +1
-
+reax CH_dis      simple gxSolid DG_CaOHdis      5.5e-6  1      bkg Ca +1 OH +2   fgd CH -1
+reax CaCO3_dis   simple gxSolid DG_CaCO3_dis    3.7e-9  0      bkg Ca +1 CO3 +1  fgd CaCO3 -1
+reax CaCO3_prec  simple gxSolid DG_CaCO3_prec   270270270  0      bkg Ca -1 CO3 -1  fgd CaCO3 +1
 
 #reax CH_form    simple gxfoo DGfoo 1.1  0.5     bkg Ca -1 OH -2                     fgd CH +1   # a commment just for testing
 #reax CSHI_form  simple gxfoo DGfoo 1.1  0.5      bkg Ca -1 H2SiO4 -1                 fgd CSHI +1     bkg H2O -1      solvent H2O    # some shuffling and a commment just for testing
@@ -78,21 +71,15 @@ reax CaCO3_prec   simple gxSolid DG_CaCO3_prec 	270270270  0      bkg Ca -1 CO3 
 #reax C3S_dis_test simple g_C3Sdis_test DG_gC3Sdis_test 1.41e-18   0.5    bkg Ca +3 H3SiO4 +1 H2O -5 OH +5    fgd C3S -1   solvent H2O
 #reax C3S_prec_test simple g_C3Sdis_test DG_gC3Sprec_test 7.092e+17   0.5    bkg Ca -3 H3SiO4 -1 H2O +5 OH -5    fgd C3S +1   solvent H2O
 
-
-
 # Reaction chains -- list of reaction types contains number of reactions per type: this number occurs in parallel
 #reax C3Sdis_ch0 chain  parall C3S_dis 1  C3S_dis 1
 #reax C3Sdis_ch1 chain series C3S_dis 1  C3S_dis 2  CSHI_dis 1
-
-
 
 # Surface energy -- rules to compute surface energy depending on particle and background compositions
 sen sen_CH const 0.0684   #  J/m2, from 68.40 dynes/cm = mJ/nm2 = ag nm-2, in distilled water with CaOH2 at 14g/l, from Estrela et al., J Appl Oral Sci 2005 
 sen sen_CaCO3 const 0.120   #  J/m2, from 120 mJ/nm2 = ag nm-2, for calcite homogeneously nucleating in water (range values between 83 and 170 give in Fernandez-Martinez Env Sci Tech 2012). Smaller values (ca 36) are given for heterogeneous nucleation on quartz instead
 
 sen sen_C3S const 0.0876   #  J/m2, from 87.6 mJ/m2 from Bullard et al 2015, converted to ag ns-2 via factor 1
-
-
 
 # Mechanisms
 # mech user_def_name reax style args
@@ -104,12 +91,8 @@ sen sen_C3S const 0.0876   #  J/m2, from 87.6 mJ/m2 from Bullard et al 2015, con
 # mech C3Sdel_apnet allpar net C3Sdis_ch0 sen_C3S int_no
 # mech   C3Sdel_apnet  allpar net   C3S_dis_Bul  sen_C3S  int_lin
 
-
 mech   CHdel_apnet  allpar net   CH_dis  sen_CH  int_2lin
 mech   CaCO3nuc_apnet  allpar net   CaCO3_prec  sen_CaCO3  int_2lin
-
-
-
 
 #   "allser" -- an all-series mechanism, where the unit reaction is the reaction or chain provided as input (which may have parallel parts).  4 arguments needed: "straight" or "net" rates, name of reaction (or chain), name of surface energy, algorithm to compute interaction energy (int_no = interactions neglected;   int_lin = linearisation of interaction with number of molecules;   int_1lin and int2lin = artificial linearisations to enforce heterogeneous nucleation in coarse grained allpar: see source code;   int_size = actual size dependence of interactions... may be expensive)
 #mech C3Sdel_aser allser net C3Sdis_ch1 sen_C3S int_no
