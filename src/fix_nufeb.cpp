@@ -170,28 +170,21 @@ void Fix_nufeb::execute(int pos, int subcomm)
 {
   if (!setup_flag) setup(subcomm);
   // send concentrations to nufeb
-  std::cerr << "[" << universe->me << "]: ";
-  std::for_each(chem->mol_cins.begin(), chem->mol_cins.end(), [](double x) { std::cerr << x << " "; });
-  std::cerr << std::endl;
   LAMMPS_NS::AtomVecBio *avec = (LAMMPS_NS::AtomVecBio *)lammpsIO->lmp->atom->style_match("bio");
   for (int i = 0; i < chem->Nmol; i++) {
     int nufeb = chem->mol_nufeb[i];
     if (nufeb > 0) { // if points to a valid nufeb chemical species
       if (first_flag) {
 	for (int j = 0; j < 7; j++) {
-	  avec->bio->ini_nus[nufeb][j] = chem->mol_cins[i];
+	  avec->bio->ini_nus[nufeb][j] = (chem->mol_cins[i] < 0) ? 1e-20 : chem->mol_cins[i];
 	}
       } else {
 	for (int cell = 0; cell < ncells; cell++) {
-	  kinetics->nus[nufeb][cell] = chem->mol_cins[i];
+	  kinetics->nus[nufeb][cell] = (chem->mol_cins[i] < 0) ? 1e-20 : chem->mol_cins[i];
 	}
       }
     }
   }
-  for (int i = 1; i <= avec->bio->nnu; i++) {
-    std::cerr << "[" << universe->me << "] " << i << ":" << kinetics->nus[i][150] << " ";
-  }
-  std::cerr << std::endl;
 
   // run nufeb
   std::ostringstream ss1;
@@ -209,16 +202,9 @@ void Fix_nufeb::execute(int pos, int subcomm)
 	conc = kinetics->nus[nufeb][0];
       }
       MPI_Bcast(&conc, 1, MPI_DOUBLE, universe->subMS[subcomm], MPI_COMM_WORLD);
-      //std::cerr << "[" << universe->me << "] " << i << ":" << conc << " ";
       chem->mol_cins[i] = conc;
     }
   }
-  //std::cerr << std::endl;
-  for (int i = 1; i <= avec->bio->nnu; i++) {
-    std::cerr << "[" << universe->me << "] " << i << ":" << kinetics->nus[i][150] << " ";
-  }
-  std::cerr << std::endl;
-  // update the charge balance in maske
   first_flag = 0;
 }
 
