@@ -812,6 +812,7 @@ void Krun::proceed(double deltat)
 	  if (universe->color == SC2exec) {
 	    if (type == "nufeb") {
 	      fix_nufeb->execute(Cpid2exec, SC2exec);
+	      fix->Cleval[Cpid2exec] = msk->tempo;
 	    }
 	  } else {
 	    if (type == "nufeb") {
@@ -820,7 +821,6 @@ void Krun::proceed(double deltat)
 		if (chem->mol_nufeb[i] > 0) { // if points to a valid nufeb chemical species
 		  double conc;
 		  MPI_Bcast(&conc, 1, MPI_DOUBLE, universe->subMS[SC2exec], MPI_COMM_WORLD);
-		  // std::cerr << "[" << universe->me << "] " << i << ":" << conc << " ";
 		  chem->mol_cins[i] = conc;
 		}
 	      }
