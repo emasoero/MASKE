@@ -28,7 +28,6 @@ Fix_nufeb::Fix_nufeb(MASKE *maske) : Pointers(maske)
 {
   setup_flag = 0;
   setup_exchange_flag = 0;
-  first_flag = 1;
   kinetics = NULL;
 }
 
@@ -56,7 +55,7 @@ void Fix_nufeb::setup(int subcomm)
     LAMMPS_NS::Modify *modify = lammpsIO->lmp->modify;
     for (int i = 0; i < modify->nfix; i++) {
       if (strcmp(modify->fix[i]->style,"kinetics") == 0) {
-	kinetics = static_cast<LAMMPS_NS::FixKinetics *>(modify->fix[i]);
+        kinetics = static_cast<LAMMPS_NS::FixKinetics *>(modify->fix[i]);
       }
     }
     if (!kinetics) error = KINETICS_NOT_FOUND;
@@ -106,7 +105,7 @@ void Fix_nufeb::setup_exchange(int subcomm)
   for (int i = 0; i < universe->nprocs; i++) {
     for (int axis = 0; axis < 3; axis++) {
       if (sublo[3*universe->me+axis] >= subhi[3*i+axis] || subhi[3*universe->me+axis] <= sublo[3*i+axis])
-	intersect[i] = false;
+        intersect[i] = false;
     }
   }
   // nufeb log output
@@ -121,7 +120,7 @@ void Fix_nufeb::setup_exchange(int subcomm)
     procs.clear();
     for (int i = 0; i < universe->nprocs; i++) {
       if (universe->color_each[i] != subcomm && intersect[i]) {
-	procs.push_back(i);
+        procs.push_back(i);
       }
     }
     // nufeb log output
@@ -135,7 +134,7 @@ void Fix_nufeb::setup_exchange(int subcomm)
     procs.clear();
     for (int i = 0; i < universe->nprocs; i++) {
       if (universe->color_each[i] == subcomm && intersect[i]) {
-	procs.push_back(i);
+        procs.push_back(i);
       }
     }
     // nufeb log output
@@ -171,17 +170,20 @@ void Fix_nufeb::execute(int pos, int subcomm)
   if (!setup_flag) setup(subcomm);
   // send concentrations to nufeb
   LAMMPS_NS::AtomVecBio *avec = (LAMMPS_NS::AtomVecBio *)lammpsIO->lmp->atom->style_match("bio");
+  // vector to store previous negative values of concentrations
+  vector<double> prev(chem->Nmol, 0);
   for (int i = 0; i < chem->Nmol; i++) {
     int nufeb = chem->mol_nufeb[i];
     if (nufeb > 0) { // if points to a valid nufeb chemical species
-      if (first_flag) {
-	for (int j = 0; j < 7; j++) {
-	  avec->bio->ini_nus[nufeb][j] = (chem->mol_cins[i] < 0) ? 1e-20 : chem->mol_cins[i];
-	}
+      prev[i] = min(0, chem->mol_cins[i]);
+      if (!kinetics->nus) {
+        for (int j = 0; j < 7; j++) {
+          avec->bio->ini_nus[nufeb][j] = (chem->mol_cins[i] < 0) ? 1e-20 : chem->mol_cins[i];
+        }
       } else {
-	for (int cell = 0; cell < ncells; cell++) {
-	  kinetics->nus[nufeb][cell] = (chem->mol_cins[i] < 0) ? 1e-20 : chem->mol_cins[i];
-	}
+        for (int cell = 0; cell < ncells; cell++) {
+          kinetics->nus[nufeb][cell] = (chem->mol_cins[i] < 0) ? 1e-20 : chem->mol_cins[i];
+        }
       }
     }
   }
@@ -199,13 +201,12 @@ void Fix_nufeb::execute(int pos, int subcomm)
     if (nufeb > 0) { // if points to a valid nufeb chemical species
       double conc;
       if (universe->key == 0) {
-	conc = kinetics->nus[nufeb][0];
+        conc = kinetics->nus[nufeb][0];
       }
       MPI_Bcast(&conc, 1, MPI_DOUBLE, universe->subMS[subcomm], MPI_COMM_WORLD);
-      chem->mol_cins[i] = conc;
+      chem->mol_cins[i] = conc + prev[i];
     }
   }
-  first_flag = 0;
 }
 
 // ---------------------------------------------------------------
@@ -229,18 +230,18 @@ void Fix_nufeb::exchange(int id, int subcomm)
     for (int p = 0; p < procs.size(); p++) {
       int r = procs[p]; // process rank
       for (int i = 0; i < atom->nlocal; i++) {
-	if (x[i][0] >= sublo[3*r] && x[i][0] < subhi[3*r]
-	    && x[i][1] >= sublo[3*r+1] && x[i][1] < subhi[3*r+1]
-	    && x[i][2] >= sublo[3*r+2] && x[i][2] < subhi[3*r+2]) {
-	  if (mask[i] & bitmask) {
-	    if (buf.size() < total + 1024) {
-	      buf.resize(2*buf.size());
-	    }
-	    int n = atom->avec->pack_exchange(i,&buf[total]);
-	    nsend[p] += n;
-	    total += n;
-	  }
-	}
+        if (x[i][0] >= sublo[3*r] && x[i][0] < subhi[3*r]
+            && x[i][1] >= sublo[3*r+1] && x[i][1] < subhi[3*r+1]
+            && x[i][2] >= sublo[3*r+2] && x[i][2] < subhi[3*r+2]) {
+          if (mask[i] & bitmask) {
+            if (buf.size() < total + 1024) {
+              buf.resize(2*buf.size());
+            }
+            int n = atom->avec->pack_exchange(i,&buf[total]);
+            nsend[p] += n;
+            total += n;
+          }
+        }
       }
       // send the number of doubles to be sent
       MPI_Isend(&nsend[p], 1, MPI_INT, r, 0, MPI_COMM_WORLD, &requests[p]);
@@ -250,7 +251,7 @@ void Fix_nufeb::exchange(int id, int subcomm)
     if (msk->nulog_flag) {
       msk->nulog << "[rank](number of doubles to send): ";
       for (int p = 0; p < procs.size(); p++) {
-	msk->nulog << "[" << p << "](" << nsend[p] << ") ";
+        msk->nulog << "[" << p << "](" << nsend[p] << ") ";
       }
       msk->nulog << std::endl;
     }
@@ -274,7 +275,7 @@ void Fix_nufeb::exchange(int id, int subcomm)
     if (msk->nulog_flag) {
       msk->nulog << "[rank](number of doubles to receive): "; 
       for (int i = 0; i < procs.size(); i++) {
-	msk->nulog << "[" << procs[i] << "](" << nrecv[i] << ") ";
+        msk->nulog << "[" << procs[i] << "](" << nrecv[i] << ") ";
       }
       msk->nulog << std::endl;
     }
