@@ -171,11 +171,11 @@ void Fix_nufeb::execute(int pos, int subcomm)
   // send concentrations to nufeb
   LAMMPS_NS::AtomVecBio *avec = (LAMMPS_NS::AtomVecBio *)lammpsIO->lmp->atom->style_match("bio");
   // vector to store previous negative values of concentrations
-  vector<double> prev(chem->Nmol, 0);
+  std::vector<double> prev(chem->Nmol, 0);
   for (int i = 0; i < chem->Nmol; i++) {
     int nufeb = chem->mol_nufeb[i];
     if (nufeb > 0) { // if points to a valid nufeb chemical species
-      prev[i] = min(0, chem->mol_cins[i]);
+      prev[i] = std::min(0.0, chem->mol_cins[i]);
       if (!kinetics->nus) {
         for (int j = 0; j < 7; j++) {
           avec->bio->ini_nus[nufeb][j] = (chem->mol_cins[i] < 0) ? 1e-20 : chem->mol_cins[i];
