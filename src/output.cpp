@@ -125,7 +125,7 @@ void Output::writethermo(void)
             //      else
             //          recv from universe->flampID
             
-            if (me == MASTER) fprintf(thermo,"\t%f",varc);
+            if (me == MASTER) fprintf(thermo,"\t%e",varc);
         }
     }
     if (me == MASTER) fprintf(thermo,"\n");

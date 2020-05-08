@@ -29,7 +29,6 @@ namespace MASKE_NS {
     int group; // bacteria group
 
     int ncells;
-    int first_flag;
     int setup_flag;
     int setup_exchange_flag;
     std::vector<double> sublo, subhi;

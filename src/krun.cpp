@@ -139,13 +139,13 @@ void Krun::proceed(double deltat)
         }
         
         
-        if (me==MASTER) fprintf(screen,"\n MASKE tempo is %f \n  start_time was %f \n End time is %f",msk->tempo,start_time,end_time);
+        if (me==MASTER) fprintf(screen,"\n MASKE tempo is %e \n  start_time was %f \n End time is %f",msk->tempo,start_time,end_time);
         
         // screen output to debug
         //sleep(me);
-        fprintf(screen,"\n\n Proc %d, SUBCOM %d entering step at tempo %f \n",me,universe->color,msk->tempo);
+        fprintf(screen,"\n\n Proc %d, SUBCOM %d entering step at tempo %e \n",me,universe->color,msk->tempo);
         MPI_Barrier(MPI_COMM_WORLD);
-        if (me==MASTER) fprintf(screen,"\n\n Let's start the tempo %f iteration \n",msk->tempo );
+        if (me==MASTER) fprintf(screen,"\n\n Let's start the tempo %e iteration \n",msk->tempo );
        // sleep(1);
     
         
@@ -158,7 +158,7 @@ void Krun::proceed(double deltat)
             
             // screen output to debug
             //sleep(me);
-            fprintf(screen,"\n\n Proc %d, SUBCOM %d tempo %f, resetting vectors \n",me,universe->color,msk->tempo);
+            fprintf(screen,"\n\n Proc %d, SUBCOM %d tempo %e, resetting vectors \n",me,universe->color,msk->tempo);
             MPI_Barrier(MPI_COMM_WORLD);
             //sleep(1);
             
@@ -463,7 +463,7 @@ void Krun::proceed(double deltat)
         // all processors update tempo
         msk->tempo = msk->tempo + Dt;
         if (me == MASTER) {
-            fprintf(screen,"\n\n New tempo is %f \n",msk->tempo);
+            fprintf(screen,"\n\n New tempo is %e \n",msk->tempo);
         }
         
         
@@ -812,6 +812,7 @@ void Krun::proceed(double deltat)
 	  if (universe->color == SC2exec) {
 	    if (type == "nufeb") {
 	      fix_nufeb->execute(Cpid2exec, SC2exec);
+	      fix->Cleval[Cpid2exec] = msk->tempo;
 	    }
 	  } else {
 	    if (type == "nufeb") {
@@ -820,7 +821,6 @@ void Krun::proceed(double deltat)
 		if (chem->mol_nufeb[i] > 0) { // if points to a valid nufeb chemical species
 		  double conc;
 		  MPI_Bcast(&conc, 1, MPI_DOUBLE, universe->subMS[SC2exec], MPI_COMM_WORLD);
-		  // std::cerr << "[" << universe->me << "] " << i << ":" << conc << " ";
 		  chem->mol_cins[i] = conc;
 		}
 	      }

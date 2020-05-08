@@ -1,7 +1,6 @@
 # Running the code on Enrico's Mac Air
 #    /opt/local/bin/mpiexec-mpich-mp -np 4 ./maske input.dat
 
-
 # ===== SET UNIVERSE OF SUB-COMMUNICATORS ========
 
 # command structure: subcomm Nsubcomms name1 Nproc1 lmp_yes/no name2 Nproc2 .... nameN NprocN
@@ -9,28 +8,21 @@
 # Antonello manages deletion, Bernini manages nucletion, Canova manages NUFEB
 subcomm 3 Antonello 4 lmp_yes 123 Bernini 4 lmp_yes 1234 Canova 4 lmp_yes 12345
 
-
-
 # ===== READ CHEMISTRY DATA BASE ========
 
 # Load chemistry database file, containing molecule types, reactions, and mechanisms
 chemDB chemDB_SI.dat
 
-
-
 # ===== LIST REAL AND TRIAL PARTICLE TYPES TO BE USED IN THE SIM =======
 # 1 will be fixed, 2-3 are mineral for deletion (corresponding to 4-5 trial for nucleation), 6 are the bacteria
 real_types 1 2 3 5 6
 trial_types 4
- 
-
 
 # ========= INITIALISE LAMMPS AND LOAD INITIAL CONFIGURATION =========
 
 lammps all  units si     # nufeb is supposed to run in si units always, and on dedicated subcomm
 
 lammps all atom_style bio
-
 
 lammps  all  atom_modify map yes   # NEEDED FOR NUCLEATE FIXES!!
 
@@ -43,7 +35,6 @@ lammps all comm_modify     vel yes
 lammps 	all 	variable Diam equal 1e-6
 lammps	all	variable scale equal sqrt(2)*9.04599E-007
 lammps	all	variable bsize equal 10*$(v_scale)
-
 
 lammps all  boundary p p f
 lammps all  region boxreg block 0 $(v_bsize) 0 $(v_bsize) 0 $(v_bsize) units box
@@ -78,22 +69,12 @@ lammps all delete_atoms region r_top compress no
 #lammps all create_atoms 3 region r_midR
 #lammps all create_atoms 6 region r_top
 
-
 # *************   additional settings needed for NUFEB only 
-#lammps Canova group AOB type 6
-#lammps Canova group NOB type 2
-#lammps Canova group DEAD type 3
-# ****************
-
 
 lammps all set type * diameter $(v_Diam)
 lammps all set type 6 diameter 1.0e-6
 lammps all set type 6 density 290
 lammps all set type 6 mass 1.5184e-16
-
-
-
-
 
 #===== Potentials, neighbours, and minimiser style
 
@@ -129,7 +110,7 @@ lammps all  neigh_modify	delay 0
 lammps all  neigh_modify	exclude type 4 4
 
 lammps all min_style maske
-lammps all min_modify dmax 1e-10 10000 10000 10000
+lammps all min_modify dmax 1e-10
 
 # ======== CONSTANTS IN LAMMPS UNITS
 #kB  0.0138064852       # Boltzmann, in nm2 ag ns-2 K-1
@@ -139,10 +120,6 @@ kB 0.00000000000000000000001380649
 hpl 0.000000000000000000000000000000000662607015
 #kB  1.380649e−23       # Boltzmann, in JK-1
 #hpl 6.62607015e−34 	# Plank, in Js
-
-
-
-
 
 # =========== DEFINE LAMMPS GROUPS TO BE USED BY MASKE FIXES (delete, nucleate, etc)
 
@@ -157,18 +134,9 @@ hpl 0.000000000000000000000000000000000662607015
 
 #lammps all run 0
 
-
-
-
-
-
 # ===========   FREEZE BOTTOM LAYER
 lammps all group gBot type 1
 lammps all fix freezeBot gBot setforce 0.0 0.0 0.0
-
-
-
-
 
 #  ===========   DISSOLVE TYPES 2 and 3 BY PARTICLE DELETION
 
@@ -176,13 +144,8 @@ sol_start uniform 4 H2O 55 Ca .000 CO3 1.0 OH 0.0000 Temp 298 DH_A 0.51 DH_B 3.2
 
 #lammps all print "Solution started ok"   
 
-
 fix KMC-free delete DelCH2 Antonello 2 mech CHdel_apnet sol_in fixed uniform box sol_out uniform box+dV
 fix KMC-free delete DelCH3 Antonello 3 mech CHdel_apnet sol_in fixed uniform box sol_out uniform box+dV
-
-
-
-
 
 # ======= NUCLEATION FIXES - approach based on stored regions, lattices, and minimise
 
@@ -202,11 +165,7 @@ store 	lattice	latNuc custom $(v_scale) a1 1.0 0.0 0.0 a2 0 $(v_aa2) 0.0 a3 0.0 
 store 	DV	latNuc variable DVnuc equal v_Diam*v_Diam*v_Diam
 
 lammps	all	variable Qdmax equal v_Lx/2000
-lammps	all	variable DxMax equal 1000	# max displacements
-lammps	all	variable DyMax equal 1000
-lammps	all	variable DzMax equal 1000		
-store minimize minNuc	0 0 2000 2000 min_modify dmax	$(v_Qdmax) $(v_DxMax) $(v_DyMax) $(v_DzMax) 
-
+store minimize minNuc   0 0 2000 2000 min_modify dmax $(v_Qdmax)
 
 fix KMC-free nucleate NucCaCO3 Bernini RegNuc latNuc minNuc 4 5 sphere 1.e-6 wei simple 1 mech CaCO3nuc_apnet sol_in fixed uniform box sol_out uniform box+dV
 
@@ -227,7 +186,7 @@ read_data_bio atom.in add append
 fix ki1 HET kinetics 1 10 10 10 v_diffT v_layer demflag 0 niter 10000
 fix ki2 HET kinetics/thermo
 fix ki3 HET kinetics/ph fix 
-fix ki4 HET kinetics/growth/energy v_EPSdens	
+fix ki4 HET kinetics/growth/energy v_EPSdens    
 fix g1 HET kinetics/diffusion v_tol pp pp nn mol
 fix d1 HET divide 1 v_EPSdens v_divDia 31231 demflag 0
 """
@@ -255,14 +214,13 @@ lammps all compute  PEall all pe/atom
 #lammps all compute  PErt g_right reduce sum c_PEr
 
 # the lammps thermo must calculate all the thermo variables and compute you want to output via the MASKE's thermo
-#lammps all thermo_style	custom step atoms vol epair press v_Nleft v_Nright c_PElt c_PErt
-lammps all thermo_style	custom step atoms vol epair press v_NCH v_NCaCO3
+#lammps all thermo_style        custom step atoms vol epair press v_Nleft v_Nright c_PElt c_PErt
+lammps all thermo_style custom step atoms vol epair press v_NCH v_NCaCO3
 #N_1 N_2 PE_1 PE_2
 
 lammps all thermo 1000
 
 thermo 1 thermo.txt conc_Ca conc_CO3 conc_H2O conc_OH lmp_v_N lmp_v_U lmp_v_P lmp_v_NCH lmp_v_NCaCO3
-
 
 #tempdump all tD1 all custom 1 tempdump1 c_PEall c_PEr
 #tempdump all tD2 all custom 1 tempdump2 c_PEl
@@ -276,12 +234,10 @@ dump Canova D4 1 all vtk dump*.vtu id type radius
 #PE_1
 #dump Bernini   D3 50  g_right custom  dump.right id type x y z radius c_PEr
 
-
 # relax every_Nsteps mode args (for minimize, etol ftol maxiter maxeval min_style 
 # min_modify_args;  for nvt, all args admitted by an nvt fix in lammps)
 #example:      relax 10 minimize 0 0 1000 1000 quickmin dmax .01 20 20 20 
-relax R1 1 minimize 0 0 1000 1000 maske dmax 1e-10 10000 10000 10000 
-
+relax R1 1 minimize 0 0 1000 1000 maske dmax 1e-10
 
 #lammps Antonello dump Dt all custom 1 tdump id type x y z radius
 #lammps Antonello dump_modify Dt every 1 first yes
@@ -289,7 +245,6 @@ relax R1 1 minimize 0 0 1000 1000 maske dmax 1e-10 10000 10000 10000
 # =============== running the KMC simulation
 lammps all print "STARTING KRUN" 
 Krun 40000000000
-
 
 lammps Antonello print "\n SUCCESS \n"
 
