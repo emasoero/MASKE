@@ -808,6 +808,12 @@ void Krun::proceed(double deltat)
         }
 	
 	if (Cexecute) {
+	  // reset the position of trial atoms
+	  for (int i=0; i<fix->fKMCtype.size(); i++) {
+	    if (strcmp(fix->fKMCtype[i].c_str(),"nucleate")==0) {
+	      fix_nucl->reset_trial_pos(i);
+	    }
+	  }
 #ifdef MASKE_WITH_NUFEB
 	  if (universe->color == SC2exec) {
 	    if (type == "nufeb") {

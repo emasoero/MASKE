@@ -1,6 +1,5 @@
 #include "fix_nucleate.h"
 #include "fix.h"
-//#include <sstream>
 #include "universe.h"
 #include "chemistry.h"
 #include "error.h"
@@ -10,12 +9,7 @@
 #include "solution.h"
 #include "block.h"
 #include "store.h"
-/*#include <stdlib.h>
-#include <stdio.h>
-#include <iostream>
-#include <fstream>
-*/
-
+#include <memory.h>
 #include <string.h>
 
 using namespace MASKE_NS;
@@ -31,6 +25,10 @@ Fix_nucleate::Fix_nucleate(MASKE *maske) : Pointers(maske)
     EVpZpos = -1.;
     EVpDIAM = -1.;
     EVpTYPE = -1;
+
+    nmax = 0;
+    nlocal0 = 0;
+    x0 = NULL;
 }
 
 
@@ -39,7 +37,7 @@ Fix_nucleate::Fix_nucleate(MASKE *maske) : Pointers(maske)
 // Class destructor
 Fix_nucleate::~Fix_nucleate()
 {
-    
+  lammpsIO->lmp->memory->destroy(x0);
 }
 
 
@@ -148,25 +146,41 @@ void Fix_nucleate::init(int pos)
     typ.str("");
     typ.clear();
 
-    
-    
-    
-    // record vectors with initial x,y,x positions of all particles and initial box size. This info will be used at each call of sample later on to apply affine deformations and adjust volume per trial particle until init is invoked again
-
+    // record vectors with initial x,y,z positions of all particles but not yet the initial box size. This info will be used at each call of sample later on to apply affine deformations and adjust volume per trial particle until init is invoked again
+    if (nmax < lammpsIO->lmp->atom->nmax) {
+      tag0 = lammpsIO->lmp->memory->grow(tag0,lammpsIO->lmp->atom->nmax,"fix_nucleate:tag0");
+      type0 = lammpsIO->lmp->memory->grow(type0,lammpsIO->lmp->atom->nmax,"fix_nucleate:type0");
+      x0 = lammpsIO->lmp->memory->grow(x0,lammpsIO->lmp->atom->nmax,3,"fix_nucleate:x0");
+    }
+    nlocal0 = lammpsIO->lmp->atom->nlocal;
+    // assuming continuous chunck of memory allocated through memory->grow 
+    memcpy(tag0,lammpsIO->lmp->atom->tag,nlocal0*sizeof(LAMMPS_NS::tagint));
+    memcpy(type0,lammpsIO->lmp->atom->type,nlocal0*sizeof(int));
+    memcpy(x0[0],lammpsIO->lmp->atom->x[0],nlocal0*3*sizeof(double));
 }
 
-
-
-
-
-
+// ---------------------------------------------------------------
+// Reset trial atoms initial positions. This assumes that there was no nucleation or dissolution happening between call to init() and reset_trial_pos(), hence we can still use atom->nlocal as the number of atoms for the stored positions.
+void Fix_nucleate::reset_trial_pos(int pos)
+{
+  for (int i = 0; i < nlocal0; i++) {
+    if (type0[i] == fix->fKMCptypeTRY[pos]) {
+      int index = lammpsIO->lmp->atom->map(tag0[i]);
+      if (index >= 0) {
+	lammpsIO->lmp->atom->x[index][0] = x0[i][0];
+	lammpsIO->lmp->atom->x[index][1] = x0[i][1];
+	lammpsIO->lmp->atom->x[index][2] = x0[i][2];
+      } else {
+	fprintf(screen, "[WARNING] Can't find atom %d in Fix_nucleate::reset_trial_pos on rank %d",tag0[i],universe->me);
+      }
+    }
+  }
+}
 
 // ---------------------------------------------------------------
 // Sampling all delete transitions correspondin to fix in position "pos" within this subcommunicator list, recorded in the fix object
 void Fix_nucleate::sample(int pos)
 {
-    
-    
     // USEFUL SHORTCUTS for current processor key and number of procs in local subcomm
     key = universe->key;
     nploc = universe->SCnp[universe->color];
