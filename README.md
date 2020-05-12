@@ -62,6 +62,38 @@ $ module load OpenMPI
 ```
 Then follow the Linux build instructions.
 
+### Enabling NUFEB
+
+MASKE can be coupled with microbial simulation provided by LAMMPS's [NUFEB](https://github.com/nufeb/NUFEB) module. Optionally, it is possible to enable NUFEB with VTK support to output .vti and .vtu files for grid based data and per-atom data. You can use those files to visualise the simulation using [Paraview](https://www.paraview.org/). For more information on how to generate those files plase refer to the NUFEB user manual.
+
+Use the following build steps:
+```
+$ cd NUFEB
+$ mkdir build
+$ cd build
+$ cmake -DCMAKE_BUILD_TYPE=Release -DWITH_NUFEB=On ..
+```
+You will get an CMake error after this but just ignore it.
+```
+$ cd ../NUFEB
+```
+If you don't want to enable VTK support do:
+```
+$ ./install.sh --enable-misc --static
+$ cd ../build
+$ cmake -DCMAKE_BUILD_TYPE=Release -DWITH_NUFEB=On ..
+```
+Otherwise do:
+```
+$ ./install.sh --enable-misc --enable-vtk --static
+$ cd ../build
+$ cmake -DCMAKE_BUILD_TYPE=Release -DWITH_NUFEB=On -DWITH_VTK=On -DVTK_DIR=$PWD/../NUFEB/thirdparty/vtk/vtk-build ..
+```
+Finally, compile MASKE using:
+```
+$ make -j
+```
+
 ### Troubleshooting
 
 - CMake can't find MPI compiler.
