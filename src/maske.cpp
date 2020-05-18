@@ -43,8 +43,8 @@ MASKE::MASKE(int narg, char **arg)
     screen = NULL;
     plog = NULL;
     screen=stdout;
-    wplog = true;
-    nulog_flag = true;
+    wplog = false;
+    nulog_flag = false;
 
     MPI_Comm_rank(MPI_COMM_WORLD, &me);
     

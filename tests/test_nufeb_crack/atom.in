@@ -1,0 +1,202 @@
+ Granular Flow Simulation
+
+     0 atoms
+     7 atom types
+    10 nutrients
+
+ Atoms
+
+ Nutrients
+
+     1   ach l 1.56e-1 1.56e-1 1.56e-1 1.56e-1 1.56e-1 1.56e-1 1.56e-1
+     2    ca l 3.12e-1 3.12e-1 3.12e-1 3.12e-1 3.12e-1 3.12e-1 3.12e-1
+     3    o2 l 2.81e-4 2.81e-4 2.81e-4 2.81e-4 2.81e-4 2.81e-4 2.81e-4
+     4   nh3 l  1.0e-3  1.0e-3  1.0e-3  1.0e-3  1.0e-3  1.0e-3  1.0e-3
+     5   co2 l  1.0e-1  1.0e-1  1.0e-1  1.0e-1  1.0e-1  1.0e-1  1.0e-1 
+     6  gco2 g       0       0       0       0       0       0       0
+     7   go2 g 2.10e-1 2.10e-1 2.10e-1 2.10e-1 2.10e-1 2.10e-1 2.10e-1
+     8   gn2 g 7.90e-1 7.90e-1 7.90e-1 7.90e-1 7.90e-1 7.90e-1 7.90e-1
+     9   h2o l       1       1       1       1       1       1       1
+    10     h l       0       0       0       0       0       0       0
+
+ Type Name
+
+     1 maske1
+     2 maske2
+     3 maske3
+     4 maske4
+     5 maske5
+     6 x_ca
+     7 inert
+
+ Diffusion Coeffs
+
+   ach 4.64e-9
+    ca 4.64e-9
+    o2 7.20e-9
+   nh3 5.90e-9
+   co2 6.91e-9
+  gco2       0
+   go2       0
+   gn2       0
+   h2o       0
+     h       0
+
+ Ks
+
+  maske1      0 0 0 0 0 0 0 0 0 0 
+  maske2      0 0 0 0 0 0 0 0 0 0 
+  maske3      0 0 0 0 0 0 0 0 0 0 
+  maske4      0 0 0 0 0 0 0 0 0 0 
+  maske5      0 0 0 0 0 0 0 0 0 0 
+  x_ca   1.0e-4 0 0 0 0 0 0 0 0 0
+  inert       0 0 0 0 0 0 0 0 0 0 
+
+ Consumption Rate
+
+  maske1         0
+  maske2         0
+  maske3         0
+  maske4         0
+  maske5         0
+  x_ca   4.6389e-5
+  inert          0
+
+ Yield
+
+  maske1         0
+  maske2         0
+  maske3         0
+  maske4         0
+  maske5         0
+  x_ca   0.6562733
+  inert          0
+
+ Maintenance
+
+  maske1         0
+  maske2         0
+  maske3         0
+  maske4         0
+  maske5         0
+  x_ca   9.1377e-7
+  inert          0
+
+ Electron Donor
+
+  maske1 ach
+  maske2 ach
+  maske3 ach
+  maske4 ach
+  maske5 ach
+  x_ca   ach
+  inert  ach
+
+ Decay
+
+  maske1         0
+  maske2         0
+  maske3         0
+  maske4         0
+  maske5         0
+  x_ca   9.2592e-6
+  inert          0
+
+ Catabolism Coeffs
+
+  maske1  0 0  0 0 0 0 0 0 0 0
+  maske2  0 0  0 0 0 0 0 0 0 0
+  maske3  0 0  0 0 0 0 0 0 0 0
+  maske4  0 0  0 0 0 0 0 0 0 0
+  maske5  0 0  0 0 0 0 0 0 0 0
+  x_ca   -1 0 -2 0 2 0 0 0 2 2
+  inert   0 0  0 0 0 0 0 0 0 0
+
+ Anabolism Coeffs
+
+  maske1      0 0 0    0    0 0 0 0   0    0
+  maske2      0 0 0    0    0 0 0 0   0    0
+  maske3      0 0 0    0    0 0 0 0   0    0
+  maske4      0 0 0    0    0 0 0 0   0    0
+  maske5      0 0 0    0    0 0 0 0   0    0
+  x_ca   -0.525 0 0 -0.2 0.05 0 0 0 0.4 0.05
+  inert       0 0 0    0    0 0 0 0   0    0
+
+ Decay Coeffs
+
+  maske1 0 0 0 0 0 0 0 0 0 0
+  maske2 0 0 0 0 0 0 0 0 0 0
+  maske3 0 0 0 0 0 0 0 0 0 0
+  maske4 0 0 0 0 0 0 0 0 0 0
+  maske5 0 0 0 0 0 0 0 0 0 0
+  x_ca   1 0 0 0 0 0 0 0 0 0
+  inert  0 0 0 0 0 0 0 0 0 0
+
+ Nutrient Energy
+
+   ach    inf -3.97e2 -3.69e2     inf inf 3
+    ca    inf       0     inf     inf inf 2
+    o2    inf    16.4     inf     inf inf 2
+   nh3    inf -7.94e1 -2.66e1     inf inf 3
+   co2 -386.0 -623.16 -586.85 -527.80 inf 3
+  gco2    inf -3.94e2     inf     inf inf 2
+   go2    inf       0     inf     inf inf 2
+   gn2    inf       0     inf     inf inf 2
+   h2o    inf -2.37e2 -1.57e2     inf inf 2
+     h    inf       0     inf     inf inf 2
+
+ Type Energy
+
+  maske1 inf   0 inf inf inf 2
+  maske2 inf   0 inf inf inf 2
+  maske3 inf   0 inf inf inf 2
+  maske4 inf   0 inf inf inf 2
+  maske5 inf   0 inf inf inf 2
+  x_ca   inf -67 inf inf inf 2
+  inert  inf   0 inf inf inf 2
+
+ Dissipation
+
+  maske1      0
+  maske2      0
+  maske3      0
+  maske4      0
+  maske5      0
+  x_ca   236.05
+  inert       0
+
+ Nutrient Charge
+
+   ach na 0 -1 na na
+    ca na 2 na na na
+    o2 na 0 na na na
+   nh3 na 1  0 na na
+   co2  0 0 -1 -2 na
+  gco2 na 0 na na na
+   go2 na 0 na na na
+   gn2 na 0 na na na
+   h2o na 0 -1 na na
+     h na 1 na na na
+
+ Type Charge
+  
+  maske1 na 0 na na na
+  maske2 na 0 na na na
+  maske3 na 0 na na na
+  maske4 na 0 na na na
+  maske5 na 0 na na na
+  x_ca   na 0 na na na
+  inert  na 0 na na na
+                                                                                                           
+ Mass Transfer Coeffs
+
+   ach 0
+    ca 0
+    o2 5.55e-4
+   nh3 0
+   co2 5.55e-4
+  gco2 0
+   go2 0
+   gn2 0
+   h2o 0
+     h 0

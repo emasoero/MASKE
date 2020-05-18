@@ -6,6 +6,7 @@
 #include <vector>
 #include "mpi.h"
 #include <unistd.h>   //just for the sleep() function
+#include <lmptype.h>
 
 //#include <string>
 //#include <vector>
@@ -34,7 +35,6 @@ namespace MASKE_NS {
         std::vector<double> ratesT;         // vector storing the time-integrated  rates of all nucleate events, even if pertaining to different fixes
         std::vector<double> CratesT;         // vector cumulating ratesT
         std::vector<int>cumNPfix,fixaID;    //vectors with cumulated number of particles per nucleation-type fix, and absolute ID of that fix
-
         
         int EVpID;  //  particle ID for the chosen nucleate event
         int EVpTYPE;   //  particle type for the chosen nucleate event
@@ -48,6 +48,7 @@ namespace MASKE_NS {
         
         void init(int);       // initialise the fix: here creates trial particles on lattice in region and counts them
         void delete_trial(int);       // delete the trial particles in a nucleate fix
+	void reset_trial_pos(int); // reset position of trial particles
         void sample(int);       // function computing the positions, IDs, and rates of all events and adding them to the vectors above
         double CrateAll();      // function computing cumulated unsorted rate vectors and returning the cumulated rate value
         double CratesTupdate(double);   // //updates the vector of time integrals of  cumulated rates, CratesT
@@ -112,9 +113,14 @@ namespace MASKE_NS {
         double *unsRates;   // array in subcomm storing unsorted rates corresponding to IDuns above (size Ng)
         int *IDpos;  // array storing starting positions of local tID arrays in submaster's IDuns
         
-         std::vector<int> UtoS;   //pointing each-proc unsorted IDuns to corresponding sorted IDsrt in global vector containing all rfreeKMC fixes in current subcomm.  Its size is Ng (number of particles in current fix).     Needed to send rates computed by each processor and assembled unsorted by submaster to global sorted-ID rate vector
+        std::vector<int> UtoS;   //pointing each-proc unsorted IDuns to corresponding sorted IDsrt in global vector containing all rfreeKMC fixes in current subcomm.  Its size is Ng (number of particles in current fix).     Needed to send rates computed by each processor and assembled unsorted by submaster to global sorted-ID rate vector
 
-
+	int nmax;
+	int nlocal0;
+	LAMMPS_NS::tagint *tag0; // initial tags
+	int *type0; // initial types
+	double **x0; // initial positions
+	 
         //----------------------------------------
         // internal functions follow
         /*

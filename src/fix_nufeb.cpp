@@ -69,7 +69,7 @@ void Fix_nufeb::setup(int subcomm)
     if (errors[i] == KINETICS_NOT_FOUND)
       this->error->errsimple("Fix kinetics not found during fix nufeb setup");
   }
-  ncells = kinetics->nx * kinetics->ny * kinetics->nz;
+  ncells = kinetics->subn[0] * kinetics->subn[1] * kinetics->subn[2];
   // Setup complete
   setup_flag = 1;
 }
@@ -174,17 +174,38 @@ void Fix_nufeb::execute(int pos, int subcomm)
   LAMMPS_NS::AtomVecBio *avec = (LAMMPS_NS::AtomVecBio *)lammpsIO->lmp->atom->style_match("bio");
   // vector to store previous negative values of concentrations
   std::vector<double> prev(chem->Nmol, 0);
+  // Zero out coupled chemical species concentrations so that we sum them up later on.
+  // This allows a many-to-one coupling from maske to nufeb.
   for (int i = 0; i < chem->Nmol; i++) {
+    prev[i] = std::min(0.0, chem->mol_cins[i]);
     int nufeb = chem->mol_nufeb[i];
     if (nufeb > 0) { // if points to a valid nufeb chemical species
-      prev[i] = std::min(0.0, chem->mol_cins[i]);
       if (!kinetics->nus) {
         for (int j = 0; j < 7; j++) {
-          avec->bio->ini_nus[nufeb][j] = (chem->mol_cins[i] < 0) ? 1e-20 : chem->mol_cins[i];
+          avec->bio->ini_nus[nufeb][j] = 1e-20;
         }
       } else {
         for (int cell = 0; cell < ncells; cell++) {
-          kinetics->nus[nufeb][cell] = (chem->mol_cins[i] < 0) ? 1e-20 : chem->mol_cins[i];
+          kinetics->nus[nufeb][cell] = 1e-20;
+        }
+      }
+    }
+  }
+  // Sum up contributions of chemical species concentrations
+  for (int i = 0; i < chem->Nmol; i++) {
+    int nufeb = chem->mol_nufeb[i];
+    if (nufeb > 0) { // if points to a valid nufeb chemical species
+      if (!kinetics->nus) {
+	if (chem->mol_cins[i] > 0) {
+	  for (int j = 0; j < 7; j++) {
+	    avec->bio->ini_nus[nufeb][j] += chem->mol_cins[i];
+	  }
+        }
+      } else {
+	if (chem->mol_cins[i] > 0) {
+	  for (int cell = 0; cell < ncells; cell++) {
+	    kinetics->nus[nufeb][cell] += chem->mol_cins[i];
+	  }
         }
       }
     }
@@ -212,7 +233,7 @@ void Fix_nufeb::execute(int pos, int subcomm)
 }
 
 // ---------------------------------------------------------------
-// Execute nufeb
+// Exchange bacteria atoms to maske subcommunicators
 // id: nufeb continuous process id
 // subcomm: sub-communicator
 void Fix_nufeb::exchange(int id, int subcomm)
