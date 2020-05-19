@@ -98,6 +98,9 @@ void Krun::proceed(double deltat)
     bool write_first_thermo = true;
     bool write_first_dumps = true;
 
+    // Setting time step to 0
+    lammpsIO->lammpsdo("timestep 0");
+
     for (int i=0; i<fix->Ctype.size(); i++) {
 #ifdef MASKE_WITH_NUFEB
       if (fix->Ctype[i] == "nufeb") {
@@ -825,7 +828,7 @@ void Krun::proceed(double deltat)
 	      // Receive new concentrations from nufeb
 	      for (int i = 0; i < chem->Nmol; i++) {
 		if (chem->mol_nufeb[i] > 0) { // if points to a valid nufeb chemical species
-		  double conc;
+		  double conc = 0;
 		  MPI_Bcast(&conc, 1, MPI_DOUBLE, universe->subMS[SC2exec], MPI_COMM_WORLD);
 		  chem->mol_cins[i] = conc;
 		}

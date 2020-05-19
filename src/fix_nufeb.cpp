@@ -28,6 +28,7 @@ enum Errors { NO_ERROR, KINETICS_NOT_FOUND, DIFFUSION_FOUND };
 
 Fix_nufeb::Fix_nufeb(MASKE *maske) : Pointers(maske)
 {
+  init_flag = 0;
   setup_flag = 0;
   setup_exchange_flag = 0;
   kinetics = NULL;
@@ -45,6 +46,10 @@ void Fix_nufeb::init(int pos)
   for (int i=0; i<store->MulCmd[sid].size(); i++) {
     lammpsIO->lammpsdo(store->MulCmd[sid][i]);
   }
+  init_flag = 1;
+
+  lammpsIO->lammpsdo("timestep 0");
+  execute(pos, universe->color, 1);
 }
 
 // ---------------------------------------------------------------
@@ -167,7 +172,7 @@ void Fix_nufeb::printall()
 
 // ---------------------------------------------------------------
 // Execute nufeb
-void Fix_nufeb::execute(int pos, int subcomm)
+void Fix_nufeb::execute(int pos, int subcomm, int init)
 {
   if (!setup_flag) setup(subcomm);
   // send concentrations to nufeb
@@ -180,7 +185,7 @@ void Fix_nufeb::execute(int pos, int subcomm)
     prev[i] = std::min(0.0, chem->mol_cins[i]);
     int nufeb = chem->mol_nufeb[i];
     if (nufeb > 0) { // if points to a valid nufeb chemical species
-      if (!kinetics->nus) {
+      if (init) {
         for (int j = 0; j < 7; j++) {
           avec->bio->ini_nus[nufeb][j] = 1e-20;
         }
@@ -195,7 +200,7 @@ void Fix_nufeb::execute(int pos, int subcomm)
   for (int i = 0; i < chem->Nmol; i++) {
     int nufeb = chem->mol_nufeb[i];
     if (nufeb > 0) { // if points to a valid nufeb chemical species
-      if (!kinetics->nus) {
+      if (init) {
 	if (chem->mol_cins[i] > 0) {
 	  for (int j = 0; j < 7; j++) {
 	    avec->bio->ini_nus[nufeb][j] += chem->mol_cins[i];
@@ -213,21 +218,26 @@ void Fix_nufeb::execute(int pos, int subcomm)
 
   // run nufeb
   std::ostringstream ss1;
-  ss1 << "timestep " << fix->Cdt[pos];
+  if (!init)
+    ss1 << "timestep " << fix->Cdt[pos];
   lammpsIO->lammpsdo(ss1.str());
   std::ostringstream ss2;
-  ss2 << "run " << fix->Csteps[pos] << " pre no post no";
+  ss2 << "run " << fix->Csteps[pos];
+  if (!init)
+    ss2 << " pre no";
+  ss2 << " post no";
   lammpsIO->lammpsdo(ss2.str());
+  lammpsIO->lammpsdo("timestep 0");
   // Send the new total concentrations from nufeb 
   for (int i = 0; i < chem->Nmol; i++) {
     int nufeb = chem->mol_nufeb[i];
     if (nufeb > 0) { // if points to a valid nufeb chemical species
-      double conc;
+      double conc = 0;
       if (universe->key == 0) {
-        conc = kinetics->nus[nufeb][0];
+        conc = kinetics->nus[nufeb][0] + prev[i];
       }
-      MPI_Bcast(&conc, 1, MPI_DOUBLE, universe->subMS[subcomm], MPI_COMM_WORLD);
-      chem->mol_cins[i] = conc + prev[i];
+      if (!init) MPI_Bcast(&conc, 1, MPI_DOUBLE, universe->subMS[subcomm], MPI_COMM_WORLD);
+      chem->mol_cins[i] = conc;
     }
   }
 }
