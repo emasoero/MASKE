@@ -3,6 +3,10 @@
 #include "universe.h"
 #include "lammpsIO.h"
 #include "error.h"
+#include "fix.h"
+#ifdef MASKE_WITH_NUFEB
+#include "fix_nufeb.h"
+#endif
 
 #include <string.h>
 
@@ -17,7 +21,10 @@ Output::Output(MASKE *maske) : Pointers(maske)
     if (me == MASTER) fprintf(screen,"Generating output class\n");
     
     th_every = 0;
-    
+
+#ifdef MASKE_WITH_NUFEB
+    nufeb_submaster_rank = -1;
+#endif
 }
 
 
@@ -64,7 +71,22 @@ void Output::createthermo(std::string fname)
     for (int i=0; i<th_qtts.size(); i++) fprintf(thermo,"\t%s",th_qtts[i].c_str());
     fprintf(thermo,"\n");
     fclose(thermo);
-    
+
+#ifdef MASKE_WITH_NUFEB
+    // Find out which process is the submaster for nufeb's subcomm
+    if (me == MASTER) {
+      for (int i = 0; i < fix->aCtype.size(); i++) {
+	if (fix->aCtype[i] == "nufeb") {
+	  int rank = 0;
+	  for (int j = 0; j < universe->SCnames.size(); j++) {
+	    if (universe->SCnames[j] == fix->aCscom[i]) break;
+	    rank += universe->SCnp[j];
+	  }
+	  nufeb_submaster_rank = rank;
+	}
+      }
+    }
+#endif
 }
 
 
@@ -127,6 +149,41 @@ void Output::writethermo(void)
             
             if (me == MASTER) fprintf(thermo,"\t%e",varc);
         }
+#ifdef MASKE_WITH_NUFEB
+	else if (strcmp(token.c_str(),"nufeb")==0) {
+	  std::string var;
+	  iss >> var;
+	  if (var == "pH") {
+	    if (fix_nufeb->init_flag && universe->key == 0) {
+	      double ph = 0;
+	      if (fix_nufeb->setup_flag)
+		ph = fix_nufeb->kinetics->sh[0];
+	      MPI_Send(&ph,1,MPI_DOUBLE,0,0,MPI_COMM_WORLD);
+	    }
+	    if (me == MASTER && nufeb_submaster_rank > 0) {
+	      double ph = 0;
+	      MPI_Recv(&ph,1,MPI_DOUBLE,nufeb_submaster_rank,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
+	      fprintf(thermo,"\t%e",-std::log10(ph));
+	    }
+	  } else if (var.substr(0, 5) == "conc[") {
+	    std::size_t closesb = var.find("]");
+	    if (closesb != std::string::npos) {
+	      int i = std::stoi(var.substr(5,closesb));
+	      if (fix_nufeb->init_flag && universe->key == 0) {
+		double conc = 0;
+		if (fix_nufeb->setup_flag)
+		  conc = fix_nufeb->kinetics->nus[i][0];
+		MPI_Send(&conc,1,MPI_DOUBLE,0,0,MPI_COMM_WORLD);
+	      }
+	      if (me == MASTER && nufeb_submaster_rank > 0) {
+		double conc;
+		MPI_Recv(&conc,1,MPI_DOUBLE,nufeb_submaster_rank,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
+		fprintf(thermo,"\t%e",conc);
+	      }
+	    }
+	  }
+	}
+#endif
     }
     if (me == MASTER) fprintf(thermo,"\n");
     if (me == MASTER) fclose(thermo);

@@ -35,7 +35,10 @@ namespace MASKE_NS {
 
         
         std::vector<std::string> th_qtts; // quantities to print in thermo file
-        
+
+#ifdef MASKE_WITH_NUFEB
+	int nufeb_submaster_rank;
+#endif
         
         void createplog(std::string);
         void toplog(std::string);
