@@ -23,9 +23,10 @@ namespace MASKE_NS {
     void setup_exchange(int);
     double getDT(int);       // function computing time increment for the continuum process
     void printall();
-    void execute(int,int);
+    void execute(int,int,int init = 0);
     void exchange(int,int);
-    
+
+    int init_flag;
     int group; // bacteria group
 
     int ncells;
