@@ -696,7 +696,7 @@ void Inputmsk::execline(std::string read_string)
                 getout=true;
             }
         }
-        else if (strcmp(word.c_str(), "relax") == 0){
+        else if (strcmp(word.c_str(), "relax") == 0) {
             if (lammpsIO->lammps_active) {
                 bool comment_found = false;
                 int every;
@@ -732,7 +732,7 @@ void Inputmsk::execline(std::string read_string)
                 relax->add_rlx(rid,every,relaxer,rlx_string,rlx_style,rlx_modify);
             }
         }
-        else if (strcmp(word.c_str(), "Krun") == 0){
+        else if (strcmp(word.c_str(), "Krun") == 0) {
             double deltat;
             lss >> deltat;
             krun->proceed(deltat);

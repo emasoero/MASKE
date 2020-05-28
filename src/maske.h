@@ -9,14 +9,6 @@
 #include <vector>
 #include <fstream>
 
-
-
-/*#include "lammps.h"         // these are LAMMPS include files
-#include "input.h"
-#include "atom.h"
-#include "library.h"
-*/
-
 #define MASTER 0
 
 

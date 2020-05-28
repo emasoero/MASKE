@@ -177,7 +177,7 @@ fix d1 het divide 1 v_EPSdens v_divDia 31231 demflag 0
 fix p1 het kinetics/pressure 7 inert 6 1e6
 """
 
-fix Cont nufeb FixNufeb Canova nufebStore leval 0 dt 60 steps 1 group bacteria
+fix Cont nufeb FixNufeb Canova nufebStore leval 0 dt 60 steps 1 group bacteria sol_out box+dV
 
 # ========= DEFINE LAMMPS DUMPS AND THERMOS + VARIABLES ALSO FOR MASKE OUTPUT
 
