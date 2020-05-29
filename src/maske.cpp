@@ -33,6 +33,9 @@
 #ifdef MASKE_WITH_NUFEB
 #include "fix_nufeb.h"
 #endif
+#ifdef MASKE_WITH_SPECIATION
+#include "spec.h"
+#endif
 
 using namespace MASKE_NS;
 
@@ -45,7 +48,8 @@ MASKE::MASKE(int narg, char **arg)
     screen=stdout;
     wplog = false;
     nulog_flag = false;
-
+    speclog_flag = true;
+    
     MPI_Comm_rank(MPI_COMM_WORLD, &me);
     
     if (me==MASTER) {
@@ -89,6 +93,9 @@ MASKE::MASKE(int narg, char **arg)
     output = new Output(this);
     fix_cfoo = new Fix_Cfoo(this);
     relax = new Relax(this);
+#ifdef MASKE_WITH_SPECIATION
+    spec = new Spec(this);
+#endif
     fix_nucl = new Fix_nucleate(this);
     block = new Block(this);
     store = new Store(this);

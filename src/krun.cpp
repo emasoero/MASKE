@@ -15,6 +15,9 @@
 #ifdef MASKE_WITH_NUFEB
 #include "fix_nufeb.h"
 #endif
+#ifdef MASKE_WITH_SPECIATION
+#include "spec.h"
+#endif
 
 #include <algorithm>
 #include <numeric>
@@ -858,13 +861,20 @@ void Krun::proceed(double deltat)
         // number of just completed step
         msk->step = msk->step+1;
         
+	// call speciation if at appropriate step
+        for (int i = 0; i<spec->specID.size();i++){
+            if (msk->step % spec->spec_every[i] == 0) {
+                spec->dospec(i);
+            }
+        }
+
         // relax if at appropriate step
         for (int i = 0; i<relax->rlxID.size();i++){
             if (msk->step % relax->rlx_every[i] == 0) {
                 relax->dorelax(i);
             }
         }
-        
+
         // If a KMC event was not executed
         // (must stay here after relax, in case a continuous event was carried out and then the relax changed the box)
         if (KMCexecute == 0){

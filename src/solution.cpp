@@ -78,11 +78,11 @@ void Solution::computeNmol(void)
         //lammpsIO->lammpsdo(tolmp);
         tolmp = "variable Bvol equal vol";
         lammpsIO->lammpsdo(tolmp);
-        tolmp = "compute rad all property/atom radius";
+        tolmp = "compute rad all property/atom radius"; // change all to exclude bacteria
         lammpsIO->lammpsdo(tolmp);
         tolmp = "variable sva atom 4./3.*PI*c_rad*c_rad*c_rad";
         lammpsIO->lammpsdo(tolmp);
-        tolmp = "compute solidVc all reduce sum v_sva";
+        tolmp = "compute solidVc all reduce sum v_sva"; // change all to exclude bacteria
         lammpsIO->lammpsdo(tolmp);
         tolmp = "variable solidV equal c_solidVc";
         lammpsIO->lammpsdo(tolmp);

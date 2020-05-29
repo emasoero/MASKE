@@ -124,6 +124,10 @@ void Chemistry::addmolecule()
     mol_nufeb.push_back(n);
     ss >> n;
     mol_nufeb_form.push_back(n);
+    // Same as above for speciation
+    std::string elem; 
+    ss >> elem;
+    mol_spec.push_back(elem);
     
     mol_cins.push_back(0.);  //initial concentration set to zero and later to be updated by solution.cpp
     mol_nins.push_back(0.);  //initial number of mols set to zero and later to be updated by solution.cpp

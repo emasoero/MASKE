@@ -14,17 +14,17 @@
 #include "relax.h"
 #include "block.h"
 #include "store.h"
+#ifdef MASKE_WITH_SPECIATION
+#include "spec.h"
+#endif
 
 #include <unistd.h>   //just for the sleep() function
-//#include "randm.h"
 
 //needed to convert strings to lower case
 #include <algorithm>
 
-
 //for cluster Rocket...
 #include <string.h>
-
 
 using namespace MASKE_NS;
 
@@ -732,6 +732,27 @@ void Inputmsk::execline(std::string read_string)
                 relax->add_rlx(rid,every,relaxer,rlx_string,rlx_style,rlx_modify);
             }
         }
+        else if (strcmp(word.c_str(), "spec") == 0) {
+	  std::string id, type, database, solvent;
+	  int every, nsolvents;
+	  double molar_mass;
+	  lss >> id;
+	  lss >> type;
+	  lss >> every;
+	  lss >> database;
+	  lss >> nsolvents;
+	  std::vector<std::string> solvent_names;
+	  for (int i = 0; i < nsolvents; i++) {
+	    lss >> solvent;
+	    solvent_names.push_back(solvent);
+	  }
+	  std::vector<double> solvent_molar_masses;
+	  for (int i = 0; i < nsolvents; i++) {
+	    lss >> molar_mass; // in g/mol
+	    solvent_molar_masses.push_back(molar_mass);
+	  }
+	  spec->add_spec(id, type, every, database, solvent_names, solvent_molar_masses);
+	}
         else if (strcmp(word.c_str(), "Krun") == 0) {
             double deltat;
             lss >> deltat;

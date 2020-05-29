@@ -47,6 +47,9 @@ namespace MASKE_NS {
 #ifdef MASKE_WITH_NUFEB
 	class Fix_nufeb *fix_nufeb;
 #endif
+#ifdef MASKE_WITH_SPECIATION
+	class Spec *spec;
+#endif
 
         int Nsteps;     // the total number of fundametnal simulation steps to run (each transition is called every multiple of this step)
         int step;       // the current simulation step
@@ -69,6 +72,9 @@ namespace MASKE_NS {
 	bool nulog_flag;     // true if nufeb log is to be generated
 	std::ofstream nulog; // nufeb log file
 
+	bool speclog_flag;     // true if speciation log is to be generated
+	std::ofstream speclog; // speciation log file
+	
 	MASKE(int,char**);  // constructor
 	~MASKE();           // destructor
 		

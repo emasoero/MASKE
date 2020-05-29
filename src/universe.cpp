@@ -133,6 +133,12 @@ void Universe::create()
       ss << "p" << me << ".nulog";
       msk->nulog.open(ss.str());
     }
+
+    if (msk->speclog_flag) {
+      std::stringstream ss;
+      ss << "p" << me << ".speclog";
+      msk->speclog.open(ss.str());
+    }
     
     // All processors tell every other processor their color (subcomm id) for later use (when sending subcomm-specific stuff, e.g. random number seed)
     color_each = new int[nprocs];

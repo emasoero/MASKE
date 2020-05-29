@@ -45,6 +45,9 @@ public:
     thermo(ptr->thermo),
     fix_cfoo(ptr->fix_cfoo),
     relax(ptr->relax),
+#ifdef MASKE_WITH_SPECIATION
+    spec(ptr->spec),
+#endif
     block(ptr->block),
     store(ptr->store),
     fix_nucl(ptr->fix_nucl) {}
@@ -71,6 +74,9 @@ protected:
     Fix_nufeb *&fix_nufeb;
 #endif
     Relax *&relax;
+#ifdef MASKE_WITH_SPECIATION
+    Spec *&spec;
+#endif
     Krun *&krun;
     Randm *&randm;
     Output *&output;
