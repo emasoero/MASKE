@@ -5,6 +5,7 @@
 #include "universe.h"
 #include "chemistry.h"
 #include "error.h"
+#include "solution.h"
 
 #include <atom_vec.h>
 #include <domain.h>
@@ -75,6 +76,72 @@ void Fix_nufeb::setup(int subcomm)
       this->error->errsimple("Fix kinetics not found during fix nufeb setup");
   }
   ncells = kinetics->subn[0] * kinetics->subn[1] * kinetics->subn[2];
+  // Check for consistency in NUFEB's molecule parameters for coupling of chemical species concentration.
+  // Coupling must strictly be one-to-one with 2 types available: master-to-master, and secondary-to-secondary.
+  // Master-to-master coupling associates one master species in MASKE to a master species in NUFEB.
+  // This type doesn't account for different chemical forms. Although NUFEB computes each form while
+  // computing for speciation only master concentrations will be exchanged.
+  // The secondary-to-secondary coupling links two secondary species. MASKE issues a warning if not all forms
+  // in NUFEB have an associated species in MASKE. That is to avoid having to track concentration of forms not
+  // being considered by MASKE and that must be accounted for when passing on to NUFEB. Moreover, when coupling
+  // with phreeqc for speciation, there would be even more complications on how to correctly associate them.
+  // To ensure one-to-one associations one might need to create additional chemical species in NUFEB or MASKE,
+  // that serve only as buckets for concentrations, or to ensure that charge balance is correct in NUFEB.
+  if (universe->key == 0) fprintf(screen,"\nFix NUFEB setup information:\n");
+  std::multimap<int, int> mmap;
+  for (int i = 0; i < chem->Nmol; i++) {
+    int nufeb = chem->mol_nufeb[i];
+    // molecule will not be coupled with NUFEB if invalid index range for chemical species is specified
+    if (nufeb <= 0 || nufeb > kinetics->bio->nnu + 1) {
+      chem->mol_nufeb[i] = -1;
+      if (universe->key == 0) fprintf(screen,"Molecule %s is not coupled with NUFEB\n",chem->molnames[i].c_str());
+    } else {
+      mmap.insert(std::make_pair(nufeb, i));
+    }
+  }
+  const char* forms[] = {"not hydrated", "hydrated", "1st deprotonated", "2nd deprotonated", "3rd deprotonated"};
+  for (int i = 1; i <= kinetics->bio->nnu; i++) {
+    auto range = mmap.equal_range(i);
+    int master = -1;
+    // check for master-to-master coupling
+    for (auto it = range.first; it != range.second; ++it) {
+      int f = chem->mol_nufeb_form[it->second];
+      if (f < 0 || f > 4) { // master-to-master coupling
+	master = it->second;
+	chem->mol_nufeb_form[it->second] = -1;
+	if (universe->key == 0) fprintf(screen,"Molecule %s is coupled with NUFEB %s master species\n",chem->molnames[it->second].c_str(),kinetics->bio->nuname[i]);
+      }
+    }
+    // check for secondary-to-secondary coupling
+    int form_flags[] = {0, 0, 0, 0, 0};
+    for (auto it = range.first; it != range.second; ++it) {
+      int f = chem->mol_nufeb_form[it->second];
+      if (f >= 0 && f < 5) { // secondary-to-secondary coupling
+	if (master >= 0) { // if there is also a master link
+	  if (universe->key == 0) fprintf(screen,"[WARNING] Trying to couple with NUFEB %s %s form (%d) in molecule %s is invalid due master coupling in %s molecule\n",kinetics->bio->nuname[i],forms[f],f,chem->molnames[it->second].c_str(),chem->molnames[master].c_str());
+	} else {
+	  if (kinetics->bio->nugibbs_coeff[i][f] >= INT_MAX) { // pointing to an invalid form
+	    if (universe->key == 0) fprintf(screen,"[WARNING] Coupling with invalid NUFEB %s %s form (%d) in molecule %s\n",kinetics->bio->nuname[i],forms[f],f,chem->molnames[it->second].c_str());
+	  } else {
+	    if (form_flags[f]) { // duplicate link
+	      if (universe->key == 0) fprintf(screen,"[WARNING] Duplicate link with NUFEB %s %s form (%d) in molecule %s\n",kinetics->bio->nuname[i],forms[f],f,chem->molnames[it->second].c_str());
+	    } else { // finally everything ok
+	      if (universe->key == 0) fprintf(screen,"Molecule %s is coupled with NUFEB %s %s form (%d)\n",chem->molnames[it->second].c_str(),kinetics->bio->nuname[i],forms[f],f);
+	    }
+	  }
+	}
+      }
+      if (kinetics->bio->nugibbs_coeff[i][f] < INT_MAX) form_flags[f] = 1;
+    }
+    // check if all forms have a molecule link
+    if (std::distance(range.first, range.second) > 0 && master < 0) {
+      for (int f = 0; f < 5; f++) {
+	if (kinetics->bio->nugibbs_coeff[i][f] < INT_MAX && form_flags[f] == 0) {
+	  if (universe->key == 0) fprintf(screen,"[WARNING] NUFEB %s %s form (%d) is not associated with a molecule\n",kinetics->bio->nuname[i],forms[f],f);
+	}
+      }
+    }
+  }
   // Setup complete
   setup_flag = 1;
 }
@@ -180,7 +247,7 @@ void Fix_nufeb::execute(int pos, int subcomm, int init)
   // vector to store previous negative values of concentrations
   std::vector<double> prev(chem->Nmol, 0);
   // Zero out coupled chemical species concentrations so that we sum them up later on.
-  // This allows a many-to-one coupling from maske to nufeb.
+  // This accounts for secondary-to-secondary coupling with multiple forms
   for (int i = 0; i < chem->Nmol; i++) {
     prev[i] = std::min(0.0, chem->mol_cins[i]);
     int nufeb = chem->mol_nufeb[i];
@@ -228,16 +295,29 @@ void Fix_nufeb::execute(int pos, int subcomm, int init)
   ss2 << " post no";
   lammpsIO->lammpsdo(ss2.str());
   lammpsIO->lammpsdo("timestep 0");
-  // Send the new total concentrations from nufeb 
+  // Compute the difference in concentrations after running NUFEB
+  std::vector<double> dconc(chem->Nmol, 0);
   for (int i = 0; i < chem->Nmol; i++) {
     int nufeb = chem->mol_nufeb[i];
     if (nufeb > 0) { // if points to a valid nufeb chemical species
       double conc = 0;
       if (universe->key == 0) {
-        conc = kinetics->nus[nufeb][0] + prev[i];
+	int form = chem->mol_nufeb_form[i];
+	if (form >= 0) { // secondary-to-secondary coupling
+	  dconc[i] = kinetics->activity[nufeb][form][0] + prev[i] - chem->mol_cins[i];
+	} else { // master-to-master coupling
+	  dconc[i] = kinetics->nus[nufeb][0] + prev[i] - chem->mol_cins[i];
+	}
       }
-      if (!init) MPI_Bcast(&conc, 1, MPI_DOUBLE, universe->subMS[subcomm], MPI_COMM_WORLD);
-      chem->mol_cins[i] = conc;
+    }
+  }
+  // Compute new concentrations based on the difference
+  solution->updateconc(pos, dconc);
+  // Send the new total concentrations from nufeb
+  for (int i = 0; i < chem->Nmol; i++) {
+    int nufeb = chem->mol_nufeb[i];
+    if (nufeb > 0) { // if points to a valid nufeb chemical species
+      if (!init) MPI_Bcast(&chem->mol_cins[i], 1, MPI_DOUBLE, universe->subMS[subcomm], MPI_COMM_WORLD);
     }
   }
 }

@@ -55,6 +55,7 @@ namespace MASKE_NS {
         void computeNmol();     // function to compute the number of molecules in solution in box and in dV
         double compbeta(int,bool,std::string,std::string);
         void update(int,double,int);
+	void updateconc(int,const std::vector<double>&);
         
         double compQ(int,std::string,std::string,std::string);   // computes activity products of various things depending on second input argument. (1) If it is "reac", these are background reactants in a precipitation or dissolution reaction, i.e. only  negative bkg terms in the reaction; (2) if "prod", products in a precipitation or dissolution reaction, i.e. only positive bkg terms in the reaction.    NOTICE that fgd terms are neglected, which is problematic if some charged molecules in solution are represented as fgd particles, as they would not be accounted for in the ionic strength.
         

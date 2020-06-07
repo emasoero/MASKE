@@ -78,11 +78,11 @@ void Solution::computeNmol(void)
         //lammpsIO->lammpsdo(tolmp);
         tolmp = "variable Bvol equal vol";
         lammpsIO->lammpsdo(tolmp);
-        tolmp = "compute rad all property/atom radius";
+        tolmp = "compute rad all property/atom radius"; // change all to exclude bacteria
         lammpsIO->lammpsdo(tolmp);
         tolmp = "variable sva atom 4./3.*PI*c_rad*c_rad*c_rad";
         lammpsIO->lammpsdo(tolmp);
-        tolmp = "compute solidVc all reduce sum v_sva";
+        tolmp = "compute solidVc all reduce sum v_sva"; // change all to exclude bacteria
         lammpsIO->lammpsdo(tolmp);
         tolmp = "variable solidV equal c_solidVc";
         lammpsIO->lammpsdo(tolmp);
@@ -474,8 +474,8 @@ void Solution::update(int apos, double pV, int EVtype)
             // add/remove all types of bkg molecules altered by the reaction
             for (int j=0; j<nmols; j++) {
                 int molID = chem->bkg_molID[rxid][j];
-                chem->mol_nins[molID] += (nrv* (double)nrxpar  * chem->bkg_nmol[rxid][j] * Vfrac);
-                chem->mol_nindV[molID] += (nrv* (double)nrxpar  * chem->bkg_nmol[rxid][j] * dVfrac);
+                chem->mol_nins[molID] += (nrv * (double)nrxpar * chem->bkg_nmol[rxid][j] * Vfrac);
+                chem->mol_nindV[molID] += (nrv * (double)nrxpar * chem->bkg_nmol[rxid][j] * dVfrac);
             }
             // change of solution volume, concentrations, and volume of voids
             SVol += chem->rx_dV_bkg[rxid] * nrv * (double)nrxpar*Vfrac;
@@ -490,7 +490,6 @@ void Solution::update(int apos, double pV, int EVtype)
         // update voids in box and dV
         voidV = BoxV - SolidV - SVol;
         dVvoidV = dV - dVSVol;
-        
     } else if (strcmp(fix->afKMCsoutUL[apos].c_str(),"local")==0) {
         // to be implemented: in this case only the subcommunnicator with managing the solution diffusion algorithm should do operations here. In this case, when compbeta is called by the fixes, it is again the subcomm manageing the solution that should be invoked. All to be implemented, so ERROR GIVEN FOR NOW
         std::string msg = "ERROR: local solution out for fix "+fix->afKMCname[apos]+" not implemented yet";
@@ -499,10 +498,36 @@ void Solution::update(int apos, double pV, int EVtype)
         std::string msg = "ERROR: solution out should be \"uniform\", instead "+fix->afKMCsoutUL[apos]+" was found for "+fix->afKMCname[apos];
         error->errsimple(msg);
     }
-    
-    
+}
 
-
+void Solution::updateconc(int apos, const std::vector<double>& dconc)
+{
+  double Vfrac = 1.;
+  double dVfrac = 0.;  // to distribute molecules between box and dV. Default values assume afKMCsoutbox[apos] == box
+  if (strcmp(fix->aCsoutbox[apos].c_str(),"box+dV")==0){
+    Vfrac = SVol/(SVol+dVSVol);
+    dVfrac = dVSVol/(SVol+dVSVol);
+  }
+  else if (strcmp(fix->aCsoutbox[apos].c_str(),"box")!=0){
+    std::string msg = "ERROR: solution out should be \"box\" or \"box+dV\", instead "+fix->afKMCsoutbox[apos]+" was found for "+fix->afKMCname[apos];
+    error->errsimple(msg);
+  }
+  for (int i=0; i<chem->Nmol; i++) {
+    double dn = dconc[i] * SVol * nAvo * unitC; // jump in number of molecules based on jump in concentration
+    double dnins = dn * Vfrac;
+    double dnindV = dn * dVfrac;
+    chem->mol_nins[i] += dnins;
+    chem->mol_nindV[i] += dnindV;
+    SVol += dnins * chem->mol_vapp[i];
+    dVSVol += dnindV * chem->mol_vapp[i];
+  }
+  for (int i=0; i<chem->Nmol; i++) {
+    chem->mol_cins[i] = chem->mol_nins[i]/SVol/nAvo/unitC;
+    chem->mol_cindV[i] = chem->mol_nindV[i]/dVSVol/nAvo/unitC;
+  }
+  // update voids in box and dV
+  voidV = BoxV - SolidV - SVol;
+  dVvoidV = dV - dVSVol;
 }
 
 // ---------------------------------------------------------------

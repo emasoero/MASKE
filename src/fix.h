@@ -75,6 +75,7 @@ namespace MASKE_NS {
 	std::vector<int> Csid;
 	std::vector<int> Csteps;
 	std::vector<std::string> Cgroups;
+        std::vector<std::string> Csoutbox;
 
         std::vector<std::string> afKMCtype;   // same as above but gathering all events and used by MASTER only
         std::vector<std::string> afKMCname;
@@ -122,6 +123,7 @@ namespace MASKE_NS {
 	std::vector<int> aCsid;
 	std::vector<int> aCsteps;
 	std::vector<std::string> aCgroups;
+        std::vector<std::string> aCsoutbox;
         
         void add(std::string);
         void printall();

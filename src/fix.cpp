@@ -315,6 +315,9 @@ void Fix::add(std::string instr)
             else if (strcmp(keyword.c_str(),"group")==0) {
                 ss >> temp_group;
             }
+            else if (strcmp(keyword.c_str(),"sol_out")==0) {
+                ss >> temp_soutbox;
+            }
             else if (keyword[0]=='#'){
                 commt_found = true;
             }
@@ -334,6 +337,7 @@ void Fix::add(std::string instr)
 	aCsid.push_back(temp_sid);
 	aCsteps.push_back(temp_steps);
 	aCgroups.push_back(temp_group);
+	aCsoutbox.push_back(temp_soutbox);
 
         bool added_local_fix = false;
         //inndividual processors in fix-invoked subcomm adding fix to their local list
@@ -347,6 +351,7 @@ void Fix::add(std::string instr)
 	    Csid.push_back(temp_sid);
 	    Csteps.push_back(temp_steps);
 	    Cgroups.push_back(temp_group);
+	    Csoutbox.push_back(temp_soutbox);
             CglobID.push_back(aCtype.size()-1);
             added_local_fix = true;
         }

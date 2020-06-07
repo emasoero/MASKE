@@ -6,31 +6,31 @@
 # charge_num  zi  is the charge number. E.g. for Ca2+ it is +2, and for H2SiO4 2- it is -2
 
 # from kumaran's paper
-molecule Ca              0          0 -0.0274E-27  0.82E-9  2  2
-molecule H4SiO4          0          0  0.1512E-27 0.983E-9  0 -1
-molecule OH              0          0   0.002E-27 0.416E-9 -1 -1
+molecule Ca              0          0 -0.0274E-27  0.82E-9  2  2 -1
+molecule H4SiO4          0          0  0.1512E-27 0.983E-9  0 -1 -1
+molecule OH              0          0   0.002E-27 0.416E-9 -1 -1 -1
 
 # hydrated diameters from Nightingale, J. Phys. Chem. 1959. Ionic radii from same paper allow estimation of apparent volume as Vhyd - Vion, as per kumaran paper
-molecule Na              0          0     -123456    0.716  1 -1
-molecule Ba              0          0     -123456    0.808  2 -1
-molecule Sr              0          0     -123456    0.824  2 -1
-molecule Mg              0          0     -123456    0.856  2 -1
-molecule CO3             0          0  0.1021E-27 0.788E-9 -2  5
-molecule H               0          0      123456    0.564 -1 -1
+molecule Na              0          0     -123456    0.716  1 -1 -1
+molecule Ba              0          0     -123456    0.808  2 -1 -1
+molecule Sr              0          0     -123456    0.824  2 -1 -1
+molecule Mg              0          0     -123456    0.856  2 -1 -1
+molecule CO3             0          0  0.1021E-27 0.788E-9 -2  5 -1
+molecule H               0          0      123456    0.564 -1 -1 -1
 
 # water from molar volume
-molecule H2O             0          0   0.027E-27        0  0 -1
+molecule H2O             0          0   0.027E-27        0  0 -1 -1
 
 # solids from molar volume
-molecule CH       0.303E-9   0.303E-9           0        0  0 -1
-molecule CaCO3   0.3944E-9  0.3944E-9           0        0  0 -1
+molecule CH       0.303E-9   0.303E-9           0        0  0 -1 -1
+molecule CaCO3   0.3944E-9  0.3944E-9           0        0  0 -1 -1
 
 # older values of which I am not sure
-molecule C3S    0.49378E-9 0.49378E-9           0        0  0 -1
-molecule CSHI      0.65E-9    0.65E-9           0        0  0 -1
-molecule CSHII     0.65E-9    0.65E-9           0        0  0 -1
-molecule H2SiO4          0          0   0.125E-27   0.5E-9 -2 -1
-molecule H3SiO4          0          0   0.125E-27   0.5E-9 -1 -1
+molecule C3S    0.49378E-9 0.49378E-9           0        0  0 -1 -1
+molecule CSHI      0.65E-9    0.65E-9           0        0  0 -1 -1
+molecule CSHII     0.65E-9    0.65E-9           0        0  0 -1 -1
+molecule H2SiO4          0          0   0.125E-27   0.5E-9 -2 -1 -1
+molecule H3SiO4          0          0   0.125E-27   0.5E-9 -1 -1 -1
 
 # ACTIVITY COEFFICIENTS OF ACTIVATED COMPLEXES
 gammax gxSolid  const 1         # dimensionless and equal to 1 if reference reaction is the dissolution of a charge-neutral solid
