@@ -21,6 +21,8 @@
 #include <iomanip>
 #include <numeric>
 
+#include <string.h>
+
 using namespace MASKE_NS;
 
 enum Errors { NO_ERROR, KINETICS_NOT_FOUND, DIFFUSION_FOUND };
