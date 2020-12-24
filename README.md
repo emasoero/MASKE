@@ -75,7 +75,7 @@ $ cd ../..
 $ mkdir build
 ```
 
-DENIS: this did enable MPI in LAMMPS for me. I had to add -DBUILD_MPI=On and -DMPI_CXX_COMPILER=mpicxx-mpich-mp . Do you reckon that MPI should be picked up automatically or not? Should we add the options above (which forces the reader to give the compiler name, so maybe not ideal)?
+DENIS: this did not enable MPI in LAMMPS for me. I had to add -DBUILD_MPI=On and -DMPI_CXX_COMPILER=mpicxx-mpich-mp . Do you reckon that MPI should be picked up automatically or not? Should we add the options above (which forces the reader to give the compiler name, so maybe not ideal)?
 
 If you want to install NUFEB, disregard the box below and move to the section "Enabling NUFEB" below.
 
