@@ -72,18 +72,20 @@ $ cd build
 $ cmake -DCMAKE_BUILD_TYPE=Release -DWITH_JPEG=Off -DWITH_PNG=Off -DWITH_FFMPEG=Off -DBUILD_LIB=On -DBUILD_OMP=Off -DPKG_MISC=yes -DPKG_USER-MASKE=yes ../cmake
 $ make -j
 $ cd ../..
+$ mkdir build
 ```
-DENIS: what to do for PHREEQC ?
 
 If you want to install NUFEB, disregard the box below and move to the section "Enabling NUFEB" below.
 
 If you want to install MASKE without NUFEB, Use:
 ```
-$ mkdir build
 $ cd build
 $ cmake -DCMAKE_BUILD_TYPE=Release ..
 $ make -j
 ```
+If you want to enable speciation by PHREEQC, add the cmake option  -DCMAKE_WITH_SPECIATION=On
+
+DENIS: is this correct about PHREEQC? What should the user do to actually make sure they have a working PHREEQC?
 
 ### Newcastle University Rocket cluster
 
