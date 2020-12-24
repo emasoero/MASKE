@@ -31,14 +31,13 @@ Use:
 
 NO IDEA HERE.... DENIS?
 
-### Downloading MASKE with NUFEF (and LAMMPS and PHREEQC)
+### Downloading MASKE with NUFEB (and LAMMPS and PHREEQC)
 
 Use:
 ```
 $ cd <path> 
 $ git clone --recurse-submodules https://github.com/emasoero/MASKE
 ```
-
 
 ## Folder layout
 
@@ -65,6 +64,7 @@ We rely on [CMake](https://cmake.org) to provide cross-platform build support.
 
 ### Linux and MacOS
 
+First we compile LAMMPS. From within the MASKE folder, use:
 ```
 $ cd lammps
 $ mkdir build
@@ -72,6 +72,13 @@ $ cd build
 $ cmake -DCMAKE_BUILD_TYPE=Release -DWITH_JPEG=Off -DWITH_PNG=Off -DWITH_FFMPEG=Off -DBUILD_LIB=On -DBUILD_OMP=Off -DPKG_MISC=yes -DPKG_USER-MASKE=yes ../cmake
 $ make -j
 $ cd ../..
+```
+DENIS: what to do for PHREEQC ?
+
+If you want to install NUFEB, disregard the box below and move to the section "Enabling NUFEB" below.
+
+If you want to install MASKE without NUFEB, Use:
+```
 $ mkdir build
 $ cd build
 $ cmake -DCMAKE_BUILD_TYPE=Release ..
