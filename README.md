@@ -141,11 +141,19 @@ with *path* being the path to the desired MPI compiler.
 
 - Compiler complains about c++11 standard.
 
-In the build folder type the following command:
+If you are trying to compile LAMMPS when you get the error, in the lammps/build folder type the following command:
+```
+$ cmake -DCMAKE_CXX_FLAGS="-std=c++11" ../cmake
+$ make -j
+```
+
+If you are trying to compile MASKE, in the MASKE/build folder type the following command:
 ```
 $ cmake -DCMAKE_CXX_FLAGS="-std=c++11" ..
 $ make -j
 ```
+
+- On MacOS, ``make -j`` can sometimes create problems. Try using only ``make``, without the ``-j`` option
 
 ## Running
 
