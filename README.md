@@ -39,6 +39,8 @@ $ cd <path>
 $ git clone --recurse-submodules https://github.com/emasoero/MASKE
 ```
 
+DENIS: the recurse did not work for NUFEB. Got an error related to hdf5. It worked when I directly went into MASKE/NUFEB and cloned it with  ``git clone https://github.com/nufeb/NUFEB --recursive``
+
 ## Folder layout
 
 After download is completed the MASKE folder should contain the following folders:
