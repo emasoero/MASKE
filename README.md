@@ -1,5 +1,9 @@
 # MASKE
 
+The basic version of MASKE only requires the LAMMPS submodule.
+If you want to include speciation in your simulation, than you need LAMMPS and PHREEQC.
+If you want to have bacteria too, you need LAMMPS, PHREEQC, and NUFEB.
+
 ## Dependecies
 
 | Name   | Description                        | Version                          |
@@ -10,12 +14,27 @@
 
 ## Download
 
-Download MASKE source code using Git:
+Download MASKE source code using Git
+
+If you want to download basic MASKE (only LAMMPS, no PHREEQC nor NUFEB), use:
+```
+$ cd <path> 
+$ git clone https://github.com/emasoero/MASKE
+$ cd MASKE
+$ git submodule update --init lammps
+```
+*path* should be the place where you want the source code to be downloaded.
+
+If you want to download MASKE with PHREEQC (and LAMMPS, but no NUFEB), use:
+
+NO IDEA HERE.... DENIS?
+
+If you want to download MASKE with NUFEB (requires LAMMPS and PHREEQC), use:
 ```
 $ cd <path> 
 $ git clone --recurse-submodules https://github.com/emasoero/MASKE
 ```
-*path* should be the place where you want the source code to be downloaded.
+
 
 ## Folder layout
 
@@ -33,6 +52,8 @@ $ ls
 | tests  | Collection of test cases   |
 | bin    | Built executables          |
 | lammps | LAMMPS source folder       |
+
+DENIS: there is no lib, nor bin, but there is NUFEB.... TO BE CORRECTED?
 
 ## Building
 
