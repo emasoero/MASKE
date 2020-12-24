@@ -14,9 +14,9 @@ If you want to have bacteria too, you need LAMMPS, PHREEQC, and NUFEB.
 
 ## Download
 
-Download MASKE source code using Git
+### Downloading basic MASKE (only LAMMPS, no PHREEQC nor NUFEB)
 
-If you want to download basic MASKE (only LAMMPS, no PHREEQC nor NUFEB), use:
+Use:
 ```
 $ cd <path> 
 $ git clone https://github.com/emasoero/MASKE
@@ -25,11 +25,15 @@ $ git submodule update --init lammps
 ```
 *path* should be the place where you want the source code to be downloaded.
 
-If you want to download MASKE with PHREEQC (and LAMMPS, but no NUFEB), use:
+### Downloading MASKE (and LAMMPS) with PHREEQC (no NUFEB)
+
+Use:
 
 NO IDEA HERE.... DENIS?
 
-If you want to download MASKE with NUFEB (requires LAMMPS and PHREEQC), use:
+### Downloading MASKE with NUFEF (and LAMMPS and PHREEQC)
+
+Use:
 ```
 $ cd <path> 
 $ git clone --recurse-submodules https://github.com/emasoero/MASKE
