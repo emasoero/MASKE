@@ -75,7 +75,7 @@ $ cd ../..
 $ mkdir build
 ```
 
-DENIS: initially I did the above and lammps was installed without MPI, reading stubs/mpi.h instead from lammps - not good for MASKE which requires MPI. I noticed only because later I got the error with MPI for MASKE and decided to check CMAKE of LAMMPS too. How to tell the user how to check if their system picks up MPI automatically or not? I saw a message after make -j above listing linked libraries: if MPI is not found it says stubs, oterhwise if gives the MPI path. Is that the way to check?
+DENIS: this did enable MPI in LAMMPS for me. I had to add -DBUILD_MPI=On and -DMPI_CXX_COMPILER=mpicxx-mpich-mp . Do you reckon that MPI should be picked up automatically or not? Should we add the options above (which forces the reader to give the compiler name, so maybe not ideal)?
 
 If you want to install NUFEB, disregard the box below and move to the section "Enabling NUFEB" below.
 
