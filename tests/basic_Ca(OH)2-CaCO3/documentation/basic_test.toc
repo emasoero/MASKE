@@ -1,0 +1,8 @@
+\contentsline {section}{\numberline {1}General description}{1}% 
+\contentsline {section}{\numberline {2}Chemistry database: relevant entries}{2}% 
+\contentsline {section}{\numberline {3}Rate of the backward reaction}{5}% 
+\contentsline {section}{\numberline {4}Net rate of a reaction}{6}% 
+\contentsline {section}{\numberline {5}A particular case: dissolution and precipitation}{6}% 
+\contentsline {section}{\numberline {6}Dissolution of a specifically located molecule (explicit in MASKE)}{7}% 
+\contentsline {subsection}{\numberline {6.1}Inverse dissolution rate and net rate, for MASKE}{11}% 
+\contentsline {section}{\numberline {7}Nucleation of a specifically located molecule (explicit in MASKE)}{12}% 

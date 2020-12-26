@@ -116,6 +116,8 @@ void Chemistry::addmolecule()
     ss >> size;
     mol_ahyd.push_back(size);
     ss >> size;
+    mol_bDH.push_back(size);
+    ss >> size;
     mol_z.push_back(size);
     // We purposely include this even when MASKE_WITH_NUFEB is not defined because
     // we didn't want to change the input files if compiled with or without NUFEB

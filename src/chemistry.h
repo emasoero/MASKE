@@ -36,10 +36,10 @@ namespace MASKE_NS {
 		~Chemistry();
 		
         std::vector<std::string> molnames;
-        std::vector<double> mol_arad, mol_acir, mol_vapp, mol_ahyd, mol_z;  // molecule linear sizes in radial and circumferential directions (when pertaining to a solid particle), and apparent volume of molecule in solution
+        std::vector<double> mol_arad, mol_acir, mol_vapp, mol_ahyd, mol_bDH, mol_z;  // molecule linear sizes in radial and circumferential directions (when pertaining to a solid particle), apparent volume of molecule in solution, a and b parameters for Debye Huckel, molecule charge
 	std::vector<int> mol_nufeb; // nufeb's chemical species index
 	std::vector<int> mol_nufeb_form; // nufeb's chemical species form index: 0 = not hydrated, 1 = fully protonated, 2 = 1st deprotonated, 3 = 2nd deprotonated, 4 = 3rd deprotonated
-	std::vector<std::string> mol_spec; // speciation element name
+	std::vector<std::string> mol_spec; // speciation element name  (I guess this is the name of the corresponding SOLUTION_MASTER_SPECIES in phreeqc)
         std::vector<double> mol_cins, mol_nins;  // vectors with concentration and number of molecules in solution: initially populated by solution.cpp
         std::vector<double> mol_cindV, mol_nindV;  // vectors with concentration and number of molecules in dV reservoire of solution (here assuming iso style of dV... vectors will be needed for aniso type)
         std::vector<std::string> gxnames, gxstyle;   // names and styles (const, or more complex ones possibly in future) of calculators of activity coeffs of activated complexes

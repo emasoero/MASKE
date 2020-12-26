@@ -174,7 +174,7 @@ void Solution::computeNmol(void)
 
 
 // ---------------------------------------------------------------
-// compute beta using the Debye Huckel calculation of activity coefficients
+// compute activity product using the approach in PHREEQC (Debye Huckel if parameters a and b in molecules in chemDB are >= 0. If they are < 0, uses Davies for charged molecules and log10 gamma = 0.1 Istrength for uncharged ones
 double Solution::compQ(int rxid, std::string type, std::string sol_in_style, std::string sol_in_UL)
 {
     //double beta = 1.;
@@ -218,7 +218,18 @@ double Solution::compQ(int rxid, std::string type, std::string sol_in_style, std
                     double gam;
                     int molID = chem->bkg_molID[rxid][i];
                     
-                    gam = pow( 10. , - chem->mol_z[molID] * chem->mol_z[molID] * (DH_A * Isqrt) / ( 1.+ DH_B * chem->mol_ahyd[molID] * Isqrt));
+                    if (chem->mol_ahyd[molID] < 0. || chem->mol_bDH[molID] < 0.){
+                        // if a Debye Huckel constants is input as negative, use Davies equation without them...
+                        if (chem->mol_z[molID] != 0 ){
+                            gam = pow( 10. , - DH_A * chem->mol_z[molID] * chem->mol_z[molID] * (Isqrt / ( 1.+ Isqrt) - 0.3 * Istr));
+                        } else{
+                            gam = pow( 10. , 0.1 * Istr);
+                        }
+                    }
+                    else{
+                        // ... otherwise use Debye Huckel equation with added explicit term on inonic strength for uncharged molecules and concentrated electrolites
+                        gam = pow( 10. , - chem->mol_z[molID] * chem->mol_z[molID] * (DH_A * Isqrt) / ( 1.+ DH_B * chem->mol_ahyd[molID] * Isqrt) + chem->mol_bDH[molID]*Istr);
+                    }
                     
                     // the below is   ( gamma * conc ) ^  stoichio
                     Q *= pow(gam * Vcins[molID] , (double) -chem->bkg_nmol[rxid][i]);
@@ -250,7 +261,18 @@ double Solution::compQ(int rxid, std::string type, std::string sol_in_style, std
                     double gam;
                     int molID = chem->bkg_molID[rxid][i];
                     
-                    gam = pow( 10. , - chem->mol_z[molID] * chem->mol_z[molID] * (DH_A * Isqrt) / ( 1.+ DH_B * chem->mol_ahyd[molID] * Isqrt));
+                     if (chem->mol_ahyd[molID] < 0. || chem->mol_bDH[molID] < 0.){
+                         // if a Debye Huckel constants is input as negative, use Davies equation without them...
+                         if (chem->mol_z[molID] != 0 ){
+                             gam = pow( 10. , - DH_A * chem->mol_z[molID] * chem->mol_z[molID] * (Isqrt / ( 1.+ Isqrt) - 0.3 * Istr));
+                        } else{
+                            gam = pow( 10. , 0.1 * Istr);
+                        }
+                    }
+                    else{
+                        // ... otherwise use Debye Huckel equation with added explicit term on inonic strength for uncharged molecules and concentrated electrolites
+                        gam = pow( 10. , - chem->mol_z[molID] * chem->mol_z[molID] * (DH_A * Isqrt) / ( 1.+ DH_B * chem->mol_ahyd[molID] * Isqrt) + chem->mol_bDH[molID]*Istr);
+                    }
                     
                     // the below is   ( gamma * conc ) ^  stoichio
                     Q *= pow(gam * Vcins[molID] , (double) chem->bkg_nmol[rxid][i]);
@@ -336,7 +358,18 @@ double Solution::compbeta(int rxid, bool net, std::string sol_in_style, std::str
                 double gam;
                 int molID = chem->bkg_molID[rxid][i];
                 
-                gam = pow( 10. , - chem->mol_z[molID] * chem->mol_z[molID] * (DH_A * Isqrt) / ( 1.+ DH_B * chem->mol_ahyd[molID] * Isqrt));
+                if (chem->mol_ahyd[molID] < 0. || chem->mol_bDH[molID] < 0.){
+                     // if a Debye Huckel constants is input as negative, use Davies equation without them...
+                     if (chem->mol_z[molID] != 0 ){
+                         gam = pow( 10. , - DH_A * chem->mol_z[molID] * chem->mol_z[molID] * (Isqrt / ( 1.+ Isqrt) - 0.3 * Istr));
+                    } else{
+                        gam = pow( 10. , 0.1 * Istr);
+                    }
+                }
+                else{
+                    // ... otherwise use Debye Huckel equation with added explicit term on inonic strength for uncharged molecules and concentrated electrolites
+                    gam = pow( 10. , - chem->mol_z[molID] * chem->mol_z[molID] * (DH_A * Isqrt) / ( 1.+ DH_B * chem->mol_ahyd[molID] * Isqrt) + chem->mol_bDH[molID]*Istr);
+                }
                 
                 // the below is   ( gamma * conc ) ^  stoichio  
                 Q *= pow(gam * Vcins[molID] , (double) chem->bkg_nmol[rxid][i]);

@@ -861,13 +861,16 @@ void Krun::proceed(double deltat)
         // number of just completed step
         msk->step = msk->step+1;
         
-	// call speciation if at appropriate step
-        for (int i = 0; i<spec->specID.size();i++){
-            if (msk->step % spec->spec_every[i] == 0) {
-                spec->dospec(i);
+        #ifdef MASKE_WITH_SPECIATION
+            // call speciation if at appropriate step
+            for (int i = 0; i<spec->specID.size();i++){
+                if (msk->step % spec->spec_every[i] == 0) {
+                    spec->dospec(i);
+                }
             }
-        }
-
+        #endif
+        
+        
         // relax if at appropriate step
         for (int i = 0; i<relax->rlxID.size();i++){
             if (msk->step % relax->rlx_every[i] == 0) {
