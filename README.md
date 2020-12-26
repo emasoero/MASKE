@@ -1,5 +1,9 @@
 # MASKE
 
+The basic version of MASKE only requires the LAMMPS submodule.
+If you want to include speciation in your simulation, than you need LAMMPS and PHREEQC.
+If you want to have bacteria too, you need LAMMPS, PHREEQC, and NUFEB.
+
 ## Dependecies
 
 | Name   | Description                        | Version                          |
@@ -10,12 +14,32 @@
 
 ## Download
 
-Download MASKE source code using Git:
+### Downloading basic MASKE (only LAMMPS, no PHREEQC nor NUFEB)
+
+Use:
+```
+$ cd <path> 
+$ git clone https://github.com/emasoero/MASKE
+$ cd MASKE
+$ git submodule update --init lammps
+```
+*path* should be the place where you want the source code to be downloaded.
+
+### Downloading MASKE (and LAMMPS) with PHREEQC (no NUFEB)
+
+Use:
+
+NO IDEA HERE.... DENIS?
+
+### Downloading MASKE with NUFEB (and LAMMPS and PHREEQC)
+
+Use:
 ```
 $ cd <path> 
 $ git clone --recurse-submodules https://github.com/emasoero/MASKE
 ```
-*path* should be the place where you want the source code to be downloaded.
+
+DENIS: the recurse did not work for NUFEB. Got an error related to hdf5. It worked when I directly went into MASKE/NUFEB and cloned it with  ``git clone https://github.com/nufeb/NUFEB --recursive``
 
 ## Folder layout
 
@@ -34,12 +58,15 @@ $ ls
 | bin    | Built executables          |
 | lammps | LAMMPS source folder       |
 
+DENIS: there is no lib, nor bin, but there is NUFEB.... TO BE CORRECTED?
+
 ## Building
 
 We rely on [CMake](https://cmake.org) to provide cross-platform build support.
 
 ### Linux and MacOS
 
+First we compile LAMMPS. From within the MASKE folder, use:
 ```
 $ cd lammps
 $ mkdir build
@@ -48,10 +75,21 @@ $ cmake -DCMAKE_BUILD_TYPE=Release -DWITH_JPEG=Off -DWITH_PNG=Off -DWITH_FFMPEG=
 $ make -j
 $ cd ../..
 $ mkdir build
+```
+
+DENIS: this did not enable MPI in LAMMPS for me. I had to add -DBUILD_MPI=On and -DMPI_CXX_COMPILER=mpicxx-mpich-mp . Do you reckon that MPI should be picked up automatically or not? Should we add the options above (which forces the reader to give the compiler name, so maybe not ideal)?
+
+If you want to install NUFEB, disregard the box below and move to the section "Enabling NUFEB" below.
+
+If you want to install MASKE without NUFEB, Use:
+```
 $ cd build
 $ cmake -DCMAKE_BUILD_TYPE=Release ..
 $ make -j
 ```
+If you want to enable speciation by PHREEQC, add the cmake option  -DCMAKE_WITH_SPECIATION=On
+
+DENIS: is this correct about PHREEQC? What should the user do to actually make sure they have a working PHREEQC?
 
 ### Newcastle University Rocket cluster
 
@@ -107,11 +145,19 @@ with *path* being the path to the desired MPI compiler.
 
 - Compiler complains about c++11 standard.
 
-In the build folder type the following command:
+If you are trying to compile LAMMPS when you get the error, in the lammps/build folder type the following command:
+```
+$ cmake -DCMAKE_CXX_FLAGS="-std=c++11" ../cmake
+$ make -j
+```
+
+If you are trying to compile MASKE, in the MASKE/build folder type the following command:
 ```
 $ cmake -DCMAKE_CXX_FLAGS="-std=c++11" ..
 $ make -j
 ```
+
+- On MacOS, ``make -j`` can sometimes create problems. Try using only ``make``, without the ``-j`` option
 
 ## Running
 
