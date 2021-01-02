@@ -85,6 +85,7 @@
 \newcommand{\fignames}{Figs.~}
 \newcommand{\tabname}{Table~}
 \newcommand{\secname}{Section~}
+\newcommand{\refrname}{Ref.~}
 \renewcommand{\thefootnote} %{\fnsymbol{footnote}}
 
 \begin{document}
@@ -141,16 +142,75 @@ The simulation describes an initial layer of $\ce{Ca(OH)_2}$ in pure water at eq
 %---------------------------------------------------
 %---------------------------------------------------
 
+%---------------------------------------------------
+\subsection{Molecules data}
+%---------------------------------------------------
+
 The following molecules are included in the MASKE simulation. The names of the molecules match the names of the corresponding species in the PHREEQC database \textit{CEMDATA18.1}.
 
 \begin{itemize}
 \item \textit{Ca(OH)2} -- solid Portlandite (calcium hydroxide) \\ 
 Being a solid, only its foreground linear sizes are required in MASKE. It is assumed that the molecule is a cube, hence its linear sizes are obtained as cubic root of the molecular volume. This latter volume, is obtained from the molar mass (74.093 g/mol) and the density (2.21 g/cm$^3$).
 %
-\item \textit{Ca(OH)2} -- solid Portlandite (calcium hydroxide) \\ 
-Being a solid, only its foreground linear sizes are required in MASKE. It is assumed that the molecule is a cube, hence its linear sizes are obtained as cubic root of the molecular volume. This latter volume, is obtained from the molar mass (74.093 g/mol) and the density (2.21 g/cm$^3$).
+\item \textit{CaCO3} -- solid calcite \\ 
+Analogous to the Portlandite above, but with molar mass of 100.0869 g/mol and  density of 2.71 g/cm$^3$.
+%
+\item \textit{Ca+2} -- calcium ions in solution \\ 
+Ions in solution require apparent volume $\phi$ in solution and $a$ and $b$ parameters for Debye-H\"uckel activity coefficients. Unless otherwise stated, the apparent volume of ion $i$ is computed at infinite dilution (excluding dependence on other ion concentrations) using a Redlich-type equation \cite{redlich1964molal} as in PHREEQC:
+%
+\begin{align}
+\phi_{i,inf}= 41.48\left( a1 \times 0.1 + \frac{a2\times 100}{\left(2600 + P_b\right)} + \frac{a3}{T_K-228} + \right.   \nonumber \\
+%
+\left. + \frac{a4 \times 10^4}{\left(2600+P_b\right)\left(T_K - 228 \right) } - W\times Q_{Born} \right)
+\end{align}
+%
+The terms in the equation are: 5 empirical constants ($a1, a2, a3, a4, W$), the pressure in bars $P_b$, the temperature in Kelvin $T_K$, and the Born's dependence of the dielectric constant of the solvent $\varepsilon_r$ as a function of pressure $Q_{Born} = \left(\frac{1}{\varepsilon_r^2}\frac{\partial }{\partial P}\varepsilon_r \right)_T$. For water at room pressure and temperature, $Q_{Born} = 9.76156E-07$, from \refrname\cite{bradley1979thermodynamics}.  The 5 empirical constants for $Ca+2$ can be found in PHREEQC databases. From the \textit{phreeqc.dat} database we have: $a1 = -0.3456$, $a2 = -7.252$, $a3 = 6.149$, $a4 = -2.479$, and $W = 1.239$. These return an apparent volume $\phi$ in cm$^3$/mol, then converted per molecule in the MASKE database units (\eg, for $Ca+2$, $\phi = -0.025129603$ nm$^3$ per molecule).
+\\
+The Debye-H\"uckel constants can be read directly from a PHREEQC database; for $Ca+2$, from the CEMDATA18.1 database, these are $a = 0.486$ nm, and $b = 0.15$.
+%
+\item \textit{OH-} -- hydroxyl ions in solution \\
+Same logics as for $CA+2$ above. Empirical parameters for $\phi$ are: $a1 = -9.66$, $a2 = 28.5$, $a3 = 80$, $a4 = -22.9$, and $W = 1.89$. Resulting apparent volume $\phi = 0.001030404$ nm$^3$ per molecule. Debye-H\"uckel constants from the CEMDATA18.1 database: $a = 1.065$ nm, and $b = 0.064$.
+%
+\item \textit{CO3-2} -- carbonate ions in solution \\
+Same logics as for $CA+2$ above. Empirical parameters for $\phi$ are: $a1 = 5.95$, $a2 = 0$, $a3 = 0$, $a4 = -5.67$, and $W = 6.85$. Resulting apparent volume $\phi = 0.019702472$ nm$^3$ per molecule. Debye-H\"uckel constants from the CEMDATA18.1 database: $a =0.54$ nm, and $b = 0.064$.
 \end{itemize}
 
+
+
+
+%---------------------------------------------------
+\subsection{Rate expressions and data}
+%---------------------------------------------------
+
+First, a brief overview at the rate equations used in MASKE for solid-liquid transitions (dissolution or precipitation). Consider the generic reaction: 
+%
+\begin{equation}
+\ce{A + B <=> C + D}
+\end{equation}
+%
+MASKE implements TST to express the net rate of reactions, with correction for the activity of the solid based on the excess enthalpy of individual particles, coming from their interaction energy. MASKE assumes a meso-scale parametrisation of the interaction potential, such that the change in interaction energy upon dissolving strss-free a kink particle is $\Delta U_{kink,0} = \gamma \Omega$, where $\gamma$ is the solid-solution interfacial energy and $\Omega$ is the particle surface. The rate expressions in MASKE are:
+%
+\begin{align}
+&\RR_{net}^{diss} = \kappa \frac{k_B T}{h}\frac{c^\ddag}{\gamma^\ddag}\exp^{\left(-\frac{\Delta G^\ddag_{diss}}{k_BT}\right)}\left\{Q_{reac}\exp\left[\frac{-\Delta U_{diss}(r)-\gamma\Delta\Omega_{diss}}{k_BT}\right]-\frac{Q_{prod}}{K_{eq,diss}}\right\} V_{m,i}^{\frac{\alpha}{3}}    \label{EqRdiss}  \\
+%
+&\RR_{net}^{prec} = \kappa \frac{k_B T}{h}\frac{c^\ddag}{\gamma^\ddag}\exp^{\left(-\frac{\Delta G^\ddag_{prec}}{k_BT}\right)}\left\{Q_{reac}-\frac{Q_{prod}}{K_{eq,prec}}\exp\left[\frac{-\Delta U_{diss}(r)-\gamma\Delta\Omega_{diss}}{k_BT}\right]\right\} \Delta V^{\frac{\alpha}{3}}    \label{EqRprec}
+\end{align}
+%
+The units of $\RR$ are events per unit time, which MASKE samples over the relevant domains (for dissolution, all the existing particles; for precipitation, a discretised set of cells covering all the possible positions in the domain). In the equation, $\kappa$ is the probability that the activated complex vibrates towards the products (as customary, MASKE takes $\kappa = 1$), $k_B$ is the Boltzmann constant, $T$ the temperature in Kelvin, $h$ the Planck constant. $\gamma^\ddag$ is the activity coefficient of the activated complex: in principle it could be computed with the Davies equation \cite{davies1962butterworths} from the ionic strength of the system, knowing the charge of the complex (or from the Setschenow equation \cite{setschenow1889konstitution} with constant = 0.1 for neutral complexes - see PHREEQC manuals); however, for now MASKE only accepts a constant value of $\gamma^\ddag$, typically chosen as 1. $c^\ddag$ is the concentration of the activated complex in standard state; it must be the same as the one used to obtain the activation energy $\Delta G^\ddag$ (or, more specifically, the entropy part of it, as $\Delta G^\ddag = \Delta H^\ddag - T\cdot \Delta S^\ddag$; a change in $c^\ddag$ to any other $c^\ddag_{new}$ would require a correction of entropy to $\Delta S^\ddag_{new}  = \Delta S^\ddag +k_B \ln\left(\frac{c^\ddag}{c^*_{new}}\right)$). In the dissolution reaction, $V_{m,i}$ is the tributary volume of particle $i$, \viz the volume of the region of space in which a particle would equilibrate to the position of particle $i$; as this is hard to compute, MASKE approximates it with the molecular volume. For a precipitation reaction,$\Delta V$ is the volume used to discretise the simulation domain to sample precipitation everywhere. $V_{m,i}$ and $\Delta V$ are raised to the power $\alpha/3$ to correct for the dimensions of $c^\ddag$; if $c^\ddag$ is per unit surface, the rate constant will be in the same units and $\alpha = 2$ will give the correct dimension of rate in time$^{-1}$. Similarly, if $c^\ddag$ is per unit volume, $\alpha = 3$ will return $\RR$ correctly in time$^{-1}$ units.
+
+In \eqnames\ref{EqRdiss} and \ref{EqRprec}, the activation energies for dissolution and precipitation are linked \via the equilibrium constant: 
+\begin{align}
+\Delta G_{diss}^\ddag - \Delta G_{prec}^\ddag = \Delta G_{r,diss} = -k_BT\ln(K_{eq,diss})   \label{eqGrdiss}\\
+%
+\Delta G_{prec}^\ddag - \Delta G_{diss}^\ddag = \Delta G_{r,prec} = -k_BT\ln(K_{eq,prec})  \label{eqGrprec}
+\end{align}
+where $\Delta G_r$ is the reaction free energy change in standard state (NB: all these values depend on the choice of standard state, as already discussed above). From \eqnames\ref{eqGrdiss} and \ref{eqGrprec} one can easily derive the relationship between equilibrium constants of the dissolution and precipitation reactions: $K_{eq,diss} = K_{eq,prec}^{-1}$. The equations also provide a way to obtain $\Delta G^\ddag_{diss}$ when  $\Delta G^\ddag_{diss}$ and $K_{eq}$ are known, and similarly for $\Delta G^\ddag_{prec}$.
+
+the  products of the reactants and of the products are $Q_{reac}$ and $Q_{prod}$, and the equilibrium constant for the reaction is $K_{Eq} = \frac{Q_{prod,eq}}{Q_{reac,eq}}$. The stoichiometry of a reaction, in MASKE, is given as a vector of change of number of molecules of various species in the solution (called ``background'') and change of number of molecules of various species from the solid (the ``foreground''). MASKE considers as reactants to compute $Q_{reac}$ all the terms that have negative values in the vectors of stoichiometric coefficients, and as products in $Q_{prod}$ all the terms with positive values. The activity of solid particles is taken as 1, and then explicitly 
+
+
+
+\vspace{5cm}
 
 
 
@@ -527,7 +587,7 @@ The algorithms to implement the equations obtained thus far would require only a
 
 %\nocite{}
 
-%\bibliographystyle{unsrt}
+\bibliographystyle{unsrt}
 
 
 %\bibliographystyle{elsarticle-harv}
@@ -539,7 +599,7 @@ The algorithms to implement the equations obtained thus far would require only a
 %\nobibliography{biblio_all_2017_12_19}
 %\bibliography{biblio_all_2017_12_19}
 
-%\bibliography{diluzio}
+\bibliography{biblio}
 
 
 \end{document}

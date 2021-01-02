@@ -801,6 +801,8 @@ void Fix_nucleate::comp_rates_allpar(int pos)
                 else rxid = chem->mechrcID[mid];   // probably redundant as already defined above: to be checked
                 
                 double DGx = chem -> compDGx(rxid); // reaction specific
+                double cx = chem -> cx[chem->rx_DGID[rxid]];
+                double dim = chem -> dim[chem->rx_DGID[rxid]];
                 double gammax = chem -> compgammax(rxid);   // somewhere in this function I will need to calculate gammax from the concentration of the activated complex in case the complex is not charge neutral
                 double KT = msk->kB * solution->Temp;
                 
@@ -815,8 +817,7 @@ void Fix_nucleate::comp_rates_allpar(int pos)
                 //double r0star =  KT / msk->hpl / gammax * exp(-DGx / KT);
                 //double apf = 1.; // molecule size in prefactor: for "allpar" one should take 1 and use gammax above in dimensionless units.   PROBABLY USELESS unless using the Shvab's mechanism of nucleation by growth
                 
-                double kappa = 1.;    double cx = 1;   // transmission coefficient and standard state concetration of the activated complex, the latter in moles per litre
-                double ki = chem->ki[rxid];    // for now I keep it, knowing that ki = 0 for nucleation (-1 for dissolution) yields classical TST
+                double kappa = 1.;  // transmission coefficient
                 double Sen = chem->compSen(mid);
                 
                 
@@ -836,23 +837,20 @@ void Fix_nucleate::comp_rates_allpar(int pos)
                     if (chem->mechchain[mid]) DUi *= (chem->ch_rdV_fgd[chID][k]);
                 }
                 
-                // prefactor. unitC * nAvo converts DV in user's units (e.g. nm3) to litres per mole (same as molar volume Vm in fix_delete... see notes on TST)
-                double r0 = kappa * KT / msk->hpl / gammax * cx * exp(-DGx / KT) * DV * solution->unitC * nAvo;
+                double r0 = kappa * KT / msk->hpl / gammax * cx * exp(-DGx / KT) * pow(DV,dim/3.);
                 
                 if (msk->wplog) {
                     std::ostringstream ss;
                     msg += "; r0 ";    ss << r0;   msg += ss.str();    ss.str(""); ss.clear();
                     msg += "; DV ";    ss << DV;   msg += ss.str();    ss.str(""); ss.clear();
-                    //msg += "; beta ";    ss << beta;   msg += ss.str();    ss.str(""); ss.clear();
                     msg += "; Qreac ";    ss << Qreac;   msg += ss.str();    ss.str(""); ss.clear();
-                    msg += "; ki ";    ss << ki;   msg += ss.str();    ss.str(""); ss.clear();
                     msg += "; Sen ";    ss << Sen;   msg += ss.str();    ss.str(""); ss.clear();
                     msg += "; DSi ";    ss << DSi;   msg += ss.str();    ss.str(""); ss.clear();
                     msg += "; DUi ";    ss << DUi;   msg += ss.str();    ss.str(""); ss.clear();
                 }
                 
-                // Rate equation as per TST (see notes_on_TST.pdf by Masoero, 2019, where ki=0 was assumed as per classical TST)
-                ri = r0 * Qreac * exp( ki * (-Sen * DSi - DUi)/KT );
+                // Rate equation as per TST (see notes_on_TST.pdf by Masoero, 2019)
+                ri = r0 * Qreac;
 
                 if (msk->wplog) {
                     msg += ", ri ";
@@ -874,7 +872,7 @@ void Fix_nucleate::comp_rates_allpar(int pos)
                     
                     //net = true;
                     //beta = solution->compbeta(rxid,net,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
-                    ri -= r0 * Qprod / chem->Keq[rxid] * exp( (1.-ki) * (Sen * DSi + DUi)/KT );
+                    ri -= r0 * Qprod / chem->Keq[rxid] * exp((Sen * DSi + DUi)/KT );
                     
                 }
                 

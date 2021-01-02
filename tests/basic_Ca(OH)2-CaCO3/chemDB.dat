@@ -2,60 +2,78 @@
 # molecule usr_def_name fgd_size_rad fgd_size_circ bkg_vol bkg_ahyd, bkg_bDH, charge_num, nufeb_sp_id, nufeb_form_id, phr_elem
 # fgd_size are the linear sizes of the molecule when in a lammps particle, rad is in radial direction, circ in circumferential direction (this latter to power 2 gives area of attachment)
 # bkg_vol is the apparent volume of one molecule when implicit in the background, typically in solution
-# bkg_ahyd and bkg_bDH are the a and b parameters in the Debye Huckel theory (a is linked to the hydrated diameter or distance of closest approach of ions in solution) -> find values in Phreeqc database or give -1 to either to use Davies equations for activity coeffs
+# bkg_ahyd and bkg_bDH are the a and b parameters in the Debye Huckel theory (a is linked to the hydrated diameter or distance of closest approach of ions in solution) -> find values in Phreeqc database or give -1 to either to use Davies and Setschenow equations for activity coeffs
 # charge_num  zi  is the charge number. E.g. for Ca2+ it is +2, and for H2SiO4 2- it is -2
 # nufeb_sp_id and nufeb_form_id are the numerical (int) ids of the corresponding species and form in nufeb: discarded if fix nufeb is not used
 # phr_elem is the name (string) of the corresponding solution_master_species in phreeqc. For example, Ca-based ions, such as Ca+2 and Ca(OH)+ ions, have the same master species in phreeqc, called "Ca" (see phreeqc database files)
 
 
-# from phreeqc database CEMDATA18.1
-molecule Ca+2      0   	0  	-0.025129603 0.486 0.15   2  -1 -1 Ca
-molecule H4SiO4  0   	0   	0.1512  0.983   0
-molecule OH      0   	0   	0.002   0.416  -1
+# from phreeqc databases phreeqc.dat and CEMDATA18.1
+molecule Ca+2   0   	0  	-0.025129603  	0.486 	0.15   	2  -1 -1 Ca
+molecule OH- 	0   	0   	0.001030404   	1.065 	0.064  	-1 -1 -1 H
+molecule CO3-2	0	0	0.019702472	0.54	0.064	-2 -1 -1 C
+
+
+# molecule H4SiO4  0   	0   	0.1512  0.983   0
+
 
 # hydrated diameters from Nightingale, J. Phys. Chem. 1959. Ionic radii from same paper allow estimation of apparent volume as Vhyd - Vion, as per kumaran paper
-molecule Na	0	0	-123456	0.716	1
-molecule Ba	0	0	-123456	0.808	2
-molecule Sr	0	0	-123456	0.824	2
-molecule Mg	0	0	-123456	0.856	2
-molecule CO3	 0	0	 0.1021 0.788  -2
-molecule H      0   	0   	123456  0.564  -1
+#molecule Na	0	0	-123456	0.716	1
+#molecule Ba	0	0	-123456	0.808	2
+#molecule Sr	0	0	-123456	0.824	2
+#molecule Mg	0	0	-123456	0.856	2
+#molecule CO3	 0	0	 0.1021 0.788  -2
+#molecule H      0   	0   	123456  0.564  -1
 
 # water from molar volume
-molecule H2O     0 0  0.027 0   0
+#molecule H2O     0 0  0.027 0   0
 
 # solids from molar volume
 # for CH: molar mass is 74.093 g/mol and density is 2.21 g/cm3 --> molecular vol = (0.381837 nm)^3
 # for CaCO3: molar mass is 100.0869 g/mol and density is 2.71 g/cm3 --> molecular vol = (0.3943535 nm)^3
-molecule Ca(OH)2      0.381837  0.381837 	0    	0     	0
-molecule CaCO3      0.3943535  0.3943535 	0    	0     	0
+#molecule Ca(OH)2      0.381837  0.381837 	0    	0     	0
+#molecule CaCO3      0.3943535  0.3943535 	0    	0     	0
 
 
 # older values of which I am not sure
-molecule C3S     0.49378  0.49378 0    0   0
-molecule CSHI    0.65 0.65 0   0   0
-molecule CSHII   0.65 0.65 0   0   0
-molecule H2SiO4  0    0   0.125 0.5   -2
-molecule H3SiO4  0    0   0.125  0.5  -1
+#molecule C3S     0.49378  0.49378 0    0   0
+#molecule CSHI    0.65 0.65 0   0   0
+#molecule CSHII   0.65 0.65 0   0   0
+#molecule H2SiO4  0    0   0.125 0.5   -2
+#molecule H3SiO4  0    0   0.125  0.5  -1
 
 
 
 # ACTIVITY COEFFICIENTS OF ACTIVATED COMPLEXES
-gammax gxSolid  const 1 	# dimensionless and equal to 1 if reference reaction is the dissolution of a charge-neutral solid
+gammax gxSolid  const 1 	# dimensionless
 
 
 
 # Standard activation free energy of chem reax -- rules to compute it, as I guess may depend not just on chemical reaction
 
-DGx DG_gC3Sdis_Grant  const 83 # units of lammps energy ag nm2 ns-2, from 50 kJ/mole in Grant 2006 and Thomas activation energy of hydration. Conversion from kJ/mol to ag nm2 ns-2 via factor 1.66
+DGx DG_CaCO3_dis const	172.64 cx 1e-14	dim 2 
+# from 104 kJ/mol in Petrou 2014, from Sjoberg 1976 (I doubt their analysis - compute it yourself from Sjoberg). Conversion from kJ/mol to ag nm2 ns-2 multiplying by 1.66.   Units of k in Sjoberg 1976 were sec-1 cm-2, so cx is 1/cm2 and must be converted to 1 event * nm-2 to get cx.   dim is the space dimensionality of the rate constant - in Sjoberg as per Petrou, it is length^-2, so dim = 2  (would be 3 if k was in length^-3)
 
-DGx DG_gC3Sprec_test const -86.144     # DGxdis above + kT ln(Keq_dis). kT in kj/mol is 2.479, times 1.66 to convert to ag nm2 ns-2. Keq_diss, from corresponding equation below, is 1.41e-18.  It is weird to see a negative DG, but this is because the standard state of a solution is 1M, so very concentrated. The negative DGx will give a high exp(-DG/kT) in the rate, but then be compensated for precipitation by the activity product of the ions in solution
+DGx DG_CaCO3_prec const	92.2884212	cx 1e-14 dim 2
+# DGxdis above + kT ln(Keq_dis). kT in kj/mol is 2.479, times 1.66 to convert to ag nm2 ns-2. Keq_diss, from corresponding equation below, is 3.31157E-09 from PHREEQC database CEMDATA18.1
 
-DGx DG_CaOHdis const 49.302     # from 29.7 kJ/mol in Johannnsen and Rademacher, Acta Hydrochim. hydrobiol. 27 (1999). Conversion from kJ/mol to ag nm2 ns-2 via factor 1.66
+DGx DG_CaOHdis const 44.39   cx 1e-14 dim 2
+# DGx = DHx - TDSx  . DHx simply equated to Ea from 29.7 kJ/mol in Johannnsen and Rademacher, Acta Hydrochim. hydrobiol. 27 (1999).  TDSx at 298 K computed from same paper in  2.96 KJ/mol with k in s-1 cm-2, so cx in cm-2 (converted to nm-2 in input above).   Result is DGx = 29.7 - 2.96 = 26.74 kJ/mol. Conversions from kJ/mol to ag nm2 ns-2 multiplying by 1.66.  
 
-DGx DG_CaCO3_dis const	58.34	# from 8.4 kcal/mol = 35.1456 kJ/mol in Sjoberg 1976, Geochim Cosmochim Acta. Conversion from kJ/mol to ag nm2 ns-2 via factor 1.66
 
-DGx DG_CaCO3_prec const	-21.555	# DGxdis above + kT ln(Keq_dis). kT in kj/mol is 2.479, times 1.66 to convert to ag nm2 ns-2. Keq_diss, from corresponding equation below, is 3.7e-9, from  wikipedia referring to Lide, D. R., ed. (2005). CRC Handbook of Chemistry and Physics (86th ed.). Boca Raton (FL): CRC Press. ISBN 0-8493-0486-5
+
+
+
+
+#DGx DG_gC3Sdis_Grant  const 83 # units of lammps energy ag nm2 ns-2, from 50 kJ/mole in Grant 2006 and Thomas activation energy of hydration. Conversion from kJ/mol to ag nm2 ns-2 via factor 1.66
+
+#DGx DG_gC3Sprec_test const -86.144     # DGxdis above + kT ln(Keq_dis). kT in kj/mol is 2.479, times 1.66 to convert to ag nm2 ns-2. Keq_diss, from corresponding equation below, is 1.41e-18.  It is weird to see a negative DG, but this is because the standard state of a solution is 1M, so very concentrated. The negative DGx will give a high exp(-DG/kT) in the rate, but then be compensated for precipitation by the activity product of the ions in solution
+
+
+
+
+
+
 
 
 
@@ -67,8 +85,13 @@ DGx DG_CaCO3_prec const	-21.555	# DGxdis above + kT ln(Keq_dis). kT in kj/mol is
 # For style simple, the 4 mandatory args are:  activity coeff of activated complex's calculator name (user defined above) ; activation energy of transition state's calculator name (user defined above);  equilibrium constant (user-given here);  ki-parameter, viz fractional contribution of interaction and surface energy (user-given here, between 0 and 1 - per classical TST, should be 0 for precipitation and 1 for dissolution reactions)
 # keywords can be bkg or fgd, followed by list of changes to background and foreground (particles) in terms of number of molecules, induced by the reaction
 
-reax CH_dis       simple gxSolid DG_CaOHdis 	5.5e-6  1      bkg Ca +1 OH +2   fgd CH -1
-reax CaCO3_prec   simple gxSolid DG_CaCO3_prec 	3.7e-9  0      bkg Ca -1 CO3 -1  fgd CaCO3 +1
+reax CH_dis       simple gxSolid DG_CaOHdis 	6.30866e-6  1      bkg Ca +1 OH +2   fgd CH -1
+# Keq,diss from phreeqc CEMDATA18.1, combining CaOH2 = Ca + 2H2O - 2H with H2O = OH + H   
+
+reax CaCO3_prec   simple gxSolid DG_CaCO3_prec 	3.02e8  0      bkg Ca -1 CO3 -1  fgd CaCO3 +1
+# Keq,prec from Keq,diss^-1 with Keq,diss = 3.31157E-09 from phreeqc CEMDATA18.1
+
+
 
 
 #reax CH_form    simple gxfoo DGfoo 1.1  0.5     bkg Ca -1 OH -2                     fgd CH +1   # a commment just for testing
@@ -78,7 +101,6 @@ reax CaCO3_prec   simple gxSolid DG_CaCO3_prec 	3.7e-9  0      bkg Ca -1 CO3 -1 
 #reax C3S_dis    simple g_C3Sdis DG_gC3Sdis 1.41e-18  0.5      bkg Ca +3 H2SiO4 +1 H2O -1 OH +2    fgd C3S -1  solvent H2O
 #reax CSHII_dis  simple gxfoo DGfoo 1.1  0.3    bkg Ca +2 H2SiO4 +1 H2O +1          fgd CSHII -1   solvent H2O
 #reax C3S_dis_Bul simple g_C3Sdis DG_gC3SdisTEST 1.41e-18   0.5    bkg Ca +3 H3SiO4 +1 H2O -5 OH +5    fgd C3S -1   solvent H2O
-
 #reax C3S_dis_test simple g_C3Sdis_test DG_gC3Sdis_test 1.41e-18   0.5    bkg Ca +3 H3SiO4 +1 H2O -5 OH +5    fgd C3S -1   solvent H2O
 #reax C3S_prec_test simple g_C3Sdis_test DG_gC3Sprec_test 7.092e+17   0.5    bkg Ca -3 H3SiO4 -1 H2O +5 OH -5    fgd C3S +1   solvent H2O
 

@@ -44,6 +44,7 @@ namespace MASKE_NS {
         std::vector<double> mol_cindV, mol_nindV;  // vectors with concentration and number of molecules in dV reservoire of solution (here assuming iso style of dV... vectors will be needed for aniso type)
         std::vector<std::string> gxnames, gxstyle;   // names and styles (const, or more complex ones possibly in future) of calculators of activity coeffs of activated complexes
         std::vector<std::string> DGnames, DGstyle;   // names and styles (const, or more complex ones possibly in future) of standard activation energy of activated complexes
+        std::vector<double> cx, dim;   // vectors of standard state concentration and dimensionality of activated complexes associated to each DG
         std::vector<std::string> rxnames, chnames;  //name of reactions and chains
         std::vector<std::string> sennames, senstyle;  //name and style of surface energy calculators
         std::vector<std::string> chstyle;  //chain styles
