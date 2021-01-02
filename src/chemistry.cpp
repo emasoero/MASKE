@@ -281,8 +281,8 @@ void Chemistry::addreax()
         Nreax++;
         rxnames.push_back(newname);
         std::string gxn,DGn;
-        double Keqi, kii;
-        ss >> gxn >> DGn >> Keqi >> kii;
+        double Keqi;
+        ss >> gxn >> DGn >> Keqi;
         for (int i = 0; i<Ngx; i++) {
             if (strcmp(gxn.c_str(), gxnames[i].c_str())==0) rx_gxID.push_back(i);
         }
@@ -298,11 +298,6 @@ void Chemistry::addreax()
             error->errsimple(msg);
         }
         Keq.push_back(Keqi);
-        if (kii >= 0. && kii <= 1.) ki.push_back(kii);
-        else {
-            std::string msg = "ERROR: ki parameter specificed for reaction \""+newname+"\" must be between 0 and 1 \n";
-            error->errsimple(msg);
-        }
         
         
         // record list of stoichio changes associated with reaction, in both background and foreground
@@ -455,7 +450,6 @@ void Chemistry::addreax()
             fprintf(screen," Gammax calculator %s with ID %d \n", gxnames[rx_gxID[Nreax-1]].c_str() , rx_gxID[Nreax-1]);
             fprintf(screen," DGx calculator %s with ID %d \n", DGnames[rx_gxID[Nreax-1]].c_str(),rx_DGID[Nreax-1]);
             fprintf(screen," Equilibrium constant %f \n",Keq[Nreax-1]);
-            fprintf(screen," Ki parameter %f \n",ki[Nreax-1]);
             fprintf(screen,"\n BKG: ");
             for (int i=0; i<(bkg_molID.back()).size(); i++) {
                 fprintf(screen," %s %f",molnames[(bkg_molID.back())[i]].c_str(),(bkg_nmol.back())[i]);

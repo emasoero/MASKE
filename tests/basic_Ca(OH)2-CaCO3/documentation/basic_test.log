@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.20 (TeX Live 2019) (preloaded format=pdflatex 2019.5.8)  2 JAN 2021 17:13
+This is pdfTeX, Version 3.14159265-2.6-1.40.20 (TeX Live 2019) (preloaded format=pdflatex 2019.5.8)  2 JAN 2021 18:37
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -501,16 +501,16 @@ Overfull \hbox (37.72697pt too wide) detected at line 197
  []
 
 [3] [4] [5] [6] [7] [8] [9] [10] [11] [12]
-Overfull \hbox (38.61647pt too wide) in alignment at lines 482--484
+Overfull \hbox (38.61647pt too wide) in alignment at lines 492--494
  [][][] []
  []
 
 [13] [14]
-Overfull \hbox (24.48712pt too wide) in alignment at lines 524--527
+Overfull \hbox (24.48712pt too wide) in alignment at lines 534--537
  [][][] []
  []
 
-[15] [16] [17] (./basic_test.bbl) [18] (./basic_test.aux)
+[15] [16] [17] (./basic_test.bbl [18]) [19] (./basic_test.aux)
 
 LaTeX Warning: There were multiply-defined labels.
 
@@ -518,11 +518,11 @@ LaTeX Warning: There were multiply-defined labels.
 Here is how much of TeX's memory you used:
  13349 strings out of 492616
  247185 string characters out of 6129482
- 299915 words of memory out of 5000000
+ 300558 words of memory out of 5000000
  17159 multiletter control sequences out of 15000+600000
  544014 words of font info for 72 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 54i,19n,92p,2184b,523s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 54i,19n,92p,2184b,525s stack positions out of 5000i,500n,10000p,200000b,80000s
 </usr/local/texlive/2019/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx12.pfb
 ></usr/local/texlive/2019/texmf-dist/fonts/type1/public/amsfonts/cm/cmbxti10.pf
 b></usr/local/texlive/2019/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb
@@ -543,10 +543,10 @@ texlive/2019/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb></usr/local/te
 xlive/2019/texmf-dist/fonts/type1/public/amsfonts/cm/cmti10.pfb></usr/local/tex
 live/2019/texmf-dist/fonts/type1/public/amsfonts/cm/cmti12.pfb></usr/local/texl
 ive/2019/texmf-dist/fonts/type1/public/rsfs/rsfs10.pfb>
-Output written on basic_test.pdf (18 pages, 281418 bytes).
+Output written on basic_test.pdf (19 pages, 282814 bytes).
 PDF statistics:
- 143 PDF objects out of 1000 (max. 8388607)
- 101 compressed objects within 2 object streams
+ 147 PDF objects out of 1000 (max. 8388607)
+ 104 compressed objects within 2 object streams
  0 named destinations out of 1000 (max. 500000)
  1 words of extra memory for PDF output out of 10000 (max. 10000000)
 

@@ -179,10 +179,10 @@ Same logics as for $CA+2$ above. Empirical parameters for $\phi$ are: $a1 = 5.95
 
 
 %---------------------------------------------------
-\subsection{Rate expressions and data}
+\subsection{Rate expressions}
 %---------------------------------------------------
 
-First, a brief overview at the rate equations used in MASKE for solid-liquid transitions (dissolution or precipitation). Consider the generic reaction: 
+This section gives an overview of the rate equations used in MASKE for solid-liquid transitions (dissolution or precipitation). Consider the generic reaction: 
 %
 \begin{equation}
 \ce{A + B <=> C + D}
@@ -206,7 +206,17 @@ In \eqnames\ref{EqRdiss} and \ref{EqRprec}, the activation energies for dissolut
 \end{align}
 where $\Delta G_r$ is the reaction free energy change in standard state (NB: all these values depend on the choice of standard state, as already discussed above). From \eqnames\ref{eqGrdiss} and \ref{eqGrprec} one can easily derive the relationship between equilibrium constants of the dissolution and precipitation reactions: $K_{eq,diss} = K_{eq,prec}^{-1}$. The equations also provide a way to obtain $\Delta G^\ddag_{diss}$ when  $\Delta G^\ddag_{diss}$ and $K_{eq}$ are known, and similarly for $\Delta G^\ddag_{prec}$.
 
-the  products of the reactants and of the products are $Q_{reac}$ and $Q_{prod}$, and the equilibrium constant for the reaction is $K_{Eq} = \frac{Q_{prod,eq}}{Q_{reac,eq}}$. The stoichiometry of a reaction, in MASKE, is given as a vector of change of number of molecules of various species in the solution (called ``background'') and change of number of molecules of various species from the solid (the ``foreground''). MASKE considers as reactants to compute $Q_{reac}$ all the terms that have negative values in the vectors of stoichiometric coefficients, and as products in $Q_{prod}$ all the terms with positive values. The activity of solid particles is taken as 1, and then explicitly 
+The activity products of the reactants and of the products are $Q_{reac}$ and $Q_{prod}$, and the equilibrium constant for the reaction is $K_{Eq} = \frac{Q_{prod,eq}}{Q_{reac,eq}}$. The stoichiometry of a reaction, in MASKE, is given as a vector of change of number of molecules of various species in the solution (called ``background'') and change of number of molecules of various species from the solid (the ``foreground''). MASKE considers as reactants to compute $Q_{reac}$ all the terms that have negative values in the vectors of stoichiometric coefficients, and as products in $Q_{prod}$ all the terms with positive values. The activity of solid particles is taken as 1, and then explicitly corrected by a change in excess enthalpy upon dissolution $\Delta H_{ex,diss} = \Delta U_{diss} + \gamma \Delta\Omega_{diss}$. Here, $\Delta U_{diss}$ is the change in interaction energy between particles following dissolution, and $\Delta \Omega_{diss}$ is the change in surface area caused by particle dissolution ($= -\Omega$ for the cases of full particle dissolution or nucleation used here, but conceptually extensible to cases of partial dissolution or growth). In general, the $\Delta \Omega_{diss}$ reflects a particular choice of the interaction energy change from removing an unstressed kink particle $\Delta U_{kink,0} = \gamma \Omega$, hence MASKE in its current version can only be used if the interaction potentials respect said constraint on $\Delta U_{kink,0}$.
+
+
+
+
+
+%---------------------------------------------------
+\subsection{Input data for the rate expressions}
+%---------------------------------------------------
+
+REMOVE KI FROM CHEMDB!!
 
 
 
