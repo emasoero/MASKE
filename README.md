@@ -27,9 +27,7 @@ $ git submodule update --init lammps
 
 ### Downloading MASKE (and LAMMPS) with PHREEQC (no NUFEB)
 
-Use:
-
-NO IDEA HERE.... DENIS?
+Same as basic MASKE since PHREEQC doesn't have a git repository.
 
 ### Downloading MASKE with NUFEB (and LAMMPS and PHREEQC)
 
@@ -39,26 +37,12 @@ $ cd <path>
 $ git clone --recurse-submodules https://github.com/emasoero/MASKE
 ```
 
-DENIS: the recurse did not work for NUFEB. Got an error related to hdf5. It worked when I directly went into MASKE/NUFEB and cloned it with  ``git clone https://github.com/nufeb/NUFEB --recursive``
-
-## Folder layout
-
-After download is completed the MASKE folder should contain the following folders:
-
+If you get the error:
 ```
-$ cd MASKE 
-$ ls
+fatal: repository 'https://github.com/live-clones/hdf5/' not found
+fatal: clone of 'https://github.com/live-clones/hdf5' into submodule path '/home/dt/test/MASKE/NUFEB/thirdparty/hdf5' failed
 ```
-
-| Folder | Description                |
-|--------|----------------------------|
-| src    | Source files               |
-| lib    | Library dependancies files |
-| tests  | Collection of test cases   |
-| bin    | Built executables          |
-| lammps | LAMMPS source folder       |
-
-DENIS: there is no lib, nor bin, but there is NUFEB.... TO BE CORRECTED?
+ignore it since we don't rely on NUFEB's HDF5 output files.
 
 ## Building
 
@@ -76,8 +60,7 @@ $ make -j
 $ cd ../..
 $ mkdir build
 ```
-
-DENIS: this did not enable MPI in LAMMPS for me. I had to add -DBUILD_MPI=On and -DMPI_CXX_COMPILER=mpicxx-mpich-mp . Do you reckon that MPI should be picked up automatically or not? Should we add the options above (which forces the reader to give the compiler name, so maybe not ideal)?
+CMake will automatically detect support for MPI in your system. If might fail to detect it (usually when you have a custom MPI installation) so you might need to add -DBUILD_MPI=On and -DMPI_CXX_COMPILER=<MPI compiler> to the CMake options.
 
 If you want to install NUFEB, disregard the box below and move to the section "Enabling NUFEB" below.
 
@@ -87,9 +70,7 @@ $ cd build
 $ cmake -DCMAKE_BUILD_TYPE=Release ..
 $ make -j
 ```
-If you want to enable speciation by PHREEQC, add the cmake option  -DCMAKE_WITH_SPECIATION=On
-
-DENIS: is this correct about PHREEQC? What should the user do to actually make sure they have a working PHREEQC?
+If you want to enable speciation by PHREEQC, add the cmake option -DWITH_SPECIATION=On
 
 ### Newcastle University Rocket cluster
 
@@ -99,6 +80,20 @@ $ module load CMake
 $ module load OpenMPI
 ```
 Then follow the Linux build instructions.
+
+### Enabling PHREEQC
+
+Download [PHREEQC source code](https://water.usgs.gov/water-resources/software/PHREEQC/iphreeqc-3.6.2-15100.tar.gz), uncompress, build and install it using:
+```
+$ cd <path where PHREEQC was downloaded>
+$ tar -xvzf iphreeqc-3.6.2-15100.tar.gz
+$ mkdir build
+$ cd build
+$ ../configure --prefix=<path to MASKE>/lib/iphreeqc
+$ make -j
+$ make install
+```
+The PHREEQC library files (libiphreeqc.so, etc.) should be installed into MASKE's lib folder.
 
 ### Enabling NUFEB
 
@@ -131,6 +126,23 @@ Finally, compile MASKE using:
 ```
 $ make -j
 ```
+
+## Folder layout
+
+After build is completed the MASKE folder should contain the following folders:
+
+```
+$ cd MASKE 
+$ ls
+```
+
+| Folder | Description                |
+|--------|----------------------------|
+| src    | Source files               |
+| lib    | Library dependancies files |
+| tests  | Collection of test cases   |
+| bin    | Built executables          |
+| lammps | LAMMPS source folder       |
 
 ### Troubleshooting
 

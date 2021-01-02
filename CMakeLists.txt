@@ -49,7 +49,7 @@ else()
 endif()
 
 if (WITH_SPECIATION)
-  find_library(PHREEQC_LIBRARIES iphreeqc PATHS ${CMAKE_SOURCE_DIR}/lib/iphreeqc-3.6.2-15100/lib NO_DEFAULT_PATH)
+  find_library(PHREEQC_LIBRARIES iphreeqc PATHS ${CMAKE_SOURCE_DIR}/lib/iphreeqc/lib NO_DEFAULT_PATH)
   list(APPEND SOURCES src/spec.cpp)
 endif()
 
