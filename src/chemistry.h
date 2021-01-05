@@ -44,12 +44,13 @@ namespace MASKE_NS {
         std::vector<double> mol_cindV, mol_nindV;  // vectors with concentration and number of molecules in dV reservoire of solution (here assuming iso style of dV... vectors will be needed for aniso type)
         std::vector<std::string> gxnames, gxstyle;   // names and styles (const, or more complex ones possibly in future) of calculators of activity coeffs of activated complexes
         std::vector<std::string> DGnames, DGstyle;   // names and styles (const, or more complex ones possibly in future) of standard activation energy of activated complexes
+        std::vector<double> cx, dim;   // vectors of standard state concentration and dimensionality of activated complexes associated to each DG
         std::vector<std::string> rxnames, chnames;  //name of reactions and chains
         std::vector<std::string> sennames, senstyle;  //name and style of surface energy calculators
         std::vector<std::string> chstyle;  //chain styles
         std::vector<std::string> mechnames, mechstyle, mechmode,mechinter;  //mechanism name, style, mode (straight or net), and energy scaling
         std::vector<int> rx_gxID,rx_DGID;   // pointers to gammax and DG calculators, specified for each simple reaction
-        std::vector<double> Keq, ki;    // vectors of equilibrium constants and ki parameters (fraction contribution of interaction and surface energy) of chemical reactions
+        std::vector<double> Keq;    // vectors of equilibrium constants of chemical reactions
         std::vector<double> rx_dV_fgd, rx_dV_bkg;    // change of foreground and backgroun volume due to reaction
         std::vector<double> ch_dV_fgd, ch_dV_bkg;    // change of foreground and backgroun volume due to reaction chain
         std::vector<std::vector<double> > ch_rdV_fgd, ch_rdV_bkg;    // relative importance in terms of volme change for each step in chain reaction: wil be used in fix_delete sometimes to compute fraction of surface and volume change to be attributed to each reaction in chain

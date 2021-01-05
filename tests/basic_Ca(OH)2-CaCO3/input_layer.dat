@@ -1,20 +1,20 @@
 # Running the code on Enrico's Mac Air
-#    /opt/local/bin/mpiexec-mpich-mp -np 4 ./maske input.dat
+#    /opt/local/bin/mpiexec-mpich-mp -np 2 ./maske input.dat
 
 
 # ===== SET UNIVERSE OF SUB-COMMUNICATORS ========
 
 # command structure: subcomm Nsubcomms name1 Nproc1 lmp_yes/no name2 Nproc2 .... nameN NprocN
 # NB: the first subcomm should always be lmp_yes, otherwise thermos cannot be produced
-# Antonello manages deletion, Bernini manages nucletion, Canova manages NUFEB
-subcomm 3 Antonello 2 lmp_yes 123 Bernini 1 lmp_yes 1234 Canova 1 lmp_yes 12345
+# Antonello manages deletion, Bernini manages nucletion
+subcomm 2 Antonello 1 lmp_yes 123 Bernini 1 lmp_yes 1234 
 
 
 
 # ===== READ CHEMISTRY DATA BASE ========
 
 # Load chemistry database file, containing molecule types, reactions, and mechanisms
-chemDB chemDB_SI.dat
+chemDB chemDB.dat
 
 
 

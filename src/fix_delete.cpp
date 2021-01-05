@@ -598,7 +598,7 @@ void Fix_delete::comp_rates_allpar(int pos)
             DUpu = -2.*tE[i]/pow((double)nrv,1./3.);
         }
         else if (strcmp(chem->mechinter[mid].c_str(),"int_2lin")==0) {
-            DSpu = -Ps/pow((double)nrv,68.5/100.);      // power artificailly tuned to get hetero nucleation in cg sim.
+            DSpu = -Ps/pow((double)nrv,68.5/100.);      // power artificailly tuned to get hetero nucleation in cg sim... just to fiddle around: do not use those in a proper simulation
             DUpu = -2.*tE[i]/pow((double)nrv,68.5/100.);
         }
         else{
@@ -628,6 +628,8 @@ void Fix_delete::comp_rates_allpar(int pos)
                 else rxid = chem->mechrcID[mid];   // probably redundant as already defined above: to be checked
                 
                 double DGx = chem -> compDGx(rxid); // reaction specific
+                double cx = chem -> cx[chem->rx_DGID[rxid]];
+                double dim = chem -> dim[chem->rx_DGID[rxid]];
                 double gammax = chem -> compgammax(rxid);
                 double KT = msk->kB * solution->Temp;
                 
@@ -639,12 +641,7 @@ void Fix_delete::comp_rates_allpar(int pos)
                     msg += "; T ";    ss << (solution->Temp);   msg += ss.str();    ss.str(""); ss.clear();
                 }
                 
-                double vAvA1 = 1.;  // see dissolution rate equation in Notes_on_TST.pdf by Masoero 2019
-                //double r0star =  KT / msk->hpl / gammax * exp(-DGx / KT);
-                //double apf = 1.; // molecule size in prefactor: for "allpar" one should take 1 and use gammax above in dimensionless units.
-                double kappa = 1.;    double cx = 1;   // transmission coefficient and standard state concetration of the activated complex, the latter in moles per litre
-
-                double ki = chem->ki[rxid];
+                double kappa = 1.;       // transmission coefficient
                 double Sen = chem->compSen(mid);
                 
             
@@ -653,7 +650,7 @@ void Fix_delete::comp_rates_allpar(int pos)
                 std::string topass = "reac";
                 double Qreac = solution->compQ(rxid,topass,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
                 
-                double Vm = - (chem -> rx_dV_fgd[rxid]) * nAvo * solution->unitC;  // Molar volume of the fgd deleted by the reaction at the current step in the chain. Minus sign because dV of fdg < 0 for a proper dissolution reaction
+                double Vm = - (chem -> rx_dV_fgd[rxid]);  // Volume of fgd deleted by the reaction at the current step in the chain. Minus sign because dV of fdg < 0 for a proper dissolution reaction.
                 
                //Delta surface and Delta U are assumed to be proportional to the number of reaction/chain units and relative importance of each step in chain
                 double DSi = DSpu;
@@ -665,15 +662,12 @@ void Fix_delete::comp_rates_allpar(int pos)
                     if (chem->mechchain[mid]) DUi *= (chem->ch_rdV_fgd[chID][k]);
                 }
                 
-                //Vm = 1.;
-                double r0 = kappa * KT / msk->hpl / gammax * cx * Vm * exp(-DGx / KT) * vAvA1;
+                double r0 = kappa * KT / msk->hpl / gammax * cx * exp(-DGx / KT)* pow(Vm,dim/3.) ;
                 
                 if (msk->wplog) {
                     std::ostringstream ss;
                     msg += "; r0 ";    ss << r0;   msg += ss.str();    ss.str(""); ss.clear();
-                    //msg += "; apf ";    ss << apf;   msg += ss.str();    ss.str(""); ss.clear();
                     msg += "; Qreac ";    ss << Qreac;   msg += ss.str();    ss.str(""); ss.clear();
-                    msg += "; ki ";    ss << ki;   msg += ss.str();    ss.str(""); ss.clear();
                     msg += "; Sen ";    ss << Sen;   msg += ss.str();    ss.str(""); ss.clear();
                     msg += "; DSi ";    ss << DSi;   msg += ss.str();    ss.str(""); ss.clear();
                     msg += "; DUi ";    ss << DUi;   msg += ss.str();    ss.str(""); ss.clear();
@@ -681,10 +675,7 @@ void Fix_delete::comp_rates_allpar(int pos)
                 
                 
                 // Rate equation as per TST (see notes_on_TST.pdf by Masoero, 2019, where ki=0 was assumed as per classical TST)
-                ri = r0 * Qreac * exp( ki * (-Sen * DSi - DUi)/KT );
-
-                // Rate equation as per TST (see Shvab et al 2017)
-                //ri = r0star * apf * apf *  beta * exp( ki * (-Sen * DSi - DUi)/KT );
+                ri = r0 * Qreac * exp((-Sen * DSi - DUi)/KT );
                 
                 
                 // if net rate is requested by user in chemDB, then add rate backward
@@ -692,10 +683,7 @@ void Fix_delete::comp_rates_allpar(int pos)
                     
                     topass = "prod";
                     double Qprod = solution->compQ(rxid,topass,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
-                    
-                    //net = true;
-                    //beta = solution->compbeta(rxid,net,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
-                    ri -= r0 * Qprod / chem->Keq[rxid] * exp( (1. - ki) * (Sen * DSi + DUi)/KT );
+                    ri -= r0 * Qprod / chem->Keq[rxid];
                 }
                 
                 if (ri < 0.) ri = 0.;

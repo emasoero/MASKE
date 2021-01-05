@@ -174,7 +174,7 @@ void Solution::computeNmol(void)
 
 
 // ---------------------------------------------------------------
-// compute activity product using the approach in PHREEQC (Debye Huckel if parameters a and b in molecules in chemDB are >= 0. If they are < 0, uses Davies for charged molecules and log10 gamma = 0.1 Istrength for uncharged ones
+// compute activity product using the approach in PHREEQC (Truesdell-Jones equation if Debye Huckel parameters a and b in molecules in chemDB are >= 0. If they are < 0, uses Davies for charged molecules and Setschenow equation (log10 gamma = 0.1 Istrength) for uncharged ones
 double Solution::compQ(int rxid, std::string type, std::string sol_in_style, std::string sol_in_UL)
 {
     //double beta = 1.;
@@ -315,7 +315,7 @@ double Solution::compQ(int rxid, std::string type, std::string sol_in_style, std
 
 
 // ---------------------------------------------------------------
-// compute beta using the Debye Huckel calculation of activity coefficients
+// compute beta using the Truesdell or Davies and Setschenow equations
 double Solution::compbeta(int rxid, bool net, std::string sol_in_style, std::string sol_in_UL)
 {
     double beta = 1.;

@@ -224,14 +224,39 @@ void Chemistry::addDG()
     
     DGcoef.push_back(cvec);
     
+    // after the coefficients to compute DGx, the code expects the standard state concentration and dimensionality of the activated complex associated to DG
+    
+    ss >> newname;
+    if (strcmp(newname.c_str(), "cx") != 0){
+        std::string msg = "ERROR: In Chemistry database, expected cx after DGx coefficients for "+ DGnames.back()+", instad \""+newname+"\" was found \n";
+        error->errsimple(msg);
+    }
+    else{
+        double entry;
+        ss >> entry;
+        cx.push_back(entry);
+    }
+    
+    ss >> newname;
+    if (strcmp(newname.c_str(), "dim") != 0){
+        std::string msg = "ERROR: In Chemistry database, expected dim after DGx coefficients for "+ DGnames.back()+", instad \""+newname+"\" was found \n";
+        error->errsimple(msg);
+    }
+    else{
+        double entry;
+        ss >> entry;
+        dim.push_back(entry);
+    }
+    
     
     //just a check
     if (me==MASTER) fprintf(screen," New DGx calculator added: %s Style = %s\n",DGnames[NDG-1].c_str(),DGstyle[NDG-1].c_str());
-    if (me==MASTER) fprintf(screen," Current DGx coeff matrix is: \n");
+    if (me==MASTER) fprintf(screen," Current DGx coeff matrix , cx, and dim are: \n");
     for (int i=0; i<NDG; i++) {
         for (int j=0; j<DGcoef[i].size(); j++) {
             if (me==MASTER) fprintf(screen," %f ",DGcoef[i][j]);
         }
+        if (me==MASTER) fprintf(screen,", cx = %e , dim = %f",cx[i],dim[i]);
         if (me==MASTER) fprintf(screen,"\n");
     }
      
@@ -256,8 +281,8 @@ void Chemistry::addreax()
         Nreax++;
         rxnames.push_back(newname);
         std::string gxn,DGn;
-        double Keqi, kii;
-        ss >> gxn >> DGn >> Keqi >> kii;
+        double Keqi;
+        ss >> gxn >> DGn >> Keqi;
         for (int i = 0; i<Ngx; i++) {
             if (strcmp(gxn.c_str(), gxnames[i].c_str())==0) rx_gxID.push_back(i);
         }
@@ -273,11 +298,6 @@ void Chemistry::addreax()
             error->errsimple(msg);
         }
         Keq.push_back(Keqi);
-        if (kii >= 0. && kii <= 1.) ki.push_back(kii);
-        else {
-            std::string msg = "ERROR: ki parameter specificed for reaction \""+newname+"\" must be between 0 and 1 \n";
-            error->errsimple(msg);
-        }
         
         
         // record list of stoichio changes associated with reaction, in both background and foreground
@@ -430,7 +450,6 @@ void Chemistry::addreax()
             fprintf(screen," Gammax calculator %s with ID %d \n", gxnames[rx_gxID[Nreax-1]].c_str() , rx_gxID[Nreax-1]);
             fprintf(screen," DGx calculator %s with ID %d \n", DGnames[rx_gxID[Nreax-1]].c_str(),rx_DGID[Nreax-1]);
             fprintf(screen," Equilibrium constant %f \n",Keq[Nreax-1]);
-            fprintf(screen," Ki parameter %f \n",ki[Nreax-1]);
             fprintf(screen,"\n BKG: ");
             for (int i=0; i<(bkg_molID.back()).size(); i++) {
                 fprintf(screen," %s %f",molnames[(bkg_molID.back())[i]].c_str(),(bkg_nmol.back())[i]);

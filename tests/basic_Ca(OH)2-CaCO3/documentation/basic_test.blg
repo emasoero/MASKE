@@ -1,48 +1,46 @@
 This is BibTeX, Version 0.99d (TeX Live 2019)
 Capacity: max_strings=100000, hash_size=100000, hash_prime=85009
 The top-level auxiliary file: basic_test.aux
-I found no \citation commands---while reading file basic_test.aux
-I found no \bibdata command---while reading file basic_test.aux
-I found no \bibstyle command---while reading file basic_test.aux
-You've used 0 entries,
-            0 wiz_defined-function locations,
-            83 strings with 494 characters,
-and the built_in function-call counts, 0 in all, are:
-= -- 0
-> -- 0
+The style file: unsrt.bst
+Database file #1: biblio.bib
+You've used 4 entries,
+            1791 wiz_defined-function locations,
+            474 strings with 4176 characters,
+and the built_in function-call counts, 888 in all, are:
+= -- 82
+> -- 31
 < -- 0
-+ -- 0
-- -- 0
-* -- 0
-:= -- 0
-add.period$ -- 0
-call.type$ -- 0
-change.case$ -- 0
++ -- 12
+- -- 8
+* -- 64
+:= -- 142
+add.period$ -- 11
+call.type$ -- 4
+change.case$ -- 4
 chr.to.int$ -- 0
-cite$ -- 0
-duplicate$ -- 0
-empty$ -- 0
-format.name$ -- 0
-if$ -- 0
+cite$ -- 4
+duplicate$ -- 32
+empty$ -- 93
+format.name$ -- 8
+if$ -- 191
 int.to.chr$ -- 0
-int.to.str$ -- 0
-missing$ -- 0
-newline$ -- 0
-num.names$ -- 0
-pop$ -- 0
-preamble$ -- 0
+int.to.str$ -- 4
+missing$ -- 3
+newline$ -- 22
+num.names$ -- 4
+pop$ -- 10
+preamble$ -- 1
 purify$ -- 0
 quote$ -- 0
-skip$ -- 0
+skip$ -- 15
 stack$ -- 0
-substring$ -- 0
-swap$ -- 0
+substring$ -- 81
+swap$ -- 4
 text.length$ -- 0
 text.prefix$ -- 0
 top$ -- 0
 type$ -- 0
 warning$ -- 0
-while$ -- 0
-width$ -- 0
-write$ -- 0
-(There were 3 error messages)
+while$ -- 10
+width$ -- 5
+write$ -- 43
