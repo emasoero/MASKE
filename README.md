@@ -60,7 +60,9 @@ $ make -j
 $ cd ../..
 $ mkdir build
 ```
-CMake will automatically detect support for MPI in your system. If might fail to detect it (usually when you have a custom MPI installation) so you might need to add -DBUILD_MPI=On and -DMPI_CXX_COMPILER=<MPI compiler> to the CMake options.
+NB: The ``-DBUILD_LIB=On`` option might be obsolete as of 1 Jan 2021.
+
+CMake will automatically detect support for MPI in your system. If might fail to detect it (usually when you have a custom MPI installation) so you might need to add -DBUILD_MPI=On and -DMPI_CXX_COMPILER=<MPI_compiler_bin_path> to the CMake options.
 
 If you want to install NUFEB, disregard the box below and move to the section "Enabling NUFEB" below.
 
@@ -127,7 +129,7 @@ Finally, compile MASKE using:
 $ make -j
 ```
 
-## Folder layout
+### Folder layout
 
 After build is completed the MASKE folder should contain the following folders:
 
@@ -187,3 +189,40 @@ $ cd tests/test12-Lay_Nucl_2Grp_Sm_Mono_1pr
 $ srun -p interactive -n 4 --pty /bin/bash
 $ mpiexec -np 4 ../../build/maske input_read.dat 
 ```
+
+## Updating 
+
+We assume sufficient familiarity with GitHub to be able to update the main code and its submodules to any available version here. This section explains how to update invididual submodules to versions other than those available here (for exmaple, updating LAMMPS to a specific version).
+
+### Updating LAMMPS
+
+Go to the MAKSE/lammps folder
+```
+$ git remote add upstream https://github.com/lammps/lammps.git
+```
+Now, with ``git remote -v`` you should see origin and upstream. Then:
+```
+$ git fetch upstream
+$ git checkout user_maske
+$ git merge <tag_name>
+```
+You can find the <tag_name> going to the GitHub page containing all tags of [LAMMPS](https://github.com/lammps/lammps/tags). <tag_name> is the label, e.g. *patch_24Dec2020*.
+
+Then ``git status`` shows conflict as files that have been *both modified*. Opening the files with conflicts, look for ``<<<<<<< HEAD`` for what is in the local version, and ``>>>>>>>> <tag_name>`` for what is in the file you pulled from LAMMPS. Typically, you should keep everything that is in the newer version of LAMMPS, while adding the parts that are specific to the USER_MASKE package we created.  When done, ``git status`` should not show conflicts anymore.
+
+Then compile LAMMPS as explained previously.
+
+If you are a Developer and want to update the LAMMPS version in MASKE on Github, you need to do one more step while in MASKE/lammps:
+```
+$ git commit -m "<your_message>"
+$ git push
+```
+Then go to the MASKE folder and type:
+```
+$ git add lammps
+$ git commit -m “<your message>
+$ git push
+```
+### Updating PHREEQC
+
+### Updating NUFEB
