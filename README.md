@@ -213,7 +213,10 @@ $ git merge upstream/master
 $ git checkout user_maske
 $ git merge <tag_name>
 ```
-You can find the <tag_name> going to the GitHub page containing all tags of [LAMMPS](https://github.com/lammps/lammps/tags). <tag_name> is the label, e.g. "patch_24Dec2020".
+You can find the <tag_name> going to the GitHub page containing all tags of [LAMMPS](https://github.com/lammps/lammps/tags). <tag_name> is the label, e.g. *patch_24Dec2020*.
+
+Then ``git status`` shows conflict as files that have been *both modified*
+
 
 ### Updating PHREEQC
 
