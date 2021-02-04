@@ -202,8 +202,8 @@ $ git remote add upstream https://github.com/lammps/lammps.git
 ```
 Now, with ``git remote -v`` you should see origin and upstream. Then:
 ```
-$ git fetch upstream
 $ git checkout user_maske
+$ git fetch upstream
 $ git merge <tag_name>
 ```
 You can find the <tag_name> going to the GitHub page containing all tags of [LAMMPS](https://github.com/lammps/lammps/tags). <tag_name> is the label, e.g. *patch_24Dec2020*.
