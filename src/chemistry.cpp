@@ -112,6 +112,8 @@ void Chemistry::addmolecule()
     ss >> size;
     mol_acir.push_back(size);
     ss >> size;
+    mol_rcr0.push_back(size);
+    ss >> size;
     mol_vapp.push_back(size);
     ss >> size;
     mol_ahyd.push_back(size);
@@ -281,8 +283,8 @@ void Chemistry::addreax()
         Nreax++;
         rxnames.push_back(newname);
         std::string gxn,DGn;
-        double Keqi;
-        ss >> gxn >> DGn >> Keqi;
+        double Keqi, kii;
+        ss >> gxn >> DGn >> Keqi >> kii;
         for (int i = 0; i<Ngx; i++) {
             if (strcmp(gxn.c_str(), gxnames[i].c_str())==0) rx_gxID.push_back(i);
         }
@@ -298,6 +300,7 @@ void Chemistry::addreax()
             error->errsimple(msg);
         }
         Keq.push_back(Keqi);
+        ki.push_back(kii);
         
         
         // record list of stoichio changes associated with reaction, in both background and foreground
@@ -406,7 +409,11 @@ void Chemistry::addreax()
         for (int i=0; i<bvec.size(); i++)   rx_dV_bkg.back() += mol_vapp[ibvec[i]]*bvec[i];
         
         rx_dV_fgd.push_back(0.);
-        for (int i=0; i<fvec.size(); i++)   rx_dV_fgd.back() += (mol_arad[ifvec[i]]*mol_acir[ifvec[i]]*mol_acir[ifvec[i]]) * fvec[i];
+        rx_dVt_fgd.push_back(0.);
+        for (int i=0; i<fvec.size(); i++)  { rx_dV_fgd.back() += (mol_arad[ifvec[i]]*mol_acir[ifvec[i]]*mol_acir[ifvec[i]]) * fvec[i];
+        
+            rx_dVt_fgd.back() += (mol_arad[ifvec[i]]*mol_acir[ifvec[i]]*mol_acir[ifvec[i]]) * fvec[i] * mol_rcr0[ifvec[i]];
+        }
 
         rx_ar_min.push_back(0.);
         rx_ar_max.push_back(0.);

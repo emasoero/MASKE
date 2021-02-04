@@ -255,14 +255,20 @@ void Fix_nucleate::sample(int pos)
     
     
     // minimise
-    tolmp = "min_style maske";   // only quickmin admitted for nucleation to date
+    int minid = fix->fKMCminid[pos];
+    tolmp = "timestep "+store->MinTstep[minid];
     lammpsIO->lammpsdo(tolmp);
     
-    int minid = fix->fKMCminid[pos];
+    tolmp = "min_style quickmaske";
+    lammpsIO->lammpsdo(tolmp);
+    
     tolmp = store->MinModCmd[minid];
     lammpsIO->lammpsdo(tolmp);
     
     tolmp = store->MinCmd[minid];
+    lammpsIO->lammpsdo(tolmp);
+    
+    tolmp = "timestep 0";
     lammpsIO->lammpsdo(tolmp);
     
     // END OF POSITIONING TRIAL PARTICLES IN LOCAL MINIMA OF ENERGY
@@ -303,7 +309,7 @@ void Fix_nucleate::sample(int pos)
     tolmp = "compute tempType all property/atom type";  // temp compute reading type per atom
     lammpsIO->lammpsdo(tolmp);
     
-    tolmp = "dump tdID all custom 1 dump.temp_"+universe->SCnames[universe->color]+" c_tempID c_tempPE";    //temp dump to update variables and computes -- NOTICE I removed c_tempRAD compared to fix_delete
+    tolmp = "dump tdID all custom 1 dump.tempTRY_"+universe->SCnames[universe->color]+" c_tempID c_tempPE type x y z";    //temp dump to update variables and computes -- NOTICE I removed c_tempRAD compared to fix_delete
     lammpsIO->lammpsdo(tolmp);
     lammpsIO->lammpsdo("run 1");     // a run1 in lammps to dump the temp and so prepare variables and computes
     
@@ -384,10 +390,12 @@ void Fix_nucleate::sample(int pos)
 
     }
     
+    
     //fprintf(screen,"\n Proc %d, EDDIG JO0? \n",me);
     //MPI_Barrier(MPI_COMM_WORLD);
     //sleep(10);
     */
+
     tolmp = "undump tdID ";     // removing temporary dump
     lammpsIO->lammpsdo(tolmp);
     // END OF READING FROM LAMMPS
@@ -805,7 +813,7 @@ void Fix_nucleate::comp_rates_allpar(int pos)
                 double dim = chem -> dim[chem->rx_DGID[rxid]];
                 double gammax = chem -> compgammax(rxid);   // somewhere in this function I will need to calculate gammax from the concentration of the activated complex in case the complex is not charge neutral
                 double KT = msk->kB * solution->Temp;
-                
+                                
                 if (msk->wplog) {
                     std::ostringstream ss;
                     msg += "; DG* ";    ss << DGx;   msg += ss.str();    ss.str(""); ss.clear();
@@ -825,6 +833,9 @@ void Fix_nucleate::comp_rates_allpar(int pos)
                 std::string topass = "reac";
                 double Qreac = solution->compQ(rxid,topass,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]); // using activity products instead of supersaturation beta, which gives more generality. See Notes_on_TST.pdf document
                 
+                double Vt = (chem -> rx_dVt_fgd[rxid]);  // Volume of fgd created by the reaction at the current step in the chain. Plus sign because dV of fdg > 0 for a proper nucleation reaction.
+
+                
                 double DV =  fix->fKMC_DV[pos];
                 
                 //Delta surface and Delta U are assumed to be proportional to the number of reaction/chain units and relative importance of each step in chain
@@ -837,7 +848,7 @@ void Fix_nucleate::comp_rates_allpar(int pos)
                     if (chem->mechchain[mid]) DUi *= (chem->ch_rdV_fgd[chID][k]);
                 }
                 
-                double r0 = kappa * KT / msk->hpl / gammax * cx * exp(-DGx / KT) * pow(DV,dim/3.);
+                double r0 = kappa * KT / msk->hpl / gammax * cx * exp(-DGx / KT);
                 
                 if (msk->wplog) {
                     std::ostringstream ss;
@@ -847,10 +858,18 @@ void Fix_nucleate::comp_rates_allpar(int pos)
                     msg += "; Sen ";    ss << Sen;   msg += ss.str();    ss.str(""); ss.clear();
                     msg += "; DSi ";    ss << DSi;   msg += ss.str();    ss.str(""); ss.clear();
                     msg += "; DUi ";    ss << DUi;   msg += ss.str();    ss.str(""); ss.clear();
+                    msg += "; Vti ";    ss << Vt;   msg += ss.str();    ss.str(""); ss.clear();
                 }
                 
+                //double fa = 1.;
+                //if (dim == 2 || dim== 1) fa = 3;
+                
+                r0 = r0*pow(Vt,(dim/3. - 1.))*DV;
+                
+                double ki = (chem -> ki[rxid]);
+                
                 // Rate equation as per TST (see notes_on_TST.pdf by Masoero, 2019)
-                ri = r0 * Qreac;
+                ri = r0 * Qreac     *exp(ki*(-Sen * DSi - DUi)/KT) ;
 
                 if (msk->wplog) {
                     msg += ", ri ";
@@ -872,7 +891,7 @@ void Fix_nucleate::comp_rates_allpar(int pos)
                     
                     //net = true;
                     //beta = solution->compbeta(rxid,net,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
-                    ri -= r0 * Qprod / chem->Keq[rxid] * exp((Sen * DSi + DUi)/KT );
+                    ri -= r0 * Qprod / chem->Keq[rxid] * exp((1.-ki)*(Sen * DSi + DUi)/KT ) ;
                     
                 }
                 
@@ -1207,7 +1226,7 @@ void Fix_nucleate::findEV(double CRC)
     int i=0;
     bool found_fix = false;
     while (i<cumNPfix.size() && !found_fix){
-        if (posit<=cumNPfix[i]) {
+        if (posit<=cumNPfix[i]-1) {
             found_fix = true;
             EVafixID = fixaID[i];
         }
@@ -1311,7 +1330,7 @@ void Fix_nucleate::execute(int pID, int EVafixID, int EVpTYPE,double EVpDIAM,dou
     //lammpsIO->lammpsdo("run 1");
     
     //temp dump to update variables and computes
-    tolmp = "dump tdID all custom 1 dump.temp_"+universe->SCnames[universe->color]+" c_cidtemp ";
+    tolmp = "dump tdID all custom 1 dump.tempIN_"+universe->SCnames[universe->color]+" c_cidtemp";
     lammpsIO->lammpsdo(tolmp);
     
     tolmp = "compute cidtt gtempin reduce sum c_cidtemp";

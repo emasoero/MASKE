@@ -36,7 +36,7 @@ namespace MASKE_NS {
 		~Chemistry();
 		
         std::vector<std::string> molnames;
-        std::vector<double> mol_arad, mol_acir, mol_vapp, mol_ahyd, mol_bDH, mol_z;  // molecule linear sizes in radial and circumferential directions (when pertaining to a solid particle), apparent volume of molecule in solution, a and b parameters for Debye Huckel, molecule charge
+        std::vector<double> mol_arad, mol_acir, mol_rcr0, mol_vapp, mol_ahyd, mol_bDH, mol_z;  // molecule linear sizes in radial and circumferential directions (when pertaining to a solid particle), ratio of interaction cutoff to equilibrium distance to go from molecular volume to tributary volume, apparent volume of molecule in solution, a and b parameters for Debye Huckel, molecule charge
 	std::vector<int> mol_nufeb; // nufeb's chemical species index
 	std::vector<int> mol_nufeb_form; // nufeb's chemical species form index: 0 = not hydrated, 1 = fully protonated, 2 = 1st deprotonated, 3 = 2nd deprotonated, 4 = 3rd deprotonated
 	std::vector<std::string> mol_spec; // speciation element name  (I guess this is the name of the corresponding SOLUTION_MASTER_SPECIES in phreeqc)
@@ -51,8 +51,9 @@ namespace MASKE_NS {
         std::vector<std::string> mechnames, mechstyle, mechmode,mechinter;  //mechanism name, style, mode (straight or net), and energy scaling
         std::vector<int> rx_gxID,rx_DGID;   // pointers to gammax and DG calculators, specified for each simple reaction
         std::vector<double> Keq;    // vectors of equilibrium constants of chemical reactions
-        std::vector<double> rx_dV_fgd, rx_dV_bkg;    // change of foreground and backgroun volume due to reaction
-        std::vector<double> ch_dV_fgd, ch_dV_bkg;    // change of foreground and backgroun volume due to reaction chain
+        std::vector<double> ki;    // vectors of energy penalty factors for chemical reactions (0 = no penalty, suggested < 1)
+        std::vector<double> rx_dV_fgd, rx_dV_bkg, rx_dVt_fgd;    // change of foreground and backgroun volume due to reaction. Change of tributary foreground volume too
+        std::vector<double> ch_dV_fgd, ch_dV_bkg;   // change of foreground and backgroun volume due to reaction chain.
         std::vector<std::vector<double> > ch_rdV_fgd, ch_rdV_bkg;    // relative importance in terms of volme change for each step in chain reaction: wil be used in fix_delete sometimes to compute fraction of surface and volume change to be attributed to each reaction in chain
         std::vector<double> ch_arac;    // ratio between radial and circumferential size of chain
         std::vector<double> rx_ar_min, rx_ar_max, rx_ar_avg, rx_ar_avv, rx_ar_cum;    // change of foreground length in radial direction due to reaction: min, max, average (sum/N), volume-based average (sumV^1/3), cumulative (sum_ar)

@@ -119,7 +119,7 @@ void Fix_delete::sample(int pos)
     tolmp = "compute tempType all property/atom type";  // temp compute reading type per atom
     lammpsIO->lammpsdo(tolmp);
     
-    tolmp = "dump tdID all custom 1 dump.temp_"+universe->SCnames[universe->color]+" c_tempID c_tempRAD c_tempPE";    //temp dump to update variables and computes
+    tolmp = "dump tdID all custom 1 dump.temp_"+universe->SCnames[universe->color]+" c_tempID c_tempRAD c_tempPE type x y z";    //temp dump to update variables and computes
     lammpsIO->lammpsdo(tolmp);
     lammpsIO->lammpsdo("run 1");     // a run1 in lammps to dump the temp and so prepare variables and computes
 
@@ -650,7 +650,7 @@ void Fix_delete::comp_rates_allpar(int pos)
                 std::string topass = "reac";
                 double Qreac = solution->compQ(rxid,topass,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
                 
-                double Vm = - (chem -> rx_dV_fgd[rxid]);  // Volume of fgd deleted by the reaction at the current step in the chain. Minus sign because dV of fdg < 0 for a proper dissolution reaction.
+                double Vt = - (chem -> rx_dVt_fgd[rxid]);  // Tributary volume of fgd deleted by the reaction at the current step in the chain. Minus sign because dV of fdg < 0 for a proper dissolution reaction.
                 
                //Delta surface and Delta U are assumed to be proportional to the number of reaction/chain units and relative importance of each step in chain
                 double DSi = DSpu;
@@ -662,7 +662,7 @@ void Fix_delete::comp_rates_allpar(int pos)
                     if (chem->mechchain[mid]) DUi *= (chem->ch_rdV_fgd[chID][k]);
                 }
                 
-                double r0 = kappa * KT / msk->hpl / gammax * cx * exp(-DGx / KT)* pow(Vm,dim/3.) ;
+                double r0 = kappa * KT / msk->hpl / gammax * cx * exp(-DGx / KT);
                 
                 if (msk->wplog) {
                     std::ostringstream ss;
@@ -671,11 +671,19 @@ void Fix_delete::comp_rates_allpar(int pos)
                     msg += "; Sen ";    ss << Sen;   msg += ss.str();    ss.str(""); ss.clear();
                     msg += "; DSi ";    ss << DSi;   msg += ss.str();    ss.str(""); ss.clear();
                     msg += "; DUi ";    ss << DUi;   msg += ss.str();    ss.str(""); ss.clear();
+                    msg += "; Vti ";    ss << Vt;   msg += ss.str();    ss.str(""); ss.clear();
                 }
                 
                 
+               // double fa = 1.;
+                //if (dim==2 || dim==1) fa=3.;
+                
+                r0 = r0*pow(Vt,dim/3.);
+                
+                double ki = (chem -> ki[rxid]);
+                
                 // Rate equation as per TST (see notes_on_TST.pdf by Masoero, 2019, where ki=0 was assumed as per classical TST)
-                ri = r0 * Qreac * exp((-Sen * DSi - DUi)/KT );
+                ri = r0 * Qreac * exp((1.-ki)*(-Sen * DSi - DUi)/KT ) ;
                 
                 
                 // if net rate is requested by user in chemDB, then add rate backward
@@ -683,8 +691,18 @@ void Fix_delete::comp_rates_allpar(int pos)
                     
                     topass = "prod";
                     double Qprod = solution->compQ(rxid,topass,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
-                    ri -= r0 * Qprod / chem->Keq[rxid];
+                    ri -= r0 * Qprod / chem->Keq[rxid]     * exp(ki*(Sen * DSi + DUi)/KT );
+                    
+                    if (msk->wplog) {
+                        std::ostringstream ss;
+                        msg += "; ri ";    ss << ri;   msg += ss.str();    ss.str(""); ss.clear();
+                        msg += "; Qprod ";    ss << Qprod;   msg += ss.str();    ss.str(""); ss.clear();
+                        msg += "; Keq ";    ss << chem->Keq[rxid] ;   msg += ss.str();    ss.str(""); ss.clear();
+                    }
+                    
                 }
+                
+                
                 
                 if (ri < 0.) ri = 0.;
                 
@@ -1015,7 +1033,7 @@ void Fix_delete::findEV(double CRC)
     posit=pre;
     EVpID = IDsrt[posit];
     
-    //fprintf(screen,"\n PROC %d posit is %d and IDsrt[posit] is %d:\n",me,posit,IDsrt[posit]);
+    fprintf(screen,"\n PROC %d posit is %d and IDsrt[posit] is %d:\n",me,posit,IDsrt[posit]);
     //for (int i=0; i<IDsrt.size(); i++) {
       //  fprintf(screen,"\n ID[%d] = %d",i,IDsrt[i]);
     //}
@@ -1024,7 +1042,7 @@ void Fix_delete::findEV(double CRC)
     int i=0;
     bool found_fix = false;
     while (i<cumNPfix.size() && !found_fix){
-        if (posit<=cumNPfix[i]) {
+        if (posit<=cumNPfix[i]-1) {
             found_fix = true;
             EVafixID = fixaID[i];
         }

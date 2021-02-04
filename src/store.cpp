@@ -86,6 +86,14 @@ void Store::add(std::string instr)
     else if (strcmp(word.c_str(), "minimize") == 0){
         ss >> word;
         MinNames.push_back(word);
+        ss >> word;
+        if (strcmp(word.c_str(), "tstep") != 0){
+            std::string msg = "ERROR: expected tstep keyword in store minimize; "+word+" found instead \n";
+            error->errsimple(msg);
+        }
+        ss >> word;
+        MinTstep.push_back(word);
+        
         std::string read_string;
         read_string = "minimize";
         for (int i=0; i<4; i++) {

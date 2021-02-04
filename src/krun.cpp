@@ -70,7 +70,7 @@ Krun::~Krun()
 
 
 // ---------------------------------------------------------------
-// Class destructor
+//
 void Krun::proceed(double deltat)
 {
     
@@ -625,11 +625,18 @@ void Krun::proceed(double deltat)
                     EVpID = fix_del->EVpID;   //more general to do this than returning by reference
                     EVafixID = fix_del->EVafixID;
                     //fix_del->EVpID = -1;   //(cleaning it up for safety)
-                    //fprintf(screen,"\n PROC %d cumulated and T-integrated rates are:\n",me);
-                    //for (int i=0; i<fix_del->CratesT.size(); i++) {
-                      //fprintf(screen,"%f\n",fix_del->CratesT[i]);
-                    //}
-                    //fprintf(screen,"\n PROC %d choses particle %d to delete using fix %s\n",me,EVpID,fix->afKMCname[EVafixID].c_str());
+                    
+                    fprintf(screen,"\n PROC %d cumulated and T-integrated rates are:\n",me);
+                    for (int i=0; i<fix_del->CratesT.size(); i++) {
+                      fprintf(screen,"%d %f\n",i,fix_del->CratesT[i]);
+                    }
+                    
+                    fprintf(screen,"\n PROC %d: number of particles per delete type fix are \n",me);
+                    for (int i=0; i<fix_del->cumNPfix.size(); i++) {
+                      fprintf(screen,"%d %d\n",i, fix_del->cumNPfix[i]);
+                    }
+                    
+                    fprintf(screen,"\n PROC %d choses particle %d to delete using fix %s\n",me,EVpID,fix->afKMCname[EVafixID].c_str());
                 }
                 else if (EVtype==1) {
                     fix_nucl->findEV(CRCred);

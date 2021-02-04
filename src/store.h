@@ -36,6 +36,7 @@ namespace MASKE_NS {
         std::vector<std::string> LatDVnames;   // see below
         std::vector<std::string> LatDVcmd; // vectors with LAMMPS variable names and commands to compute DV associated to a lattice point, to be used in fix_nucleate sampling
         std::vector<std::string> MinCmd;  // same for minimize
+        std::vector<std::string> MinTstep;  // time step for minimizer
         std::vector<std::string> MinModCmd;  // same for min_modify
 
         std::vector<std::vector<std::string>> MulCmd;

@@ -505,10 +505,26 @@ void Solution::update(int apos, double pV, int EVtype)
             }
                 
             // add/remove all types of bkg molecules altered by the reaction
+            
+            if (msk->wplog){
+                std::string msg;
+                msg = "Number of molecules in solution of:\n";
+                output->toplog(msg);
+            }
+            
             for (int j=0; j<nmols; j++) {
                 int molID = chem->bkg_molID[rxid][j];
                 chem->mol_nins[molID] += (nrv * (double)nrxpar * chem->bkg_nmol[rxid][j] * Vfrac);
                 chem->mol_nindV[molID] += (nrv * (double)nrxpar * chem->bkg_nmol[rxid][j] * dVfrac);
+                
+                if (msk->wplog){
+                    std::string msg;
+                    std::ostringstream ss;
+                    msg = "- "; ss << molID;   msg += ss.str()+"\t";    ss.str(""); ss.clear();
+                    msg += " --> in sol: "; ss << chem->mol_nins[molID] ;   msg += ss.str()+"\t";    ss.str(""); ss.clear();
+                    msg += " --> in dV: "; ss << chem->mol_nindV[molID] ;   msg += ss.str()+"\n";    ss.str(""); ss.clear();
+                    output->toplog(msg);
+                }
             }
             // change of solution volume, concentrations, and volume of voids
             SVol += chem->rx_dV_bkg[rxid] * nrv * (double)nrxpar*Vfrac;
