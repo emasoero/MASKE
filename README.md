@@ -127,7 +127,7 @@ Finally, compile MASKE using:
 $ make -j
 ```
 
-## Folder layout
+### Folder layout
 
 After build is completed the MASKE folder should contain the following folders:
 
@@ -187,3 +187,13 @@ $ cd tests/test12-Lay_Nucl_2Grp_Sm_Mono_1pr
 $ srun -p interactive -n 4 --pty /bin/bash
 $ mpiexec -np 4 ../../build/maske input_read.dat 
 ```
+
+## Updating 
+
+We assume sufficient familiarity with GitHub to be able to update the main code and its submodules to any available version here. This section explains how to update invididual submodules to versions other than those available here (for exmaple, updating LAMMPS to a specific version).
+
+### Updating LAMMPS
+
+### Updating PHREEQC
+
+### Updating NUFEB
