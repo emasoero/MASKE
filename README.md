@@ -215,7 +215,7 @@ $ git merge <tag_name>
 ```
 You can find the <tag_name> going to the GitHub page containing all tags of [LAMMPS](https://github.com/lammps/lammps/tags). <tag_name> is the label, e.g. *patch_24Dec2020*.
 
-Then ``git status`` shows conflict as files that have been *both modified*
+Then ``git status`` shows conflict as files that have been *both modified*. Opening the files with conflicts, look for ``<<<<<<< HEAD`` for what is in the local version, and ``>>>>>>>> <tag_name>`` for what is in the file you pulled from LAMMPS. Typically, you should keep everything that is in the newer version of LAMMPS, while adding the parts that are specific to the USER_MASKE package we created.
 
 
 ### Updating PHREEQC
