@@ -60,6 +60,8 @@ $ make -j
 $ cd ../..
 $ mkdir build
 ```
+NB: The ``-DBUILD_LIB=On`` option might be obsolete as of 1 Jan 2021.
+
 CMake will automatically detect support for MPI in your system. If might fail to detect it (usually when you have a custom MPI installation) so you might need to add -DBUILD_MPI=On and -DMPI_CXX_COMPILER=<MPI_compiler_bin_path> to the CMake options.
 
 If you want to install NUFEB, disregard the box below and move to the section "Enabling NUFEB" below.
