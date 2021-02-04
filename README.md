@@ -217,7 +217,12 @@ If you are a Developer and want to update the LAMMPS version in MASKE on Github,
 $ git commit -m "<your_message>"
 $ git push
 ```
-
+Then go to the MASKE folder and type:
+```
+$ git add lammps
+$ git commit -m “<your message>
+$ git push
+```
 ### Updating PHREEQC
 
 ### Updating NUFEB
