@@ -194,6 +194,17 @@ We assume sufficient familiarity with GitHub to be able to update the main code 
 
 ### Updating LAMMPS
 
+Go to the MAKSE/lammps folder
+```
+$ git remote add upstream https://github.com/lammps/lammps.git
+```
+Go to your GitHub folder
+```
+$ git clone https://github.com/emasoero/lammps.git
+$ cd lammps
+$ git remote add upstream https://github.com/lammps/lammps.git
+```
+Now, git remote -v should show you origin and upstream
 ### Updating PHREEQC
 
 ### Updating NUFEB
