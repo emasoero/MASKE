@@ -215,6 +215,7 @@ Then compile LAMMPS as explained previously.
 If you are a Developer and want to update the LAMMPS version in MASKE on Github, you need to do one more step while in MASKE/lammps:
 ```
 $ git commit -m "<your_message>"
+$ git push
 ```
 
 ### Updating PHREEQC
