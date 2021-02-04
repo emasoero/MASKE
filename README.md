@@ -60,7 +60,7 @@ $ make -j
 $ cd ../..
 $ mkdir build
 ```
-CMake will automatically detect support for MPI in your system. If might fail to detect it (usually when you have a custom MPI installation) so you might need to add -DBUILD_MPI=On and -DMPI_CXX_COMPILER=<MPI compiler> to the CMake options.
+CMake will automatically detect support for MPI in your system. If might fail to detect it (usually when you have a custom MPI installation) so you might need to add -DBUILD_MPI=On and -DMPI_CXX_COMPILER=<MPI_compiler_bin_path> to the CMake options.
 
 If you want to install NUFEB, disregard the box below and move to the section "Enabling NUFEB" below.
 
@@ -204,7 +204,17 @@ $ git clone https://github.com/emasoero/lammps.git
 $ cd lammps
 $ git remote add upstream https://github.com/lammps/lammps.git
 ```
-Now, git remote -v should show you origin and upstream
+Now, with ``git remote -v`` you should see origin and upstream. Then:
+```
+$ git fetch upstream
+$ git merge upstream/master
+
+
+$ git checkout user_maske
+$ git merge <tag_name>
+```
+You can find the <tag_name> going to the GitHub page containing all tags of [LAMMPS](https://github.com/lammps/lammps/tags). <tag_name> is the label, e.g. "patch_24Dec2020".
+
 ### Updating PHREEQC
 
 ### Updating NUFEB
