@@ -201,6 +201,7 @@ Go to the MASKE/lammps folder
 $ git checkout user_maske
 $ git pull
 ```
+Then compil LAMMPS as previously exlained.
 
 ### Upgrading LAMMPS
 
