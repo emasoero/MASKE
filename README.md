@@ -190,11 +190,21 @@ $ srun -p interactive -n 4 --pty /bin/bash
 $ mpiexec -np 4 ../../build/maske input_read.dat 
 ```
 
-## Updating 
-
-We assume sufficient familiarity with GitHub to be able to update the main code and its submodules to any available version here. This section explains how to update invididual submodules to versions other than those available here (for exmaple, updating LAMMPS to a specific version).
+## Updating and Upgrading
 
 ### Updating LAMMPS
+
+This section explains how to update LAMMPS to the current version in the MASKE distribution
+
+Go to the MASKE/lammps folder
+```
+$ git checkout user_maske
+$ git pull
+```
+
+### Upgrading LAMMPS
+
+This section explains how you can choose a version of LAMMPS different from what is included in the MASKE distribution (e.g., the latest one). 
 
 Go to the MAKSE/lammps folder
 ```
