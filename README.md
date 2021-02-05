@@ -221,9 +221,9 @@ You can find the <tag_name> going to the GitHub page containing all tags of [LAM
 
 Then ``git status`` shows conflict as files that have been *both modified*. Opening the files with conflicts, look for ``<<<<<<< HEAD`` for what is in the local version, and ``>>>>>>>> <tag_name>`` for what is in the file you pulled from LAMMPS. Typically, you should keep everything that is in the newer version of LAMMPS, while adding the parts that are specific to the USER_MASKE package we created.  When done, ``git status`` should not show conflicts anymore.
 
-Then compile LAMMPS as explained previously.
+Then compile LAMMPS as explained previously. 
 
-If you are a Developer and want to update the LAMMPS version in MASKE on Github, you need to do one more step while in MASKE/lammps:
+If you are a Developer and want to upgrade the LAMMPS version in MASKE on Github, you also need to follow the steps below, while in MASKE/lammps:
 ```
 $ git commit -m "<your_message>"
 $ git push
