@@ -209,7 +209,7 @@ This section explains how you can choose a version of LAMMPS different from what
 
 Go to the MAKSE/lammps folder
 ```
-$ git remote add upstream https://github.com/lammps/lammps.git
+$ git remote add upstream git@github.com:lammps/lammps.git
 ```
 Now, with ``git remote -v`` you should see origin and upstream. Then:
 ```
