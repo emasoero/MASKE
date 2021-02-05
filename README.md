@@ -60,7 +60,7 @@ $ make -j
 $ cd ../..
 $ mkdir build
 ```
-NB: The ``-DBUILD_LIB=On`` option might be obsolete as of 1 Jan 2021.
+NB: The ``-DBUILD_LIB=On`` option might be obsolete as of 1 Jan 2021. The ``-j`` option after ``make`` can be removed if that step is unsuccesful (that option is for a faster compilation in parallel, but sometimes it fails on MacOS).
 
 CMake will automatically detect support for MPI in your system. If might fail to detect it (usually when you have a custom MPI installation) so you might need to add -DBUILD_MPI=On and -DMPI_CXX_COMPILER=<MPI_compiler_bin_path> to the CMake options.
 
