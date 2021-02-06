@@ -1,0 +1,62 @@
+## Creates a layer of fcc particles with 
+
+atom_style	sphere
+boundary	p p p
+units 		nano
+dimension	3
+
+variable 	Diam equal 0.473745541	#for CaCO3
+variable 	eqDist equal v_Diam*0.74^(1./3.)
+variable 	scale equal sqrt(2)*v_eqDist
+
+variable 	xbsize equal 10*$(v_scale)
+variable 	ybsize equal 10*$(v_scale)
+variable 	zbsize equal 10*$(v_scale)
+
+region 		boxreg block 0 $(v_xbsize) 0 $(v_ybsize) 0 $(v_zbsize) units box
+create_box  	1 boxreg     
+
+
+#creating the FCC lattice in a cubic region in the box
+
+lattice 	fcc $(v_scale)   
+variable 	xl equal xlo+0.05*$(v_xbsize)
+variable 	xr equal xhi-0.05*$(v_xbsize)
+variable 	yl equal ylo+0.05*$(v_ybsize)
+variable 	yr equal yhi-0.05*$(v_ybsize)
+variable 	zl equal zlo+0.05*$(v_zbsize)
+variable 	zr equal zhi-0.05*$(v_zbsize)
+region 		r_solid block $(v_xl) $(v_xr) $(v_yl) $(v_yr) $(v_zl) $(v_zr) units box
+create_atoms 	1 region r_solid
+
+
+# assign same diameter to all atoms
+set		type * diameter $(v_Diam)
+
+
+# interaction potential from table file
+pair_style 	table linear 4000
+pair_coeff 	* * table.potential Spring_Ca(OH)2-Ca(OH)2
+
+
+# neighbor parameters
+variable	skin equal $(v_eqDist)/5.
+neighbor	$(v_skin) bin
+neigh_modify	delay 0
+
+
+pair_write 1 1 4000 r 1.00E-030 0.47136 tableOUT.txt Spring_Ca(OH)2-Ca(OH)2
+
+
+# outputs
+thermo_style	custom step atoms pe vol epair
+thermo		1000
+dump		geod all custom 1000 dump.pour id type x y z radius
+dump_modify	geod every 1 first yes
+
+
+# run minimization
+min_style cg
+min_modify	dmax $(v_skin)
+minimize	1e-8 0.1 1000000 1000000
+#minimize	0 0 1000000 1000000

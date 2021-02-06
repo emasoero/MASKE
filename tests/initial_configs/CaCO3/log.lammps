@@ -1,0 +1,4 @@
+LAMMPS (20 Nov 2019)
+ITEM: TIMESTEP
+ERROR: Unknown command: ITEM: TIMESTEP (src/input.cpp:232)
+Last command: ITEM: TIMESTEP

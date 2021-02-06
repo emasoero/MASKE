@@ -9,7 +9,7 @@ If you want to have bacteria too, you need LAMMPS, PHREEQC, and NUFEB.
 | Name   | Description                        | Version                          |
 |--------|------------------------------------|----------------------------------|
 | Git    | Distributed version control system | Most recent versions should work |
-| CMake  | Cross-platform build tool          | 3.0 or above                     |
+| CMake  | Cross-platform build tool          | 3.10 or above  (same req. as LAMMPS)                    |
 | MPI    | Implementation of the MPI standard | Same requirements as LAMMPS      |
 
 ## Download

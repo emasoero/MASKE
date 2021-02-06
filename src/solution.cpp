@@ -316,6 +316,7 @@ double Solution::compQ(int rxid, std::string type, std::string sol_in_style, std
 
 // ---------------------------------------------------------------
 // compute beta using the Truesdell or Davies and Setschenow equations
+//   OBSOLETE as of 2021-02-05.... To be deleted when rationalising this class
 double Solution::compbeta(int rxid, bool net, std::string sol_in_style, std::string sol_in_UL)
 {
     double beta = 1.;
@@ -549,6 +550,7 @@ void Solution::update(int apos, double pV, int EVtype)
     }
 }
 
+// For now, only used by fix_nufeb.cpp
 void Solution::updateconc(int apos, const std::vector<double>& dconc)
 {
   double Vfrac = 1.;

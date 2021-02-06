@@ -1,0 +1,147 @@
+LAMMPS (20 Nov 2019)
+## Creates a layer of fcc particles with
+
+atom_style	sphere
+boundary	p p p
+units 		nano
+dimension	3
+
+variable 	Diam equal 0.473745541	#for CaCO3
+variable 	eqDist equal v_Diam*0.74^(1./3.)
+variable 	scale equal sqrt(2)*v_eqDist
+
+variable 	xbsize equal 10*$(v_scale)
+variable 	xbsize equal 10*0.60599732400958894463
+variable 	ybsize equal 10*$(v_scale)
+variable 	ybsize equal 10*0.60599732400958894463
+variable 	zbsize equal 10*$(v_scale)
+variable 	zbsize equal 10*0.60599732400958894463
+
+region 		boxreg block 0 $(v_xbsize) 0 $(v_ybsize) 0 $(v_zbsize) units box
+region 		boxreg block 0 6.0599732400958901124 0 $(v_ybsize) 0 $(v_zbsize) units box
+region 		boxreg block 0 6.0599732400958901124 0 6.0599732400958901124 0 $(v_zbsize) units box
+region 		boxreg block 0 6.0599732400958901124 0 6.0599732400958901124 0 6.0599732400958901124 units box
+create_box  	1 boxreg
+Created orthogonal box = (0 0 0) to (6.05997 6.05997 6.05997)
+  1 by 1 by 1 MPI processor grid
+
+
+#creating the FCC lattice in a cubic region in the box
+
+lattice 	fcc $(v_scale)
+lattice 	fcc 0.60599732400958894463
+Lattice spacing in x,y,z = 0.605997 0.605997 0.605997
+variable 	xl equal xlo+0.05*$(v_xbsize)
+variable 	xl equal xlo+0.05*6.0599732400958901124
+variable 	xr equal xhi-0.05*$(v_xbsize)
+variable 	xr equal xhi-0.05*6.0599732400958901124
+variable 	yl equal ylo+0.05*$(v_ybsize)
+variable 	yl equal ylo+0.05*6.0599732400958901124
+variable 	yr equal yhi-0.05*$(v_ybsize)
+variable 	yr equal yhi-0.05*6.0599732400958901124
+variable 	zl equal zlo+0.05*$(v_zbsize)
+variable 	zl equal zlo+0.05*6.0599732400958901124
+variable 	zr equal zhi-0.05*$(v_zbsize)
+variable 	zr equal zhi-0.05*6.0599732400958901124
+region 		r_solid block $(v_xl) $(v_xr) $(v_yl) $(v_yr) $(v_zl) $(v_zr) units box
+region 		r_solid block 0.30299866200479502742 $(v_xr) $(v_yl) $(v_yr) $(v_zl) $(v_zr) units box
+region 		r_solid block 0.30299866200479502742 5.7569745780910999144 $(v_yl) $(v_yr) $(v_zl) $(v_zr) units box
+region 		r_solid block 0.30299866200479502742 5.7569745780910999144 0.30299866200479502742 $(v_yr) $(v_zl) $(v_zr) units box
+region 		r_solid block 0.30299866200479502742 5.7569745780910999144 0.30299866200479502742 5.7569745780910999144 $(v_zl) $(v_zr) units box
+region 		r_solid block 0.30299866200479502742 5.7569745780910999144 0.30299866200479502742 5.7569745780910999144 0.30299866200479502742 $(v_zr) units box
+region 		r_solid block 0.30299866200479502742 5.7569745780910999144 0.30299866200479502742 5.7569745780910999144 0.30299866200479502742 5.7569745780910999144 units box
+create_atoms 	1 region r_solid
+Created 2916 atoms
+  create_atoms CPU = 0.00485271 secs
+
+
+# assign same diameter to all atoms
+set		type * diameter $(v_Diam)
+set		type * diameter 0.47374554099999999224
+  2916 settings made for diameter
+
+
+# interaction potential from table file
+pair_style 	table linear 4000
+pair_coeff 	* * table.potential Spring_Ca(OH)2-Ca(OH)2
+WARNING: 1712 of 4000 force values in table are inconsistent with -dE/dr.
+  Should only be flagged at inflection points (src/pair_table.cpp:483)
+WARNING: 3999 of 4000 distance values in table with relative error
+  over 1e-06 to re-computed values (src/pair_table.cpp:492)
+
+
+# neighbor parameters
+variable	skin equal $(v_eqDist)/5.
+variable	skin equal 0.42850481718808197673/5.
+neighbor	$(v_skin) bin
+neighbor	0.085700963437616406448 bin
+neigh_modify	delay 0
+
+
+pair_write 1 1 4000 r 1.00E-030 0.47136 tableOUT.txt Spring_Ca(OH)2-Ca(OH)2
+Neighbor list info ...
+  update every 1 steps, delay 0 steps, check yes
+  max neighbors/atom: 2000, page size: 100000
+  master list distance cutoff = 0.557061
+  ghost atom cutoff = 0.557061
+  binsize = 0.27853, bins = 22 22 22
+  1 neighbor lists, perpetual/occasional/extra = 1 0 0
+  (1) pair table, perpetual
+      attributes: half, newton on
+      pair build: half/bin/atomonly/newton
+      stencil: half/bin/3d/newton
+      bin: standard
+
+
+# outputs
+thermo_style	custom step atoms pe vol epair
+thermo		1000
+dump		geod all custom 1000 dump.pour id type x y z radius
+dump_modify	geod every 1 first yes
+
+
+# run minimization
+min_style cg
+min_modify	dmax $(v_skin)
+min_modify	dmax 0.085700963437616406448
+minimize	1e-8 0.1 1000000 1000000
+Per MPI rank memory allocation (min/avg/max) = 6.932 | 6.932 | 6.932 Mbytes
+Step Atoms PotEng Volume E_pair 
+       0     2916    -125440.1    222.54207    -125440.1 
+       1     2916    -125440.1    222.54207    -125440.1 
+Loop time of 0.0332555 on 1 procs for 1 steps with 2916 atoms
+
+97.7% CPU use with 1 MPI tasks x no OpenMP threads
+
+Minimization stats:
+  Stopping criterion = linesearch alpha is zero
+  Energy initial, next-to-last, final = 
+        -125440.098296     -125440.098296     -125440.098296
+  Force two-norm initial, final = 90.5039 90.5039
+  Force max component initial, final = 3.05262 3.05262
+  Final line search alpha, max atom move = 8.17077e-13 2.49423e-12
+  Iterations, force evaluations = 1 67
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0.024704   | 0.024704   | 0.024704   |   0.0 | 74.29
+Neigh   | 0.0022201  | 0.0022201  | 0.0022201  |   0.0 |  6.68
+Comm    | 0.00068307 | 0.00068307 | 0.00068307 |   0.0 |  2.05
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 0.005648   |            |       | 16.98
+
+Nlocal:    2916 ave 2916 max 2916 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    513 ave 513 max 513 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    15606 ave 15606 max 15606 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 15606
+Ave neighs/atom = 5.35185
+Neighbor list builds = 4
+Dangerous builds = 3
+#minimize	0 0 1000000 1000000
+Total wall time: 0:00:00
