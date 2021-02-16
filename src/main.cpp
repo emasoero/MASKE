@@ -47,19 +47,6 @@ int main(int argc, char **argv)
     
 
     
-    // Allocate all the transition and continuum processes to the appropriate subcommunicator
-    //maske->universe->populate();
-    
-    
-    
-    
-    // Run the main loop
-    //maske->mainloop();
-    
-    
-    
-    
-    
     
     /*
      

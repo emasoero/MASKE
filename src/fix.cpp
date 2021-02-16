@@ -3,7 +3,6 @@
 #include "universe.h"
 #include "error.h"
 #include "chemistry.h"
-#include "block.h"
 #include "store.h"
 //#include "lammpsIO.h"
 //#include "error.h"

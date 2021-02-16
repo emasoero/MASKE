@@ -27,12 +27,8 @@ namespace MASKE_NS {
         class Error *error;
         class Inputmsk *inputmsk;
         class Universe *universe;
-        class DTnucleate *nucleate;
         class LammpsIO *lammpsIO;
-        class Simbox *simbox;
-        class Particles *particles;
         class Chemistry *chem;
-        class Interactions *interact;
         class Solution *solution;
         class Fix *fix;
         class Krun *krun;
@@ -42,7 +38,6 @@ namespace MASKE_NS {
         class Fix_Cfoo *fix_cfoo;
         class Relax *relax;
         class Fix_nucleate *fix_nucl;
-        class Block *block;
         class Store *store;
 #ifdef MASKE_WITH_NUFEB
 	class Fix_nufeb *fix_nufeb;
@@ -79,7 +74,6 @@ namespace MASKE_NS {
 	~MASKE();           // destructor
 		
 	void printall();
-        void mainloop();   //OBSOLETE
         
     private:
         int me;

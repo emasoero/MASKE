@@ -7,7 +7,6 @@
 #include "output.h"
 #include "krun.h"
 #include "solution.h"
-#include "block.h"
 #include "store.h"
 #include <memory.h>
 #include <string.h>

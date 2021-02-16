@@ -1,9 +1,5 @@
 #include "lammpsIO.h"
 #include "universe.h"
-#include "simbox.h"
-#include "interactions.h"
-#include "particles.h"
-//#include "DTnucleate.h"
 //#include "error.h"
 /*#include <stdlib.h>
 #include <stdio.h>
@@ -82,57 +78,8 @@ void LammpsIO::create()
         std::string todo;
         todo = "log log."+universe->SCnames[universe->color]+".lammps";
         lammpsIO->lammpsdo(todo);
-        //tdump_fname = universe->SCnames[universe->color]+".tdump";
+
         
-        
-    /*
-        std::string instr = "units "+units;
-        fprintf(screen,"\n Proc[%d]: units command is: %s\n",me,instr.c_str());
-        lmp->input->one(instr.c_str());
-        
-        instr = "atom_style "+atomstyle;
-        //fprintf(screen,"\n atom_style command is: %s\n",instr.c_str());
-        lmp->input->one(instr.c_str());
-        
-        instr = "boundary "+simbox->boundary[0]+" "+simbox->boundary[1]+" "+simbox->boundary[2];
-        //fprintf(screen,"\n Boundary command is: %s\n",instr.c_str());
-        lmp->input->one(instr.c_str());
-        
-        instr = "pair_style "+interact->stylestr;
-        //fprintf(screen,"\n Pair_style command is: %s\n",instr.c_str());
-        lmp->input->one(instr.c_str());
-        
-        ss<< "timestep "<<timestep;
-        instr = ss.str();
-        ss.str("");
-        //fprintf(screen,"\n Proc[%d]: timestep command is: %s\n",me,instr.c_str());
-        lmp->input->one(instr.c_str());
-        
-        //lammps creates the simulation box
-        ss<<"region simboxENRICOswwwlp prism "<<simbox->xyzlo[0]<<" "<<simbox->xyzhi[0]<<" "<<simbox->xyzlo[1]<<" "<<simbox->xyzhi[1]<<" "<<simbox->xyzlo[2]<<" "<<simbox->xyzhi[2]<<" "<<simbox->xyztri[0]<<" "<<simbox->xyztri[1]<<" "<<simbox->xyztri[2];
-        instr = ss.str();
-        ss.str("");
-        fprintf(screen,"\n Proc[%d]: region command is: %s\n",me,instr.c_str());
-        lmp->input->one(instr.c_str());
-        ss<<"create_box "<<particles->Nt<<" simboxENRICOswwwlp";
-        instr = ss.str();
-        ss.str("");
-        fprintf(screen,"\n Proc[%d]: create_box command is: %s\n",me,instr.c_str());
-        lmp->input->one(instr.c_str());
-        
-        
-        // pair coefficient passed to lammps
-        for (int i=0; i<particles->Nt; i++) {
-            for (int j=i; j<particles->Nt; j++) {
-                ss<<"pair_coeff "<<i+1<<" "<<j+1<<" "<<interact->Mcoeff[i*particles->Nt+j];
-                instr = ss.str();
-                ss.str("");
-                if (me == MASTER) fprintf(screen,"\n pair_coeff command is: %s\n",instr.c_str());
-                lmp->input->one(instr.c_str());
-            }
-        }
-        
-        */
         
     }
 }

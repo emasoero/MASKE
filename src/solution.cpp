@@ -5,7 +5,6 @@
 #include "lammpsIO.h"
 #include "universe.h"
 #include "fix.h"
-//#include "DTnucleate.h"
 
 /*#include <stdlib.h>
 #include <stdio.h>

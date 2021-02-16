@@ -41,29 +41,6 @@ namespace MASKE_NS {
 
         std::vector<std::vector<std::string>> MulCmd;
 
-        /*
-        std::vector<std::string> tempSvec;  // temp vector to store all lammps commands associated to block before pushing them back into vector of vectors
-        
-        
-        std::vector<std::vector<std::string> > LatLammps; // collaction of all lammps command lines in each lattice block
-        std::vector<std::vector<std::string> > RegLammps; // collaction of all lammps command lines in each region block
-        
-        bool MinModFound, MinCmdFound; // flags indicating whether Minimiser and Min Modifyer are found (as they should) in lattice block
-        bool LatFound; // flag indicating whether "lattice" command is found (as it should) in lattice block
-        bool RegFound; // flag indicating whether "region" command is found (as it should) in region block
-
-        bool BlockFound;    // flag indicating whether another block command is found within a block. This should not happen: if it happens it means that a previous block was not correclty closed via the command end_block
-        
-        std::vector<std::string> LatMinMod;     // minimization style of each lattice
-        std::vector<std::string> LatMinCmd;    // minimization command of each lattice
-        
-        
-        
-        void add_lattice(std::string);
-        void add_region(std::string);
-        void add_Latline(std::string);
-        void add_Regline(std::string);
-        */
         void add(std::string);
         void printall();
         

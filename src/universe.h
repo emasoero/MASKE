@@ -28,7 +28,6 @@ namespace MASKE_NS {
 		void create();       // creates the universe of sub-communicators
 		void printall();
         void addsubcomm(std::string,int,int,int);   //adds one sub communicator with corresponding number of processors
-        void populate();    // Allocate all the transition and continuum processes to the appropriate subcommunicator
         
         int nsc;            // number of subcommunicators defined
         int color;          // processor-specific color, which identifies what subcomm the processor pertains to

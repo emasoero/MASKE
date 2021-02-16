@@ -1,5 +1,4 @@
 #include "universe.h"
-#include "DTnucleate.h"
 #include "error.h"
 #include "randm.h"
 #include "output.h"
@@ -188,55 +187,6 @@ void Universe::create()
      */
 }
 
-
-
-
-
-
-// ---------------------------------------------------------------
-// Allocate all the transition and continuum processes to the appropriate subcommunicator
-void Universe::populate()
-{
-    if (me == MASTER) fprintf(screen,"Allocating all the transition and continuum processes to the appropriate subcommunicators...\n");
-
-    
-    // Check that all transitions are associated with existing subcomm
-    for (int i=0; i<nucleate->Ntrans;i++) {
-        std::string temp_string;
-        temp_string = nucleate->scnames[i];
-        bool found=false;
-        for (int j=0; j<SCnames.size();j++) {
-            if (strcmp(temp_string.c_str(), SCnames[j].c_str()) == 0) {
-                found=true;
-            }
-        }
-        if (!found) {
-            std::string msg="ERROR: nucleation event \""+nucleate->Tnames[i]+"\" associated to subcomm \""+temp_string+"\" which does not exist";
-            error->errsimple(msg);
-        }
-    }
-    
-    
-    
-    // Add discrete transition to local subcomm, one at the time..
-    
-    // Nucleation first...
-    for (int i=0; i<nucleate->Ntrans;i++) {
-        std::string temp_string;
-        temp_string = nucleate->scnames[i];
-        if (strcmp(temp_string.c_str(), SCnames[color].c_str()) == 0) {
-            nucleate->addtransSC(i);
-        }
-    }
-    
-    // Then the others...
-    
-    
-    
-    // Add continuum transitions to local subcomm, one at the time..
-    
-    // Growth first...
-}
 
 
 

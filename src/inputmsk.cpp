@@ -1,18 +1,13 @@
 #include "inputmsk.h"
 #include "error.h"
 #include "universe.h"
-#include "DTnucleate.h"
 #include "lammpsIO.h"
-#include "simbox.h"
-#include "particles.h"
 #include "chemistry.h"
-#include "interactions.h"
 #include "solution.h"
 #include "fix.h"
 #include "krun.h"
 #include "output.h"
 #include "relax.h"
-#include "block.h"
 #include "store.h"
 #ifdef MASKE_WITH_SPECIATION
 #include "spec.h"
@@ -154,9 +149,8 @@ void Inputmsk::file()
             std::istringstream ss(read_string);
             ss >> firstWord;
             
-            // if this is not a loop or a block command, execute the line
+            // if this is not a loop command, execute the line
             // if it is a loop, create a vector containing all line commands in the loop and executes them for the desired number of times
-            // if it is a block, record the block lines in object and move on
             if (strcmp(firstWord.c_str(),"loop")==0) {
                 // read the loop name and extremes. Record following lines in vector until the end_of_loop line is found
                 std::string iname,imaxname,lmpyn,loopname;
@@ -197,120 +191,37 @@ void Inputmsk::file()
                     }
                 }
             }
-            else if (strcmp(firstWord.c_str(), "block") == 0){
-                std::string read_string3, read_string4;
-                ss>>read_string2>>read_string3;
-                if (me==MASTER) {
-                    fprintf(screen,"\n inputmsk -- Adding block:  %s %s\n",read_string2.c_str(),read_string3.c_str());
-                }
-                
-                bool endblock = false;
-                int nread = 0;
-                if (strcmp(read_string2.c_str(), "lattice") == 0){
-                    block->add_lattice(read_string3);
-                    while (endblock == false && nread < 10000){
-                        std::getline(inFile, read_string4);
-                        if (strcmp(read_string4.c_str(), "end_block") == 0){
-                            endblock = true;
-                            block->LatLammps.push_back(block->tempSvec);
-                        }
-                        else {
-                            block->add_Latline(read_string4);
-                        }
-                        nread++;
-                    }
-                }
-                else if (strcmp(read_string2.c_str(), "region") == 0){
-                    block->add_region(read_string3);
-                    while (endblock == false && nread < 10000){
-                        std::getline(inFile, read_string4);
-                        if (strcmp(read_string4.c_str(), "end_block") == 0){
-                            endblock = true;
-                            block->RegLammps.push_back(block->tempSvec);
-                        }
-                        else {
-                            block->add_Regline(read_string4);
-                        }
-                        nread++;
-                    }
-                }
-                
-                if (!endblock){
-                    std::string msg = "ERROR: lattice or region block named \""+read_string3+"\" does not terminate with end_block keyword (or is >10000 lines long: to enable >10000 lines blocks change inputmsk.cpp";
-                    error->errsimple(msg);
-                }
-                
-                
-                // verify how blocks are read via screen output
-                if (me==MASTER){
-                    fprintf(screen,"\n inputmsk -- Proc %d recorded block %s called %s with following lammps commands:\n",me,read_string2.c_str(),read_string3.c_str());
-                    if (strcmp(read_string2.c_str(), "lattice")==0){
-                        int last  = block->LatLammps.size();
-                        int lastlast = block->LatLammps[last-1].size();
-                        for (int i=0; i<lastlast; i++){
-                            fprintf(screen,"%s\n",block->LatLammps[last-1][i].c_str());
-                        }
-                        fprintf(screen,"%s\n",block->LatMinMod[last-1].c_str());
-                        fprintf(screen,"%s\n",block->LatMinCmd[last-1].c_str());
-                    }
-                     if (strcmp(read_string2.c_str(), "region")==0){
-                         int last  = block->RegLammps.size();
-                         int lastlast = block->RegLammps[last-1].size();
-                         for (int i=0; i<lastlast; i++){
-                             fprintf(screen,"%s\n",block->RegLammps[last-1][i].c_str());
-                         }
-                    }
-                }
-                
-                if (strcmp(read_string2.c_str(), "lattice")==0){
-                    if (block->MinCmdFound == false || block->MinModFound == false || block->LatFound==false) {
-                        std::string msg = "ERROR: lattice block named \""+read_string3+"\" must contain a minimize, a min_modify, and a lattice commmand for LAMMPS";
-                        error->errsimple(msg);
-                    }
-                }
-                if (strcmp(read_string2.c_str(), "region")==0){
-                    if (block->RegFound == false) {
-                        std::string msg = "ERROR: region block named \""+read_string3+"\" must contain a region commmand for LAMMPS";
-                        error->errsimple(msg);
-                    }
-                }
-                if (block->BlockFound){
-                    std::string msg = "ERROR: region block named \""+read_string3+"\" either contains another nested block (forbidden) or is not ended correctly with an end_block command";
-                    error->errsimple(msg);
-                }
-                
-            }
 	    // Check for store multi command because we need to parse multiple lines
             else if (strcmp(firstWord.c_str(), "store") == 0) {
-	      std::string type;
-	      ss >> type;
-	      if (type == "multi") {
-		std::string name;
-		ss >> name;
-		store->MulNames.push_back(name);
-		std::string triple_quote;
-		ss >> triple_quote;
-		if (triple_quote != "\"\"\"")
-		  error->errsimple("ERROR: couldn't find triple quote in multi-line store command");
-		int nline = 0;
-		std::vector<std::string> cmds;
-		while (true) {
-		  std::string line;
-		  std::getline(inFile, line);
-		  if (line.empty())
-		    continue;
-		  if (line.rfind("\"\"\"", 0) == 0)
-		    break;
-		  cmds.push_back(line);
-		  ++nline;
-		  if (nline > 1000000)
-		    error->errsimple("ERROR: too many lines in multi-line store command");
-		}
-		store->MulCmd.push_back(cmds);
-	      }
-	      else
-		execline(read_string);
-	    }
+                std::string type;
+                ss >> type;
+                if (type == "multi") {
+                    std::string name;
+                    ss >> name;
+                    store->MulNames.push_back(name);
+                    std::string triple_quote;
+                    ss >> triple_quote;
+                    if (triple_quote != "\"\"\"")
+                        error->errsimple("ERROR: couldn't find triple quote in multi-line store command");
+                    int nline = 0;
+                    std::vector<std::string> cmds;
+                    while (true) {
+                        std::string line;
+                        std::getline(inFile, line);
+                        if (line.empty())
+                            continue;
+                        if (line.rfind("\"\"\"", 0) == 0)
+                            break;
+                        cmds.push_back(line);
+                        ++nline;
+                        if (nline > 1000000)
+                            error->errsimple("ERROR: too many lines in multi-line store command");
+                    }
+                    store->MulCmd.push_back(cmds);
+                }
+                else
+                execline(read_string);
+            }
             else {
                 execline(read_string);
             }
@@ -427,10 +338,6 @@ void Inputmsk::execline(std::string read_string)
                 fprintf(screen, "\n");
             }
         }
-        else if (strcmp(word.c_str(), "parttype") == 0){
-            lss >> read_string2;
-            particles->addtype(read_string2);
-        }
         else if (strcmp(word.c_str(), "chemDB") == 0){
             lss >> read_string;
             chem->readDB(read_string);
@@ -489,23 +396,6 @@ void Inputmsk::execline(std::string read_string)
             else {
                 getout=true; // seems to be doing the same as "break" above... not sure though.. I'll keep it as is for now
             }
-        }
-        else if (strcmp(word.c_str(), "simbox") == 0){
-            lss>>read_string2;
-            if (strcmp(read_string2.c_str(), "prism") == 0) {
-                lss >> simbox->xyzlo[0] >> simbox->xyzhi[0]  >> simbox->xyzlo[1] >> simbox->xyzhi[1]  >> simbox->xyzlo[2] >> simbox->xyzhi[2]   >> simbox->xyztri[0] >> simbox->xyztri[1] >> simbox->xyztri[2];
-                simbox->computeTM();
-            }
-            else {
-                std::string msg = "ERROR: thus far only \"prism\" is accepted as a simulation box style. \""+read_string+"\" instead was found \n";
-                error->errsimple(msg);
-            }
-        }
-        else if (strcmp(word.c_str(), "pair_coeff") == 0){
-            std::string read_string3;
-            lss>>read_string>>read_string2;
-            std::getline(lss, read_string3);
-            interact->addpcoeff(read_string,read_string2,read_string3);
         }
         else if (strcmp(word.c_str(), "sol_start") == 0){
             if (me == MASTER) fprintf(screen, "\nFound sol_start\n");
@@ -763,69 +653,6 @@ void Inputmsk::execline(std::string read_string)
             double deltat;
             lss >> deltat;
             krun->proceed(deltat);
-        }
-        else if (strcmp(word.c_str(), "nucleate") == 0) {
-            std::string tname, subcom, freqtype;
-            freqtype = "step";
-            double freqnum = 1;
-            double lasteval = 0., starteval=0.;
-            lss >> tname >> subcom;
-            bool foundend=false, foundevery = false, foundleval=false,foundseval=false;
-            while (!foundend) {
-                lss >> read_string;
-                if (strcmp(read_string.c_str(), "end") == 0 || strcmp(read_string.c_str(), "END") == 0 ) {
-                    foundend = true;
-                }
-                else if (strcmp(read_string.c_str(), "every") == 0){
-                    lss >> freqtype >> freqnum;
-                    if (strcmp(freqtype.c_str(), "step") != 0 && strcmp(freqtype.c_str(), "time") != 0 ){
-                        std::string msg = "ERROR: one nucleation transition has \"every\" option associated to a type of frequency that is neither \"step\" nor \"time\"";
-                        error->errsimple(msg);
-                    }
-                    foundevery = true;
-                }
-                else if (strcmp(read_string.c_str(), "lasteval") == 0){
-                    lss >> lasteval;
-                    if (lasteval < 0.) lasteval=0.;
-                    foundleval = true;
-                }
-                else if (strcmp(read_string.c_str(), "starteval") == 0){
-                    lss >> starteval;
-                    if (starteval < 0.) starteval=0.;
-                    foundseval = true;
-                }
-                
-            }
-            if (isrestart) {
-                if (!foundend) {
-                    std::string msg = "ERROR: did not find \"end\" at the end of a nucleation definition in restart file";
-                    error->errsimple(msg);
-                }
-                if (!foundevery) {
-                    std::string msg = "ERROR: did not find \"every\" in a nucleation definition in restart file";
-                    error->errsimple(msg);
-                }
-                if (!foundevery) {
-                    std::string msg = "ERROR: did not find \"lasteval\" in a nucleation definition in restart file";
-                    error->errsimple(msg);
-                }
-                if (!foundseval) {
-                    std::string msg = "ERROR: did not find \"starteval\" in a nucleation definition in restart file";
-                    error->errsimple(msg);
-                }
-                nucleate->addtrans(tname,subcom,freqtype,freqnum,lasteval+freqnum,starteval);
-                
-            }
-            else nucleate->addtrans(tname,subcom,freqtype,freqnum,lasteval,starteval);
-            // just a check
-            /*
-             if (me == MASTER){
-             std::string temp_string,temp_string2;;
-             temp_string = nucleate->Tnames[nucleate->Ntrans-1];
-             temp_string2 = nucleate->scnames[nucleate->Ntrans-1];
-             fprintf(screen, "\nNucleation transition \"%s\" added to the preliminary list; later to be associated to subcomm \"%s\"",temp_string.c_str(),temp_string2.c_str());
-             }
-             */
         }
         else{
             std::string msg = "ERROR: command unknown in input or restart file: "+word;
