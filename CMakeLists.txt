@@ -11,26 +11,21 @@ if (WITH_VTK)
 endif()
 
 set(SOURCES 
-  src/block.cpp
   src/chemistry.cpp
-  src/DTnucleate.cpp
   src/error.cpp
   src/fix_Cfoo.cpp
   src/fix.cpp
   src/fix_delete.cpp
   src/fix_nucleate.cpp
   src/inputmsk.cpp
-  src/interactions.cpp
   src/krun.cpp
   src/lammpsIO.cpp
   src/main.cpp
   src/maske.cpp
   src/memory.cpp
   src/output.cpp
-  src/particles.cpp
   src/randm.cpp
   src/relax.cpp
-  src/simbox.cpp
   src/solution.cpp
   src/store.cpp
   src/universe.cpp)

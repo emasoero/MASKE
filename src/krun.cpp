@@ -36,11 +36,12 @@
 using namespace MASKE_NS;
 
 union ubuf {
-  double d;
-  int64_t i;
-  ubuf(double arg) : d(arg) {}
-  ubuf(int64_t arg) : i(arg) {}
-  ubuf(int arg) : i(arg) {}
+      // Denis' stuff - not sure what this does.
+      double d;
+      int64_t i;
+      ubuf(double arg) : d(arg) {}
+      ubuf(int64_t arg) : i(arg) {}
+      ubuf(int arg) : i(arg) {}
 };
 
 Krun::Krun(MASKE *maske) : Pointers(maske)
@@ -50,8 +51,6 @@ Krun::Krun(MASKE *maske) : Pointers(maske)
     MPI_Comm_rank(MPI_COMM_WORLD, &me);
     
     reset_event_vec = true;   // if the simulation is not a restart, then at the first step the code will compute the number of events in each RF-KMC process and prepare empty vectors to accommodate rates coming from the fixes
-    //Ntrans = 0;
-    //Ntsc=0;
     QkTint = 0.;
     resetQkTint = true;
 
@@ -75,17 +74,8 @@ void Krun::proceed(double deltat)
 {
     
     // screen output to debug
-     int sleeptime = me;    // KMR - defines an integer to give as input to sleep() function just used for debigging.   Gives numreical valuw to integer equal to rank of current processor in COMM_WORLD
-    /*
-     sleep(sleeptime);
-    fprintf(screen,"\n\n Proc %d, SUBCOM %d Ready to start krun \n",me,universe->color);
-    MPI_Barrier(MPI_COMM_WORLD);
-    if (me==MASTER) {
-        fprintf(screen,"\n\n Let's start krun \n");
-    }
-    sleep(2);
-     */
-    
+     int sleeptime = me;    // KMR - defines an integer to give as input to sleep() function just used for debigging
+
     // some initial variables and quantities
     double start_time = msk->tempo;   // the time at which this krun loop started
     double end_time = start_time + deltat;   //time past/reached which this loop stops
@@ -101,38 +91,24 @@ void Krun::proceed(double deltat)
     bool write_first_thermo = true;
     bool write_first_dumps = true;
 
-    // Setting time step to 0
+    // Setting time step to 0 (not a good thing, but to prevent that internal calls of "run 1" for LAMMPS in this code cause LAMMPS time to increase
     lammpsIO->lammpsdo("timestep 0");
 
+    // Initialise any continuous fix that requires this before starting the krun loop
     for (int i=0; i<fix->Ctype.size(); i++) {
 #ifdef MASKE_WITH_NUFEB
-      if (fix->Ctype[i] == "nufeb") {
-	fix_nufeb->init(i);
-      }
+        if (fix->Ctype[i] == "nufeb") {
+          fix_nufeb->init(i);
+        }
 #endif
     }
     
     //**********************************
-    // FROM NOW ON, TIME WILL ADVANCE
+    // FROM NOW ON, MASKE'S TIME WILL ADVANCE
     while (msk->tempo < end_time){
         
-        
-        // just to mix up lammps config a bit and force lammps to use multiple processors..
-        
-         /*
-          if (lammpsIO->lammps_active){
-            std::string tolmp = "displace_atoms all random 0.0050 0.0050 0.0080 123224";
-            //std::string tolmp = "displace_atoms all move 10 20 -4";
-            lammpsIO->lammpsdo(tolmp);
-            tolmp = "run 1";   // just to see something in dump... to be removed later
-            lammpsIO->lammpsdo(tolmp);
-        }
-          */
-        
-        
-        
         if (write_first_thermo) {
-	    output->writethermo();
+            output->writethermo();
             write_first_thermo = false;
         }
         
@@ -221,23 +197,22 @@ void Krun::proceed(double deltat)
         double Qknucl= 0.;   // cumulative rate from nucleation events only
         
         if (universe->key==0) {
-            Qkdel = fix_del->CrateAll();   //extract total rate of all delete and events in subcomm
+            //extract total rate of all delete and nuceleate events in subcomm
+            Qkdel = fix_del->CrateAll();
             Qknucl = fix_nucl->CrateAll();
         }
         Qk = Qkdel + Qknucl;  //  + ... all RF-KMC event types to be defined in future
         
         
         // each submaster sends its Qk to the master (me==0)
-        double *Qkall;  // an array for the master to record the Qk from each submaster
+        double *Qkall;  //  array on master record Qk from each submaster
         Qkall = new double[universe->nprocs];
         for (int i=0; i<universe->nprocs; i++) Qkall[i] = 0.;
         
         if (universe->key==0) {
-            Qkall[me] = Qk;  //each submaster records its Qk into its local Qkall, which is now ready to be passed to the global MASTER
+            Qkall[me] = Qk;  //each submaster records its Qk into its local Qkall, now ready to be passed to the global Qkall on MASTER
             fprintf(screen,"\n\n Vector of cumulative delete + nucleate rates from processor %d is: \n",me);
-            for (int i=0; i<universe->nprocs; i++) {
-                fprintf(screen," %e ",Qkall[i]);
-            }
+            for (int i=0; i<universe->nprocs; i++) fprintf(screen," %e ",Qkall[i]);
         }
 
         if (me>0){

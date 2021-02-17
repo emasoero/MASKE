@@ -36,7 +36,7 @@ namespace MASKE_NS {
 		std::string inconfig,totrash,err_msg,read_string2,firstWord,word;              // input config file (data or xyz type)
         int tstep;  // lammps timestep read from xyz file
         bool time_strict, time_loose, time_first, time_last;    //flags to know how to read time from XYZ file
-        bool foundNsteps, foundSubcomm, foundstep,foundtempo;
+        bool foundSubcomm, foundstep,foundtempo;
         double(ru);
         
 	};

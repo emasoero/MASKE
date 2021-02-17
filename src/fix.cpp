@@ -331,12 +331,12 @@ void Fix::add(std::string instr)
         aCname.push_back(temp_name);
         aCscom.push_back(temp_scom);
         aCdt.push_back(temp_dt);
-	aCleval.push_back(temp_leval);
-	aCstore.push_back(temp_store);
-	aCsid.push_back(temp_sid);
-	aCsteps.push_back(temp_steps);
-	aCgroups.push_back(temp_group);
-	aCsoutbox.push_back(temp_soutbox);
+        aCleval.push_back(temp_leval);
+        aCstore.push_back(temp_store);
+        aCsid.push_back(temp_sid);
+        aCsteps.push_back(temp_steps);
+        aCgroups.push_back(temp_group);
+        aCsoutbox.push_back(temp_soutbox);
 
         bool added_local_fix = false;
         //inndividual processors in fix-invoked subcomm adding fix to their local list
@@ -346,11 +346,11 @@ void Fix::add(std::string instr)
             Cscom.push_back(temp_scom);
             Cdt.push_back(temp_dt);
             Cleval.push_back(temp_leval);
-	    Cstore.push_back(temp_store);
-	    Csid.push_back(temp_sid);
-	    Csteps.push_back(temp_steps);
-	    Cgroups.push_back(temp_group);
-	    Csoutbox.push_back(temp_soutbox);
+            Cstore.push_back(temp_store);
+            Csid.push_back(temp_sid);
+            Csteps.push_back(temp_steps);
+            Cgroups.push_back(temp_group);
+            Csoutbox.push_back(temp_soutbox);
             CglobID.push_back(aCtype.size()-1);
             added_local_fix = true;
         }

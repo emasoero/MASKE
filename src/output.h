@@ -23,14 +23,9 @@ namespace MASKE_NS {
         int th_every;  // thermo is written every so many steps
         
         std::vector<std::string> dumpID; // IDs of dumps in current subcomm
-        std::vector<int> TdumpID; // numeric IDs of tempdump associated to each dump
         std::vector<int> dump_every; //frequency of each dump in current subcomm
         std::vector<std::string> dump_string; // string called by dump  "wrtie_dump group custom filename id type..."
         std::vector<bool> dump_first;  //recognises if dump was called already or this is first call
-        
-        std::vector<std::string> tempdumpID; // IDs of tempdumps in current subcomm
-        std::vector<std::string> tempdump_string; // string called by tempdump
-        std::vector<std::string> tempdump_modify; // string called by tempdump modifier
 
 
         
@@ -47,9 +42,6 @@ namespace MASKE_NS {
         void add_thqtt(std::string);
         void writedump(int);
         void add_dump(std::string,int,std::string);
-        void add_tempdump(std::string,std::string);
-        void openTdump(int);
-        void closeTdump(int);
 
         
     private:

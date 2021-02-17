@@ -201,27 +201,6 @@ void Output::add_dump(std::string dID,int devery,std::string dstring)
     dstring = "dump "+dID+" "+dstring;
     dump_string.push_back(dstring);
     dump_first.push_back(true);
-   
-    
-    
-    // find numeric ID of tempdump associated to this dump
-    /*int tdIDnum = -2;
-    for (int i =0; i<tempdumpID.size(); i++) {
-        if (strcmp(tdID.c_str(),tempdumpID[i].c_str())==0) {
-            tdIDnum = i;
-        }
-    }
-    if (strcasecmp(tdID.c_str(),"null")==0) {
-        tdIDnum = -1;
-    }
-    if (tdIDnum<-1) {
-        std::string msg = "ERROR: tempdump "+tdID+" invoked by dump \""+dID+"\" not found.";
-        error->errsimple(msg);
-    }
-    else {
-        TdumpID.push_back(tdIDnum);
-    }
-     */
 }
 
 
@@ -229,12 +208,6 @@ void Output::add_dump(std::string dID,int devery,std::string dstring)
 // write new entry in dump file
 void Output::writedump(int i)
 {
-    /*if (TdumpID[i]!=-1) {
-        openTdump(TdumpID[i]);
-        lammpsIO->lammpsdo("run 1");
-    }*/
-    
-    
     // create dump (for just one step)
     lammpsIO->lammpsdo(dump_string[i]);
     
@@ -255,41 +228,4 @@ void Output::writedump(int i)
     // close dump
     tolmp = "undump "+dumpID[i];
     lammpsIO->lammpsdo(tolmp);
-    
-    //if (TdumpID[i]!=-1) closeTdump(TdumpID[i]);
 }
-
-
-
-
-
-// ---------------------------------------------------------------
-// record new temporary dump
-void Output::add_tempdump(std::string dID,std::string dstring)
-{
-    tempdumpID.push_back(dID);
-    tempdump_string.push_back(dstring);
-    std::string modif;
-    modif = "dump_modify "+dID+" first yes every 1";
-    tempdump_modify.push_back(modif);
-}
-
-
-// ---------------------------------------------------------------
-// sets up a tempdump
-void Output::openTdump(int i)
-{
-    lammpsIO->lammpsdo(tempdump_string[i]);
-    lammpsIO->lammpsdo(tempdump_modify[i]);
-}
-
-
-// ---------------------------------------------------------------
-// closes a tempdump
-void Output::closeTdump(int i)
-{
-    std::string tolmp;
-    tolmp = "undump "+tempdumpID[i];
-    lammpsIO->lammpsdo(tolmp);
-}
-

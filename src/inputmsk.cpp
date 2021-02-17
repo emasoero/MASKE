@@ -43,7 +43,6 @@ Inputmsk::Inputmsk(MASKE *maske, int argc, char **argv) : Pointers(maske)
     time_first=false;
     time_last=false;
     ru = 1.;
-    foundNsteps=false;
     foundSubcomm=false;
     foundstep=false;
     foundtempo=false;
@@ -232,10 +231,6 @@ void Inputmsk::file()
     
     // Check that all what needed to be foound in the inputcprs file has been found indeed
     // TO BE POLISHED
-    /*if (!foundNsteps) {
-        std::string msg = "ERROR: Nsteps not found in inputcprs file";
-        error->errsimple(msg);
-    }*/
     if (!foundSubcomm) {
         std::string msg = "ERROR: No subcommunicator found";
         error->errsimple(msg);
@@ -280,11 +275,6 @@ void Inputmsk::execline(std::string read_string)
     std::istringstream lss(read_string);
     while (lss >> word && !getout) {
         if (strncmp(word.c_str(), "#", 1) == 0) break;
-        else if (strcmp(word.c_str(), "Nsteps") == 0) {
-            lss >> msk->Nsteps;
-            if (me == MASTER) fprintf(screen, "\nNsteps = %d", msk->Nsteps);
-            foundNsteps = true;
-        }
         else if (strcmp(word.c_str(), "step") == 0 && isrestart) {
             lss >> msk->step;
             msk->doublestep = (double) msk->step;
@@ -445,38 +435,6 @@ void Inputmsk::execline(std::string read_string)
                 }
             }
         }
-        else if (strcmp(word.c_str(), "config0") == 0){
-            lss>>inconfig;
-            if (strcmp(inconfig.c_str(), "empty") != 0){
-                lss >> read_string;
-                if (strcmp(read_string.c_str(), "strict") == 0) {
-                    time_strict = true;
-                    lss >> tstep;
-                }
-                else if (strcmp(read_string.c_str(), "loose") == 0) {
-                    lss >> tstep;
-                    time_loose = true;
-                }
-                else if (strcmp(read_string.c_str(), "first") == 0) {
-                    time_first = true;
-                }
-                else if (strcmp(read_string.c_str(), "last") == 0) {
-                    time_last = true;
-                }
-                else {
-                    std::string msg = "ERROR: time type not valid. \""+read_string+"\" was found, but only strict, loose, first, or last, are allowed \n";
-                    error->errsimple(msg);
-                }
-            }
-            lss >> read_string;
-            if (strcmp(read_string.c_str(), "ru") == 0) {
-                lss >> ru;
-            }
-            else{
-                std::string msg = "ERROR: expected argument ru after type of time in config0 command (input or restart file). Insted \""+read_string+"\" was found";
-                error->errsimple(msg);
-            }
-        }
         else if (strcmp(word.c_str(), "fix") == 0){
             std::string read_string3;
             std::getline(lss, read_string3);
@@ -546,37 +504,6 @@ void Inputmsk::execline(std::string read_string)
                         lss >> read_string;
                     }
                     output->add_dump(dumpID,dump_every,dump_string);
-                }
-                else {
-                    break;
-                }
-            }
-            else {
-                getout=true;
-            }
-        }
-        else if (strcmp(word.c_str(), "tempdump") == 0){
-            if (lammpsIO->lammps_active) {
-                bool comment_found = false;
-                std::string subcname;
-                lss >> subcname;
-                if (strcmp(subcname.c_str(),(universe->SCnames[universe->color]).c_str())==0 || strcasecmp(subcname.c_str(),"all")==0 ) {
-                    std::string read_string, dumpID, dump_string, dump_group, dump_style, dump_every,dump_fname;
-                    lss >> dumpID >> dump_group >> dump_style >> dump_every >> dump_fname;
-                    dump_fname = dump_fname+"."+universe->SCnames[universe->color];
-                    dump_string = "dump "+dumpID+" "+dump_group+" "+dump_style+" "+dump_every+" "+dump_fname;
-                    lss >> read_string;
-                    while (lss && !comment_found){
-                        if (strncmp(read_string.c_str(), "#", 1) != 0){
-                            dump_string = dump_string+" "+read_string;
-                        }
-                        else  {
-                            comment_found = true;
-                            getout=true;
-                        }
-                        lss >> read_string;
-                    }
-                    output->add_tempdump(dumpID,dump_string);
                 }
                 else {
                     break;

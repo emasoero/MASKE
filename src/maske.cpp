@@ -57,7 +57,6 @@ MASKE::MASKE(int narg, char **arg)
     }
     MPI_Barrier(MPI_COMM_WORLD);
     
-    Nsteps = 0;
     step = 0;
     tempo = 0;
     doublestep = (double)step;

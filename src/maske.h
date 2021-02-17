@@ -46,7 +46,6 @@ namespace MASKE_NS {
 	class Spec *spec;
 #endif
 
-        int Nsteps;     // the total number of fundametnal simulation steps to run (each transition is called every multiple of this step)
         int step;       // the current simulation step
         double doublestep;  // same as step, but in double version, as needed to calculate the frequency of invoking transition (see isasctive functions in transition files)
         double tempo;   // current simulation time
