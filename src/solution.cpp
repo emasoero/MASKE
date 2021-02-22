@@ -144,7 +144,7 @@ void Solution::computeNmol(void)
         MPI_Recv(&BoxV, 1, MPI_DOUBLE, source, 1, MPI_COMM_WORLD, &status);
         MPI_Recv(&PackF, 1, MPI_DOUBLE, source, 2, MPI_COMM_WORLD, &status);
     }
-    
+    // try
     // all procs compute volume of solution in box and in dV, and number if molecules depending on concentrations
     SVol = BoxV * (1.- PackF) - voidV;
     dVSVol = dV - dVvoidV;
