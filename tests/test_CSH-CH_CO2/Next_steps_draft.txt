@@ -1,0 +1,26 @@
+
+
+U = 1/2 k (r - r0)^2 - e0
+
+k = EA/L -->  A = pi (D/2)^2    L = r0 
+
+e0 = (surf_en * pi* D^2) / n_bulk/2
+
+D from molecular volume, assuming a molecule is a sphere
+
+for CSH, we do not know r0 and n_bulk a priori
+
+
+1) define trial interaction potential for CSH-CSH, assuming r0 = D and n_bulk = 11
+
+2) fill an empty box with a random packing of CSH particles with diameter D and potential from 1
+
+3) we relax the box to have zero average pressure
+
+4) we assume this relaxed box contains solid CSH only. If we do simbox_volume - CSH_volume = porosity = p
+
+5) r0 = D * (1-p)^(1/3)
+
+6) if this is correct, if we repeat the space filing from empty box, this time with potential featuring the correct r0, then sum_(CSHparticles) 4/3* pi D^3 = simbox_vol
+
+7) if this happens, then we can carve a sphere from the middle and use it to change n_bulk in e0 until we impose equilibrium (no dissolution, no precipitation) when the activity product of ions in solution = Keq_CSH   (we know Keq for CSH from the literature)

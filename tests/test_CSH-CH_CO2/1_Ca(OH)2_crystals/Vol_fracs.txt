@@ -1,0 +1,23 @@
+1 mole CSHgel   +  1.3 moles CH = tot mol
+
+
+
+V_CSHgel + V_CH = Vbox  (assuming 100% C3S reaction and only gel pores - no capillary)
+
+(V_CH / MV_CH) / (V_csh / MV_CSHgel) = 1.3   -->  V_CH = 1.3* MV_CH * Vcsh / MVcsh
+
+
+
+Vcsh + 1.3 Vcsh (MV_CH/MVcsh) = V   -->   Vcsh / Vbox = 1 / (1+1.3* MVch/MVcsh )
+
+Vch / Vbox = 1 - Vcsh/Vbox = 1 - 1 / (1 + 1.3 * MVch/MVcsh)
+
+MVch = 33.1 cm3/mol
+MVcsh = 110.1 cm3/mol  
+
+--------
+
+
+Vcsh/Vbox = 72%
+
+VCH / Vbox = 28%
