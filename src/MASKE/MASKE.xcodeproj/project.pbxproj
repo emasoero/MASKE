@@ -1,0 +1,155 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 50;
+	objects = {
+
+/* Begin PBXFileReference section */
+		507AE01925CD3B7900CB8DDC /* maske.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = maske.h; path = ../maske.h; sourceTree = "<group>"; };
+		507AE01A25CD3B7900CB8DDC /* fix_nufeb.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = fix_nufeb.h; path = ../fix_nufeb.h; sourceTree = "<group>"; };
+		507AE01B25CD3B7900CB8DDC /* output.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = output.cpp; path = ../output.cpp; sourceTree = "<group>"; };
+		507AE01D25CD3B7A00CB8DDC /* krun.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = krun.cpp; path = ../krun.cpp; sourceTree = "<group>"; };
+		507AE01E25CD3B7A00CB8DDC /* relax.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = relax.cpp; path = ../relax.cpp; sourceTree = "<group>"; };
+		507AE01F25CD3B7A00CB8DDC /* fix.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = fix.h; path = ../fix.h; sourceTree = "<group>"; };
+		507AE02025CD3B7A00CB8DDC /* chemistry.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = chemistry.h; path = ../chemistry.h; sourceTree = "<group>"; };
+		507AE02125CD3B7A00CB8DDC /* solution.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = solution.h; path = ../solution.h; sourceTree = "<group>"; };
+		507AE02225CD3B7A00CB8DDC /* universe.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = universe.cpp; path = ../universe.cpp; sourceTree = "<group>"; };
+		507AE02525CD3B7A00CB8DDC /* store.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = store.h; path = ../store.h; sourceTree = "<group>"; };
+		507AE02625CD3B7A00CB8DDC /* fix_nufeb.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = fix_nufeb.cpp; path = ../fix_nufeb.cpp; sourceTree = "<group>"; };
+		507AE02725CD3B7A00CB8DDC /* inputmsk.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = inputmsk.h; path = ../inputmsk.h; sourceTree = "<group>"; };
+		507AE02825CD3B7A00CB8DDC /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = main.cpp; path = ../main.cpp; sourceTree = "<group>"; };
+		507AE02B25CD3B7A00CB8DDC /* universe.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = universe.h; path = ../universe.h; sourceTree = "<group>"; };
+		507AE02C25CD3B7A00CB8DDC /* solution.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = solution.cpp; path = ../solution.cpp; sourceTree = "<group>"; };
+		507AE02D25CD3B7A00CB8DDC /* randm.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = randm.cpp; path = ../randm.cpp; sourceTree = "<group>"; };
+		507AE02E25CD3B7A00CB8DDC /* lammpsIO.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = lammpsIO.cpp; path = ../lammpsIO.cpp; sourceTree = "<group>"; };
+		507AE02F25CD3B7A00CB8DDC /* fix_delete.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = fix_delete.h; path = ../fix_delete.h; sourceTree = "<group>"; };
+		507AE03025CD3B7A00CB8DDC /* error.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = error.h; path = ../error.h; sourceTree = "<group>"; };
+		507AE03125CD3B7A00CB8DDC /* lammpsIO.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = lammpsIO.h; path = ../lammpsIO.h; sourceTree = "<group>"; };
+		507AE03225CD3B7A00CB8DDC /* fix_nucleate.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = fix_nucleate.cpp; path = ../fix_nucleate.cpp; sourceTree = "<group>"; };
+		507AE03325CD3B7A00CB8DDC /* output.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = output.h; path = ../output.h; sourceTree = "<group>"; };
+		507AE03725CD3B7B00CB8DDC /* relax.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = relax.h; path = ../relax.h; sourceTree = "<group>"; };
+		507AE03825CD3B7B00CB8DDC /* spec.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = spec.cpp; path = ../spec.cpp; sourceTree = "<group>"; };
+		507AE03925CD3B7B00CB8DDC /* randm.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = randm.h; path = ../randm.h; sourceTree = "<group>"; };
+		507AE03A25CD3B7B00CB8DDC /* fix_nucleate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = fix_nucleate.h; path = ../fix_nucleate.h; sourceTree = "<group>"; };
+		507AE03B25CD3B7B00CB8DDC /* fix_delete.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = fix_delete.cpp; path = ../fix_delete.cpp; sourceTree = "<group>"; };
+		507AE03C25CD3B7B00CB8DDC /* fix.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = fix.cpp; path = ../fix.cpp; sourceTree = "<group>"; };
+		507AE03D25CD3B7B00CB8DDC /* inputmsk.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = inputmsk.cpp; path = ../inputmsk.cpp; sourceTree = "<group>"; };
+		507AE03E25CD3B7B00CB8DDC /* spec.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = spec.h; path = ../spec.h; sourceTree = "<group>"; };
+		507AE04025CD3B7B00CB8DDC /* memory.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = memory.h; path = ../memory.h; sourceTree = "<group>"; };
+		507AE04125CD3B7B00CB8DDC /* store.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = store.cpp; path = ../store.cpp; sourceTree = "<group>"; };
+		507AE04225CD3B7B00CB8DDC /* error.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = error.cpp; path = ../error.cpp; sourceTree = "<group>"; };
+		507AE04325CD3B7B00CB8DDC /* chemistry.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = chemistry.cpp; path = ../chemistry.cpp; sourceTree = "<group>"; };
+		507AE04425CD3B7B00CB8DDC /* pointers.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = pointers.h; path = ../pointers.h; sourceTree = "<group>"; };
+		507AE04625CD3B7B00CB8DDC /* memory.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = memory.cpp; path = ../memory.cpp; sourceTree = "<group>"; };
+		507AE04725CD3B7B00CB8DDC /* fix_Cfoo.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = fix_Cfoo.cpp; path = ../fix_Cfoo.cpp; sourceTree = "<group>"; };
+		507AE04825CD3B7B00CB8DDC /* fix_Cfoo.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = fix_Cfoo.h; path = ../fix_Cfoo.h; sourceTree = "<group>"; };
+		507AE04925CD3B7B00CB8DDC /* maske.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = maske.cpp; path = ../maske.cpp; sourceTree = "<group>"; };
+		507AE04A25CD3B7B00CB8DDC /* krun.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = krun.h; path = ../krun.h; sourceTree = "<group>"; };
+		50B1B85D26824B6A003046A1 /* setconc.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = setconc.h; path = ../setconc.h; sourceTree = "<group>"; };
+		50B1B85E26824B6A003046A1 /* setconc.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = setconc.cpp; path = ../setconc.cpp; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		507AE01225CD3B6800CB8DDC = {
+			isa = PBXGroup;
+			children = (
+				507AE04325CD3B7B00CB8DDC /* chemistry.cpp */,
+				507AE02025CD3B7A00CB8DDC /* chemistry.h */,
+				507AE04225CD3B7B00CB8DDC /* error.cpp */,
+				507AE03025CD3B7A00CB8DDC /* error.h */,
+				507AE04725CD3B7B00CB8DDC /* fix_Cfoo.cpp */,
+				507AE04825CD3B7B00CB8DDC /* fix_Cfoo.h */,
+				507AE03B25CD3B7B00CB8DDC /* fix_delete.cpp */,
+				507AE02F25CD3B7A00CB8DDC /* fix_delete.h */,
+				507AE03225CD3B7A00CB8DDC /* fix_nucleate.cpp */,
+				507AE03A25CD3B7B00CB8DDC /* fix_nucleate.h */,
+				507AE02625CD3B7A00CB8DDC /* fix_nufeb.cpp */,
+				507AE01A25CD3B7900CB8DDC /* fix_nufeb.h */,
+				507AE03C25CD3B7B00CB8DDC /* fix.cpp */,
+				507AE01F25CD3B7A00CB8DDC /* fix.h */,
+				507AE03D25CD3B7B00CB8DDC /* inputmsk.cpp */,
+				507AE02725CD3B7A00CB8DDC /* inputmsk.h */,
+				507AE01D25CD3B7A00CB8DDC /* krun.cpp */,
+				507AE04A25CD3B7B00CB8DDC /* krun.h */,
+				507AE02E25CD3B7A00CB8DDC /* lammpsIO.cpp */,
+				507AE03125CD3B7A00CB8DDC /* lammpsIO.h */,
+				507AE02825CD3B7A00CB8DDC /* main.cpp */,
+				507AE04925CD3B7B00CB8DDC /* maske.cpp */,
+				507AE01925CD3B7900CB8DDC /* maske.h */,
+				507AE04625CD3B7B00CB8DDC /* memory.cpp */,
+				507AE04025CD3B7B00CB8DDC /* memory.h */,
+				507AE01B25CD3B7900CB8DDC /* output.cpp */,
+				507AE03325CD3B7A00CB8DDC /* output.h */,
+				507AE04425CD3B7B00CB8DDC /* pointers.h */,
+				507AE02D25CD3B7A00CB8DDC /* randm.cpp */,
+				507AE03925CD3B7B00CB8DDC /* randm.h */,
+				507AE01E25CD3B7A00CB8DDC /* relax.cpp */,
+				507AE03725CD3B7B00CB8DDC /* relax.h */,
+				50B1B85D26824B6A003046A1 /* setconc.h */,
+				50B1B85E26824B6A003046A1 /* setconc.cpp */,
+				507AE02C25CD3B7A00CB8DDC /* solution.cpp */,
+				507AE02125CD3B7A00CB8DDC /* solution.h */,
+				507AE03825CD3B7B00CB8DDC /* spec.cpp */,
+				507AE03E25CD3B7B00CB8DDC /* spec.h */,
+				507AE04125CD3B7B00CB8DDC /* store.cpp */,
+				507AE02525CD3B7A00CB8DDC /* store.h */,
+				507AE02225CD3B7A00CB8DDC /* universe.cpp */,
+				507AE02B25CD3B7A00CB8DDC /* universe.h */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXProject section */
+		507AE01325CD3B6800CB8DDC /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 1240;
+			};
+			buildConfigurationList = 507AE01625CD3B6800CB8DDC /* Build configuration list for PBXProject "MASKE" */;
+			compatibilityVersion = "Xcode 9.3";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 507AE01225CD3B6800CB8DDC;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+			);
+		};
+/* End PBXProject section */
+
+/* Begin XCBuildConfiguration section */
+		507AE01725CD3B6800CB8DDC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = Debug;
+		};
+		507AE01825CD3B6800CB8DDC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		507AE01625CD3B6800CB8DDC /* Build configuration list for PBXProject "MASKE" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				507AE01725CD3B6800CB8DDC /* Debug */,
+				507AE01825CD3B6800CB8DDC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 507AE01325CD3B6800CB8DDC /* Project object */;
+}

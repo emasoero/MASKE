@@ -8,6 +8,7 @@
 #include "krun.h"
 #include "output.h"
 #include "relax.h"
+#include "setconc.h"
 #include "store.h"
 #ifdef MASKE_WITH_SPECIATION
 #include "spec.h"
@@ -512,6 +513,29 @@ void Inputmsk::execline(std::string read_string)
             else {
                 getout=true;
             }
+        }
+        else if (strcmp(word.c_str(), "setconc") == 0) {
+            std::string sname,molname;
+            double molconc;
+            int every;
+            lss >> sname >> every >> molname >> molconc;
+            
+            bool flag_ctr = false;
+            std::string counter,ctr_mol,boxdV;
+            ctr_mol = "none";
+            lss >> counter;
+            if (strcmp(counter.c_str(),"counter")==0) {
+                flag_ctr = true;
+                lss >> ctr_mol;
+                lss >> boxdV;
+            }
+            else boxdV = counter;
+            
+            if (strcmp(boxdV.c_str(),"box")!=0 && strcmp(boxdV.c_str(),"box+dV")!=0) {
+                std::string msg = "ERROR: setconc command must end with either \"box\" or \"box+dV\", instead \""+boxdV+"\" was found\n";
+                error->errsimple(msg);
+            }
+            setconc->add_conc(sname,every,molname,molconc,flag_ctr,ctr_mol,boxdV);
         }
         else if (strcmp(word.c_str(), "relax") == 0) {
             if (lammpsIO->lammps_active) {

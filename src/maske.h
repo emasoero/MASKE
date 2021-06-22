@@ -37,6 +37,7 @@ namespace MASKE_NS {
         class Output *output;
         class Fix_Cfoo *fix_cfoo;
         class Relax *relax;
+        class Setconc *setconc;
         class Fix_nucleate *fix_nucl;
         class Store *store;
 #ifdef MASKE_WITH_NUFEB

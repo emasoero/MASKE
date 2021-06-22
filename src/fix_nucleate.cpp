@@ -1309,7 +1309,14 @@ void Fix_nucleate::execute(int pID, int EVafixID, int EVpTYPE,double EVpDIAM,dou
     ss << zr;   tolmp += ss.str(); ss.str(""); ss.clear();
      */
     
-    tolmp = "region tempregg block $(xlo) $(xhi) $(ylo) $(yhi) $(zlo) $(zhi)";
+    tolmp = "variable xltemp equal xlo+0.1*(xhi-xlo)";
+    tolmp = "variable xrtemp equal xhi-0.1*(xhi-xlo)";
+    tolmp = "variable yltemp equal ylo+0.1*(yhi-ylo)";
+    tolmp = "variable yrtemp equal yhi-0.1*(yhi-ylo)";
+    tolmp = "variable zltemp equal zlo+0.1*(zhi-zlo)";
+    tolmp = "variable zrtemp equal zhi-0.1*(zhi-zlo)";
+    
+    tolmp = "region tempregg block $(v_xltemp) $(v_xrtemp) $(v_yltemp) $(v_yrtemp) $(v_zltemp) $(v_zrtemp)";
     lammpsIO->lammpsdo(tolmp);
     
     tolmp = "group gtempin empty";
@@ -1322,6 +1329,12 @@ void Fix_nucleate::execute(int pID, int EVafixID, int EVpTYPE,double EVpDIAM,dou
     
     lammpsIO->lammpsdo("run 1");
     
+    tolmp = "variable xltemp delete";
+    tolmp = "variable xrtemp delete";
+    tolmp = "variable yltemp delete";
+    tolmp = "variable yrtemp delete";
+    tolmp = "variable zltemp delete";
+    tolmp = "variable zrtemp delete";
     
     // read id of new particle, and assign it the exact desired position
     tolmp = "compute cidtemp gtempin property/atom id";

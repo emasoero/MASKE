@@ -41,6 +41,7 @@ public:
     thermo(ptr->thermo),
     fix_cfoo(ptr->fix_cfoo),
     relax(ptr->relax),
+    setconc(ptr->setconc),
 #ifdef MASKE_WITH_SPECIATION
     spec(ptr->spec),
 #endif
@@ -70,6 +71,7 @@ protected:
 #endif
     Krun *&krun;
     Randm *&randm;
+    Setconc *&setconc;
     Output *&output;
     Fix_nucleate *&fix_nucl;
     Store *&store;

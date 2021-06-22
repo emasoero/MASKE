@@ -26,6 +26,7 @@ set(SOURCES
   src/output.cpp
   src/randm.cpp
   src/relax.cpp
+  src/setconc.cpp
   src/solution.cpp
   src/store.cpp
   src/universe.cpp)

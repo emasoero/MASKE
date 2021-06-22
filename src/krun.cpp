@@ -10,6 +10,7 @@
 #include "solution.h"
 #include "chemistry.h"
 #include "relax.h"
+#include "setconc.h"
 #include "error.h"
 
 #ifdef MASKE_WITH_NUFEB
@@ -601,10 +602,10 @@ void Krun::proceed(double deltat)
                     EVafixID = fix_del->EVafixID;
                     //fix_del->EVpID = -1;   //(cleaning it up for safety)
                     
-                    fprintf(screen,"\n PROC %d cumulated and T-integrated rates are:\n",me);
+                    /*fprintf(screen,"\n PROC %d cumulated and T-integrated rates are:\n",me);
                     for (int i=0; i<fix_del->CratesT.size(); i++) {
                       fprintf(screen,"%d %f\n",i,fix_del->CratesT[i]);
-                    }
+                    }*/
                     
                     fprintf(screen,"\n PROC %d: number of particles per delete type fix are \n",me);
                     for (int i=0; i<fix_del->cumNPfix.size(); i++) {
@@ -859,6 +860,14 @@ void Krun::proceed(double deltat)
                 relax->dorelax(i);
             }
         }
+        
+        // setconc if at appropriate step
+        for (int i = 0; i<setconc->setnames.size();i++){
+            if (msk->step % setconc->vevery[i] == 0) {
+                setconc->exec(i);
+            }
+        }
+        
 
         // If a KMC event was not executed
         // (must stay here after relax, in case a continuous event was carried out and then the relax changed the box)

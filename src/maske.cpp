@@ -19,6 +19,7 @@
 #include "fix_delete.h"
 #include "fix_Cfoo.h"
 #include "relax.h"
+#include "setconc.h"
 #include "krun.h"
 #include "randm.h"
 #include "output.h"
@@ -83,6 +84,7 @@ MASKE::MASKE(int narg, char **arg)
     output = new Output(this);
     fix_cfoo = new Fix_Cfoo(this);
     relax = new Relax(this);
+    setconc = new Setconc(this);
 #ifdef MASKE_WITH_SPECIATION
     spec = new Spec(this);
 #endif
@@ -156,19 +158,19 @@ MASKE::~MASKE()
     MPI_Barrier(MPI_COMM_WORLD);
     delete fix_cfoo;
     if (me==MASTER) {
-        fprintf(screen,"Deleting fix_cfoo class\n");
+        fprintf(screen,"Deleting relax class\n");
         relax->printall();
     }
     MPI_Barrier(MPI_COMM_WORLD);
+    delete relax;
 #ifdef MASKE_WITH_NUFEB
     delete fix_nufeb;
     if (me==MASTER) {
         fprintf(screen,"Deleting fix_nufeb class\n");
-        relax->printall();
+        //relax->printall();
     }
     MPI_Barrier(MPI_COMM_WORLD);
 #endif
-    delete relax;
     if (me==MASTER) {
         fprintf(screen,"Deleting fix_nucleate class\n");
         fix_nucl->printall();
