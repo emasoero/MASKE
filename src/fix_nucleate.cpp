@@ -1336,11 +1336,17 @@ void Fix_nucleate::execute(int pID, int EVafixID, int EVpTYPE,double EVpDIAM,dou
     lammpsIO->lammpsdo("run 1");
     
     tolmp = "variable xltemp delete";
+    lammpsIO->lammpsdo(tolmp);
     tolmp = "variable xrtemp delete";
+    lammpsIO->lammpsdo(tolmp);
     tolmp = "variable yltemp delete";
+    lammpsIO->lammpsdo(tolmp);
     tolmp = "variable yrtemp delete";
+    lammpsIO->lammpsdo(tolmp);
     tolmp = "variable zltemp delete";
+    lammpsIO->lammpsdo(tolmp);
     tolmp = "variable zrtemp delete";
+    lammpsIO->lammpsdo(tolmp);
     
     // read id of new particle, and assign it the exact desired position
     tolmp = "compute cidtemp gtempin property/atom id";
