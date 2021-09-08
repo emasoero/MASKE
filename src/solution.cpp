@@ -529,8 +529,9 @@ void Solution::update(int apos, double pV, int EVtype)
             // change of solution volume, concentrations, and volume of voids
             SVol += chem->rx_dV_bkg[rxid] * nrv * (double)nrxpar*Vfrac;
             dVSVol += chem->rx_dV_bkg[rxid] * nrv * (double)nrxpar*dVfrac;
-            for (int j=0; j<nmols; j++) {
-                int molID = chem->bkg_molID[rxid][j];
+            //for (int j=0; j<nmols; j++) {
+                //int molID = chem->bkg_molID[rxid][j];
+            for (int molID=0; molID<mol_cins.size(); molID++) {
                 chem->mol_cins[molID] = chem->mol_nins[molID]/SVol/nAvo/unitC;
                 chem->mol_cindV[molID] = chem->mol_nindV[molID]/dVSVol/nAvo/unitC;
             }
