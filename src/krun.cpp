@@ -862,11 +862,13 @@ void Krun::proceed(double deltat)
         }
         
         // setconc if at appropriate step
-        for (int i = 0; i<setconc->setnames.size();i++){
-            if (msk->step % setconc->vevery[i] == 0) {
-                setconc->exec(i);
+        
+            if (msk->step % setconc->vevery == 0) {
+
+                setconc->exec();
+
             }
-        }
+        
         
 
         // If a KMC event was not executed

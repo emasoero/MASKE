@@ -26,6 +26,7 @@ Solution::Solution(MASKE *maske) : Pointers(maske)
     voidV = 0.;
     dVvoidV = 0.;
     unitC = -1.;
+    solvID = -1;
 }
 
 
@@ -148,19 +149,31 @@ void Solution::computeNmol(void)
     // all procs compute volume of solution in box and in dV, and number if molecules depending on concentrations
     SVol = BoxV * (1.- PackF) - voidV;
     dVSVol = dV - dVvoidV;
-    
+
+    double sumvi=0;
+    double sumvidV=0;
     // number of molecules of each species in solution in box and in dV  (for now I assume same starting concentration in box and dV... to be changed in future)
     for (int i =0; i<conc.size(); i++){
         nmol.push_back(SVol * conc[i] * nAvo * unitC);
+        
         for (int j=0; j < chem->Nmol; j++) {
             if ( strcmp(molins[i].c_str(),(chem->molnames[j]).c_str())==0 ) {
                 chem->mol_nins[j] = nmol.back();
                 chem->mol_cindV[j] = conc[i];
                 chem->mol_nindV[j] = nmol.back()/SVol*dVSVol;
+                sumvi+= chem->mol_nins[j] * chem->mol_vapp[j];
+                sumvidV+=chem->mol_nindV[j] * chem->mol_vapp[j];
             }
         }
+
     }
-    
+
+    chem->mol_nins[solvID]=(SVol-sumvi)/chem->mol_vapp[solvID];
+    chem->mol_nindV[solvID]=(dVSVol-sumvidV)/chem->mol_vapp[solvID];
+
+    chem->mol_cins[solvID]=chem->mol_nins[solvID]/SVol/nAvo/unitC;
+    chem->mol_cindV[solvID]=chem->mol_nindV[solvID]/dVSVol/nAvo/unitC;
+
     if (me == MASTER) {
         fprintf(screen, "\nAvogadro number is %e\nSolution volume is %f\n Packing fraction is %f\n Unit conversion vol is %e\n dV is %f\n dVvoidV is %f\n voidV is %f\n DH_A is %f\n",nAvo,SVol,PackF,unitC,dV,dVvoidV,voidV,DH_A);
     }
@@ -192,7 +205,9 @@ double Solution::compQ(int rxid, std::string type, std::string sol_in_style, std
         // compute ionic strength  (can be moved in update solution..)
         double Istr = 0.;
         for (int i=0; i<chem->Nmol; i++) {
-            Istr +=  Vcins[i] * chem->mol_z[i] * chem->mol_z[i];
+            Istr +=  fabs(chem->mol_cins[i]) * chem->mol_z[i] * chem->mol_z[i];
+            //absolute value of concentration is used to account for the charges of ions with negative concentration as well 
+            //(including counter ions in setconc)
         }
         Istr /= 2.;
         double Isqrt = sqrt(Istr);
@@ -334,7 +349,9 @@ double Solution::compbeta(int rxid, bool net, std::string sol_in_style, std::str
         // compute ionic strength
         double Istr = 0.;
         for (int i=0; i<chem->Nmol; i++) {
-            Istr +=  Vcins[i] * chem->mol_z[i] * chem->mol_z[i];
+            Istr +=  fabs(chem->mol_cins[i]) * chem->mol_z[i] * chem->mol_z[i];
+            //absolute value of concentration is used to account for the charges of ions with negative concentration as well 
+            //(including counter ions in setconc)
         }
         Istr /= 2.;
         double Isqrt = sqrt(Istr);
@@ -531,7 +548,8 @@ void Solution::update(int apos, double pV, int EVtype)
             dVSVol += chem->rx_dV_bkg[rxid] * nrv * (double)nrxpar*dVfrac;
             //for (int j=0; j<nmols; j++) {
                 //int molID = chem->bkg_molID[rxid][j];
-            for (int molID=0; molID < chem->mol_cins.size(); molID++) {
+            for (int molID=0; molID < chem->mol_cins.size(); molID++)
+            {
                 chem->mol_cins[molID] = chem->mol_nins[molID]/SVol/nAvo/unitC;
                 chem->mol_cindV[molID] = chem->mol_nindV[molID]/dVSVol/nAvo/unitC;
             }
