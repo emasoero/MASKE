@@ -1,0 +1,141 @@
+# Running the code on Enrico's Mac Air
+#    /opt/local/bin/mpiexec-mpich-mp -np 1 ./maske input.dat
+
+
+# ===== SET UNIVERSE OF SUB-COMMUNICATORS ========
+
+# command structure: subcomm Nsubcomms name1 Nproc1 lmp_yes/no seed name2 Nproc2 lammps_yes/no seed .... etc
+# NB: the first subcomm should always be lmp_yes, otherwise thermos cannot be produced
+subcomm 1 Antonello 2 lmp_yes 123
+
+
+
+# ===== READ CHEMISTRY DATA BASE ========
+
+# Load chemistry database file, containing molecule types, reactions, and mechanisms
+chemDB ./chemDB.dat
+
+
+
+# ===== LIST REAL AND TRIAL PARTICLE TYPES TO BE USED IN THE SIM =======
+real_types 1 
+
+# type 1 = real Ca(OH)2 to dissolve
+
+
+# ========= INITIALISE LAMMPS AND CREATE FIRST PARTICLEs =========
+
+lammps all  	units nano
+lammps all 	atom_style sphere
+lammps all  	atom_modify map yes   # NEEDED FOR NUCLEATE FIXES!!
+lammps all 	boundary p p p
+lammps all  	region simbox block 0 1000 0 1000 0 1000 units box
+lammps all  	create_box  1 simbox    #make space for enough types when creating box
+
+
+# initially, all particles are Ca(OH)2 here, so consistent diameter here
+lammps 	all 	variable DCH equal 47.3745541
+
+# equilibrium distance assumes FCC equilibrium packing, with density 0.74
+lammps  all 	variable eqDCH equal $(v_DCH)*(0.74^(1./3.)) 
+
+
+# create a large crystal
+lammps all	variable scale equal sqrt(2)*v_eqDCH
+lammps all	lattice fcc $(v_scale)  
+lammps all	region nuc1 block 10 990 10 990 10 990 units box
+lammps all 	create_atoms 1 region nuc1
+lammps all 	group nuc1 region nuc1
+lammps all 	displace_atoms nuc1 rotate 0 0 0 1 0 0 0
+
+#lammps all	lattice fcc $(v_scale)
+#lammps all	region nuc2 block 3 18 10.5 15 1.5 29.25 units box
+#lammps all 	create_atoms 1 region nuc2
+#lammps all 	group nuc2 region nuc2
+#lammps all 	displace_atoms nuc2 rotate 0 0 0 1 0 0 -5
+
+#lammps all	lattice fcc $(v_scale)
+#lammps all	region nuc3 block 2 12 2 12 14 16 units box
+#lammps all 	create_atoms 1 region nuc3
+#lammps all 	group nuc3 region nuc3
+#lammps all 	displace_atoms nuc3 rotate 0 0 0 1 0 0 0
+
+
+ 
+
+lammps all 	set type * diameter $(v_DCH)
+
+#===== Potentials, neighbours, and minimiser style
+
+lammps all   pair_style table linear 4000
+
+lammps all	pair_coeff 	1 1 ./table.potential_CH-CH.txt Spring_Ca(OH)2-Ca(OH)2
+
+
+lammps all pair_write 1 1 4000 r 1.00E-030 0.45731 tableOUT.txt Spring_Ca(OH)2-CaCO3
+
+
+lammps all 	variable skin equal $(v_eqDCH)/10.
+lammps all  	neighbor $(v_skin) bin
+lammps all  	neigh_modify delay 0
+
+# ======== CONSTANTS IN LAMMPS UNITS
+kB  0.0138064852       # Boltzmann, in nm2 ag ns-2 K-1
+hpl  0.000662607004   # Plank, in nm2 ag / ns
+
+
+#  ===========   SET INITIAL SOLUTION
+
+#beta=0
+
+sol_start uniform 5 Ca+2 0.000 H4SiO4 0.00001 OH- 0.03 CO3-2 1.132E-5 H+ 3.002264E-2 solvent H2O Temp 298 DH_A 0.51 DH_B 3.29 voidV 0 dV iso 0 dVvoidV 0  unitC 1e-24
+
+setconc 4 Ca+2 0.000 CO3-2 1.132E-5 OH- 0.03 H4SiO4 0.00001 1 counter H+ box
+
+
+# ======= DISSOLUTION FIXES
+
+fix KMC-free delete DelCH Antonello 1 mech CHdel_apnet sol_in fixed uniform box sol_out uniform box+dV
+
+# ========= DEFINE LAMMPS DUMPS AND THERMOS + VARIABLES ALSO FOR MASKE OUTPUT
+
+lammps all variable N equal atoms
+lammps all variable U equal epair
+lammps all variable P equal press
+ 
+lammps all variable tyCH atom "type == 1"
+lammps all variable tyCO3 atom "type == 2"
+
+lammps all group g_CH dynamic all var tyCH every 1
+lammps all group g_CO3 dynamic all var tyCO3 every 1
+
+lammps all variable NCH equal count(g_CH)
+lammps all variable NCO3 equal count(g_CO3)
+
+lammps all compute  PEall all pe/atom
+
+
+# the lammps thermo must calculate all the thermo variables and compute you want to output via the MASKE's thermo
+lammps all thermo_style	custom step atoms vol epair press v_NCH v_NCO3
+
+lammps all thermo 1000
+
+thermo 1 thermo.txt conc_Ca+2 conc_H4SiO4 conc_H2O conc_OH- conc_CO3-2 conc_H+ lmp_v_N lmp_v_U lmp_v_P lmp_v_NCH lmp_v_NCO3
+
+dump Antonello D1 1 all     custom  dump.all id type x y z radius c_PEall
+
+# relax every_Nsteps mode args (for minimize, etol ftol maxiter maxeval min_style 
+# min_modify_args;  for nvt, all args admitted by an nvt fix in lammps)
+#example:      relax 10 minimize 0 0 1000 1000 quickmin dmax .01 20 20 20 
+# relax R1 1 minimize 0 0 1000 1000 cg dmax 0.001 20 20 20 
+
+
+#lammps Antonello dump Dt all custom 1 tdump id type x y z radius
+#lammps Antonello dump_modify Dt every 1 first yes
+
+# =============== running the KMC simulation
+lammps all print "STARTING KRUN" 
+Krun 4000000000000000000
+
+
+lammps Antonello print "\n SUCCESS \n"
