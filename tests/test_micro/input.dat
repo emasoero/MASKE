@@ -95,7 +95,7 @@ setconc 4 Ca+2 0.000 CO3-2 1.132E-5 OH- 0.03 H4SiO4 0.00001 1 counter H+ box
 
 # ======= DISSOLUTION FIXES
 
-fix KMC-free delete DelCH Antonello 1 mech CHdel_apnet sol_in fixed uniform box sol_out uniform box+dV
+fix KMC-free delete DelCH Antonello 1 mech CHdel_micro sol_in fixed uniform box sol_out uniform box+dV
 
 # ========= DEFINE LAMMPS DUMPS AND THERMOS + VARIABLES ALSO FOR MASKE OUTPUT
 

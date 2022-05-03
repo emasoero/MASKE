@@ -148,6 +148,9 @@ sen sen_CSH const 87.6
 # mech   C3Sdel_apnet  allpar net   C3S_dis_Bul  sen_C3S  int_lin
 
 
+#   mech  name typ net/straight reax surface_nrg interact_interpol fkink eps_l Ustrain
+mech   CHdel_micro  micro net   CH_dis  sen_CH  int_no 0.2 -30 0
+
 mech   CHdel_apnet  allpar net   CH_dis  sen_CH  int_lin
 mech   CaCO3nuc_apnet  allpar net   CaCO3_prec  sen_CaCO3  int_lin
 #mech   CaCO3dis_apnet  allpar net   CaCO3_diss  sen_CaCO3  int_lin
