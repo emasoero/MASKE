@@ -574,7 +574,7 @@ void Inputmsk::execline(std::string read_string)
             }
         }
         else if (strcmp(word.c_str(), "spec") == 0) {
-            #ifdef MASKE_WITH_SPECIATION
+            #ifndef MASKE_WITH_SPECIATION
                 std::string msg = "ERROR: MASKE must be installed with the WITH_SPECIATION option to use this command";
                 error->errsimple(msg);
             #endif
@@ -596,8 +596,9 @@ void Inputmsk::execline(std::string read_string)
                 lss >> molar_mass; // in g/mol
                 solvent_molar_masses.push_back(molar_mass);
             }
+            // the "if" below is needed too to avoid compilation errors
             #ifdef MASKE_WITH_SPECIATION
-                spec->add_spec(id, type, every, database, solvent_names, solvent_molar_masses);
+            spec->add_spec(id, type, every, database, solvent_names, solvent_molar_masses);
             #endif
 	}
         else if (strcmp(word.c_str(), "Krun") == 0) {

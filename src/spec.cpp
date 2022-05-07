@@ -90,7 +90,7 @@ void Spec::dospec(int i)
   
   // set up concentration map
   std::map<std::string, double> conc(residuals);
-  std::map<std::string, int> mol;
+  std::map<std::string, int> mol;    // ids of MASKE molecules associated to phreeqc master species
   for (int j = 0; j < chem->mol_spec.size(); j++) {
     if (chem->mol_spec[j] != "NULL" && chem->mol_spec[j] != "pOH" && chem->mol_spec[j] != "pH") {
       conc[chem->mol_spec[j]] += chem->mol_cins[j];
