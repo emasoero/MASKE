@@ -404,6 +404,30 @@ void Inputmsk::execline(std::string read_string)
                     solution->addmol(read_string,conci);
                 }
                 
+            
+                std::string solvent,solvent_mol;
+                lss >> solvent;
+                if (strcmp(solvent.c_str(),"solvent")==0) {
+                    
+                    lss >> solvent_mol;
+                }
+                else {
+                    std::string msg = "ERROR: \"solvent\" keyword expected; instead found :"+solvent+"  \n";
+                    error->errsimple(msg);
+                }
+
+                solution->solvID=-1;
+                for (int i=0; i<chem->molnames.size(); i++){
+                    if(strcmp(solvent_mol.c_str(),chem->molnames[i].c_str())==0) solution->solvID = i;
+                }
+
+                if (solution->solvID==-1){
+                    std::string msg = "ERROR: Solvent \""+solvent_mol+"\" not found in ChemDB  \n";
+                    error->errsimple(msg);
+                }
+
+
+
                 bool comment_found = false;
                 while (lss && !comment_found){
                     lss >> read_string;
@@ -515,11 +539,19 @@ void Inputmsk::execline(std::string read_string)
             }
         }
         else if (strcmp(word.c_str(), "setconc") == 0) {
-            std::string sname,molname;
-            double molconc;
+             
+            int nmol;
+            lss >> nmol;
+            for (int i=0; i<nmol; i++){
+                std::string molname;
+                double molconc;
+                lss >> molname >> molconc;
+                setconc->add_conc(molname,molconc);
+            }
+
             int every;
-            lss >> sname >> every >> molname >> molconc;
-            
+            lss >> every;
+            setconc->vevery=every;
             bool flag_ctr = false;
             std::string counter,ctr_mol,boxdV;
             ctr_mol = "none";
@@ -528,14 +560,29 @@ void Inputmsk::execline(std::string read_string)
                 flag_ctr = true;
                 lss >> ctr_mol;
                 lss >> boxdV;
+                setconc->ctr_mols=ctr_mol;
             }
-            else boxdV = counter;
+            else {
+                boxdV = counter;
+            }
+            setconc->boxdV=boxdV;
+            setconc->ctr_flags=flag_ctr;
             
             if (strcmp(boxdV.c_str(),"box")!=0 && strcmp(boxdV.c_str(),"box+dV")!=0) {
                 std::string msg = "ERROR: setconc command must end with either \"box\" or \"box+dV\", instead \""+boxdV+"\" was found\n";
                 error->errsimple(msg);
             }
-            setconc->add_conc(sname,every,molname,molconc,flag_ctr,ctr_mol,boxdV);
+            // find ID corresponding to names of counterion if needed
+            if( setconc->ctr_flags){
+                for (int i=0; i<chem->molnames.size(); i++){
+                    if(strcmp((setconc->ctr_mols).c_str(),chem->molnames[i].c_str())==0) setconc->ctrID = i;
+                }
+                if (setconc->ctrID==-1){
+                    std::string temp=setconc->ctr_mols;
+                    std::string msg = "ERROR: counterion "+temp+" requested in setconc command not found\n";
+                    error->errsimple(msg);
+                }
+            }
         }
         else if (strcmp(word.c_str(), "relax") == 0) {
             if (lammpsIO->lammps_active) {

@@ -39,6 +39,7 @@ namespace MASKE_NS {
         std::vector<double> nmol, nmoldV;           // vector with number of molecules in solution in box and in dV (when aniso dV implemented, a 2D vector should be used instead of nmoldV)
         std::vector<double> molID;         // vector with ids of molecules in solution (to point to molecule in chemistry.cpp vectors)
         std::string soltype;                // type of solution: uniform vs lattice etc..
+        int solvID;              //ID of solvent molecule in chem.cpp
         double Temp;                        // Temperature: for now can be only uniform
         std::string dVtype;     // iso or aniso
         double voidV, dVvoidV ;         // volume of voids in box and in dV (when aniso dV implemented, a vector should be used instead of dVvoidV)
