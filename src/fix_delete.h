@@ -78,6 +78,9 @@ namespace MASKE_NS {
         int *tIDarr ;   // array of size naP with unsorted IDs of atoms in current processor only
         int *nID_each;     // array storing IDs in each processor: used by submaster for assembly and back
         double *rate_each;     // array storing rates in each processor
+        double **locLMP;   // array to extract content of compute property/local from LAMMPS, used in "micro" style to obtain IDs and types of interacting pairs of atoms from neighbour list
+        double *aDIST;   // vector to extract content of compute pair/local from LAMMPS, used in "micro" style to obtain distances between interacting pairs of atoms from neighbour list
+
 
         
         //----------------------------------------

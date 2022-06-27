@@ -49,6 +49,7 @@ namespace MASKE_NS {
         std::vector<std::string> sennames, senstyle;  //name and style of surface energy calculators
         std::vector<std::string> chstyle;  //chain styles
         std::vector<std::string> mechnames, mechstyle, mechmode,mechinter;  //mechanism name, style, mode (straight or net), and energy scaling
+        std::vector<std::vector<std::string>> mechpar;   // additional parameters associated to a mechanism (e.g., in coarse grained "micro" style, we have fraction of kinks on particle surface, base srain energy in particle, etc)
         std::vector<int> rx_gxID,rx_DGID;   // pointers to gammax and DG calculators, specified for each simple reaction
         std::vector<double> Keq;    // vectors of equilibrium constants of chemical reactions
         std::vector<double> ki;    // vectors of energy penalty factors for chemical reactions (0 = no penalty, suggested < 1)
@@ -60,6 +61,7 @@ namespace MASKE_NS {
         std::vector<double> rx_ac_min, rx_ac_max, rx_ac_avg, rx_ac_avv, rx_ac_cum;    // same as above, in circumferential direaction
         std::vector<bool> mechchain;   // vector saying whether each mechanisms refers to a chain of reactins (true) or to an individual reaction (false)
         std::vector<int> mechrcID, mechsenID;    // ID of reaction (or chain) and of surface energy calculator corresponding to each mechanism
+
 
         
         

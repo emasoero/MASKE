@@ -121,8 +121,21 @@ void Fix_delete::sample(int pos)
     
     tolmp = "dump tdID all custom 1 dump.temp_"+universe->SCnames[universe->color]+" c_tempID c_tempRAD c_tempPE type x y z";    //temp dump to update variables and computes
     lammpsIO->lammpsdo(tolmp);
+    
+    
+    if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+        tolmp = "compute tempPAT all property/local patom1 patom2 ptype1 ptype2";
+        lammpsIO->lammpsdo(tolmp);
+        tolmp = "compute tempDIST all pair/local dist";
+        lammpsIO->lammpsdo(tolmp);
+        tolmp = " dump tdLID all local 1 dumpL.tmp index c_tempPAT[1] c_tempPAT[2] c_tempPAT[3] c_tempPAT[4] c_tempDIST";
+        lammpsIO->lammpsdo(tolmp);
+    }
+    
     lammpsIO->lammpsdo("run 1");     // a run1 in lammps to dump the temp and so prepare variables and computes
 
+    
+    
     
     // extracting unsorted group atom ids and energies
     // NB: lammps computes of properties per atom per group store the results in arrays whose size is natoms (number of atoms in the simulations, including those not in the group). Entries associated to atoms not in the group are set to 0, which I spot and get rid of
@@ -161,6 +174,15 @@ void Fix_delete::sample(int pos)
     //int *atype = ((int *) lammps_extract_atom(lammpsIO->lmp,(char *)"type"));
     //atype = new double[natoms];
     atype = ((double *) lammps_extract_compute(lammpsIO->lmp,(char *) "tempType",1,1));
+    
+    if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+        // PAT is a local compute (style = 2 in lammps library) of array (i.e. matrix) type (type = 2 in lammps library)
+        locLMP = ((double **) lammps_extract_compute(lammpsIO->lmp,(char *) "tempPAT",2,2));
+        // DIST is a local compute (style = 2 in lammps library) of vector type (type = 1 in lammps library)
+        aDIST=((double *) lammps_extract_compute(lammpsIO->lmp,(char *) "tempDIST",2,1));
+        
+        // TRY SOMETHNG LIKE THIS TO GET SIZE OF LOCAL COMPUTES. SEE limbrary.cpp and library.h in lammps/src               int nrows = ((int) lammps_extract_compute(lammpsIO->lmp,(char *) "tempDIST",2,4)););
+    }
     
     
     /*if (me==3){
@@ -214,6 +236,32 @@ void Fix_delete::sample(int pos)
             output->toplog(msg);
             msg="";
         }*/
+        
+        if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+            msg = msg+"\nNumber of interacting pairs in current processor: ";
+            //ss << sizeof(a1ID);       msg = msg+ss.str(); ss.str("");   ss.clear();
+            output->toplog(msg);
+            msg="";
+            output->toplog("\npos ID1 ID2 TYPE1 TYPE2");
+            sleep(2);
+            {
+                for(int i=0; i<8; i++){
+                    ss << i;        msg = ss.str()+" ";   ss.str("");   ss.clear();
+                    fprintf(screen,"\n Proc %d, i = %d ,\n",me,i);
+                    ss << locLMP[i][0];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                    ss << locLMP[i][1];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                    ss << locLMP[i][2];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                    ss << locLMP[i][3];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                    ss << aDIST[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                    output->toplog(msg);
+                    msg="";
+                    sleep(1);
+                }
+            }
+        }
+       
+        
+        
     }
     
     //fprintf(screen,"\n Proc %d, EDDIG JO0? \n",me);
@@ -222,6 +270,11 @@ void Fix_delete::sample(int pos)
     
     tolmp = "undump tdID";     // removing temporary dump
     lammpsIO->lammpsdo(tolmp);
+    if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+        tolmp = "undump tdLID";     // removing temporary "local" dump for per-pair interactions
+        lammpsIO->lammpsdo(tolmp);
+    }
+    
     // END OF READING FROM LAMMPS
     // -----------------------------------------------------------------------------
     // -----------------------------------------------------------------------------
@@ -331,6 +384,13 @@ void Fix_delete::sample(int pos)
     tolmp = "uncompute tempType";
     lammpsIO->lammpsdo(tolmp);
     
+    
+    if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+        tolmp = "uncompute tempPAT";
+        lammpsIO->lammpsdo(tolmp);
+        tolmp = "uncompute tempDIST";
+        lammpsIO->lammpsdo(tolmp);
+    }
     
     delete [] rate_each;
     delete [] tIDarr;

@@ -624,7 +624,7 @@ void Chemistry::addmech()
     
     // read syle
     ss >> newname;
-    if (strcmp(newname.c_str(), "allpar") != 0 && strcmp(newname.c_str(), "allser") != 0 && strcmp(newname.c_str(), "growth") != 0 && strcmp(newname.c_str(), "cnt") != 0) {
+    if (strcmp(newname.c_str(), "allpar") != 0 && strcmp(newname.c_str(), "allser") != 0 && strcmp(newname.c_str(), "growth") != 0 && strcmp(newname.c_str(), "cnt") != 0 && strcmp(newname.c_str(), "micro") != 0) {
         std::string msg = "ERROR: Unknown style of mechanism \""+mechnames.back()+"\". Known styles are allpar, allser, growth, or cnt, instead \""+newname+"\" was found \n";
         error->errsimple(msg);
     }
@@ -682,11 +682,26 @@ void Chemistry::addmech()
     
     // read interaction energy scaling rule with particle size
     ss >> newname;
-    if (strcmp(newname.c_str(), "int_no") != 0 && strcmp(newname.c_str(), "int_lin") != 0 && strcmp(newname.c_str(), "int_1lin") != 0 && strcmp(newname.c_str(), "int_2lin") != 0 && strcmp(newname.c_str(), "int_size") != 0 ) {
+    if (strcmp(newname.c_str(), "int_no") != 0 && strcmp(newname.c_str(), "int_lin") != 0 && strcmp(newname.c_str(), "int_1lin") != 0 && strcmp(newname.c_str(), "int_2lin") != 0 && strcmp(newname.c_str(), "int_size") != 0 && strcmp(newname.c_str(), "int_uni") != 0) {
         std::string msg = "ERROR: Unknown energy scaling rule of  \""+mechnames.back()+"\". Known styles are int_no, int_lin, or int_size, or int_1Dlin, instead \""+newname+"\" was found \n";
         error->errsimple(msg);
     }
     mechinter.push_back(newname);
+    
+    
+    std::vector<std::string> tempvec;
+    if(strcmp(mechstyle.back().c_str(),"micro")==0){
+        std::string param;
+        std::string msg = "ERROR: Mechanism \""+mechnames.back()+"\" is of style \"micro\" which requires coverage_calculator_style and associated filename at the end of the \"mech\" command in chemDB\n";
+        
+        if(ss >> param) tempvec.push_back(param);   // coverage calculator style name
+        else  error->errsimple(msg);
+        
+        if(ss >> param) tempvec.push_back(param);   // filename for coverage calculator
+        else error->errsimple(msg);
+
+    }
+    mechpar.push_back(tempvec);
     
     
     //just a check
@@ -696,7 +711,13 @@ void Chemistry::addmech()
         else fprintf(screen," Reaction is a SINGLE one named : %s\n",rxnames[mechrcID.back()].c_str());
     }
     if (me==MASTER) fprintf(screen," Interaction scaling: %s \n",mechinter[Nmech-1].c_str());
-    if (me==MASTER) fprintf(screen,"\n");
+    if (me==MASTER) fprintf(screen," Additional parameters:");
+    if (me==MASTER) {
+            for (int pp=0;pp<mechpar[Nmech-1].size();pp++){
+            fprintf(screen," %s",mechpar[Nmech-1][pp].c_str());
+        }
+    }
+    if (me==MASTER) fprintf(screen,"\n\n");
 }
     
 
