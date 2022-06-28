@@ -124,12 +124,14 @@ void Fix_delete::sample(int pos)
     
     
     if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
-        tolmp = "compute tempPAT all property/local patom1 patom2 ptype1 ptype2";
-        lammpsIO->lammpsdo(tolmp);
-        tolmp = "compute tempDIST all pair/local dist";
-        lammpsIO->lammpsdo(tolmp);
-        tolmp = " dump tdLID all local 1 dumpL.tmp index c_tempPAT[1] c_tempPAT[2] c_tempPAT[3] c_tempPAT[4] c_tempDIST";
-        lammpsIO->lammpsdo(tolmp);
+        if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+            tolmp = "compute tempPAT all property/local patom1 patom2 ptype1 ptype2";
+            lammpsIO->lammpsdo(tolmp);
+            tolmp = "compute tempDIST all pair/local dist";
+            lammpsIO->lammpsdo(tolmp);
+            tolmp = " dump tdLID all local 1 dumpL.tmp index c_tempPAT[1] c_tempPAT[2] c_tempPAT[3] c_tempPAT[4] c_tempDIST";
+            lammpsIO->lammpsdo(tolmp);
+        }
     }
     
     lammpsIO->lammpsdo("run 1");     // a run1 in lammps to dump the temp and so prepare variables and computes
@@ -176,12 +178,13 @@ void Fix_delete::sample(int pos)
     atype = ((double *) lammps_extract_compute(lammpsIO->lmp,(char *) "tempType",1,1));
     
     if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
-        // PAT is a local compute (style = 2 in lammps library) of array (i.e. matrix) type (type = 2 in lammps library)
-        locLMP = ((double **) lammps_extract_compute(lammpsIO->lmp,(char *) "tempPAT",2,2));
-        // DIST is a local compute (style = 2 in lammps library) of vector type (type = 1 in lammps library)
-        aDIST=((double *) lammps_extract_compute(lammpsIO->lmp,(char *) "tempDIST",2,1));
-        
-        // TRY SOMETHNG LIKE THIS TO GET SIZE OF LOCAL COMPUTES. SEE limbrary.cpp and library.h in lammps/src               int nrows = ((int) lammps_extract_compute(lammpsIO->lmp,(char *) "tempDIST",2,4)););
+        if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+            // PAT is a local compute (style = 2 in lammps library) of array (i.e. matrix) type (type = 2 in lammps library)
+            locLMP = ((double **) lammps_extract_compute(lammpsIO->lmp,(char *) "tempPAT",2,2));
+            // DIST is a local compute (style = 2 in lammps library) of vector type (type = 1 in lammps library)
+            aDIST = ((double *) lammps_extract_compute(lammpsIO->lmp,(char *) "tempDIST",2,1));
+            nlocR = *((int*)lammps_extract_compute(lammpsIO->lmp,(char *) "tempPAT",2,4));
+        }
     }
     
     
@@ -238,24 +241,23 @@ void Fix_delete::sample(int pos)
         }*/
         
         if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
-            msg = msg+"\nNumber of interacting pairs in current processor: ";
-            //ss << sizeof(a1ID);       msg = msg+ss.str(); ss.str("");   ss.clear();
-            output->toplog(msg);
-            msg="";
-            output->toplog("\npos ID1 ID2 TYPE1 TYPE2");
-            sleep(2);
-            {
-                for(int i=0; i<8; i++){
-                    ss << i;        msg = ss.str()+" ";   ss.str("");   ss.clear();
-                    fprintf(screen,"\n Proc %d, i = %d ,\n",me,i);
-                    ss << locLMP[i][0];   msg += ss.str()+" ";  ss.str("");   ss.clear();
-                    ss << locLMP[i][1];   msg += ss.str()+" ";  ss.str("");   ss.clear();
-                    ss << locLMP[i][2];   msg += ss.str()+" ";  ss.str("");   ss.clear();
-                    ss << locLMP[i][3];   msg += ss.str()+" ";  ss.str("");   ss.clear();
-                    ss << aDIST[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
-                    output->toplog(msg);
-                    msg="";
-                    sleep(1);
+            if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+                msg = msg+"\nNumber of interacting pairs in current processor: ";
+                ss << nlocR;       msg = msg+ss.str(); ss.str("");   ss.clear();
+                output->toplog(msg);
+                msg="";
+                output->toplog("\npos id1 id2 type1 type2 dist");
+                {
+                    for(int i=0; i<nlocR; i++){
+                        ss << i;        msg = ss.str()+" ";   ss.str("");   ss.clear();
+                        ss << locLMP[i][0];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                        ss << locLMP[i][1];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                        ss << locLMP[i][2];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                        ss << locLMP[i][3];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                        ss << aDIST[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                        output->toplog(msg);
+                        msg="";
+                    }
                 }
             }
         }
@@ -270,9 +272,12 @@ void Fix_delete::sample(int pos)
     
     tolmp = "undump tdID";     // removing temporary dump
     lammpsIO->lammpsdo(tolmp);
+    
     if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
-        tolmp = "undump tdLID";     // removing temporary "local" dump for per-pair interactions
-        lammpsIO->lammpsdo(tolmp);
+        if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+            tolmp = "undump tdLID";     // removing temporary "local" dump for per-pair interactions
+            lammpsIO->lammpsdo(tolmp);
+        }
     }
     
     // END OF READING FROM LAMMPS
@@ -363,6 +368,9 @@ void Fix_delete::sample(int pos)
     else if (strcmp((chem->mechstyle[mid]).c_str(),"allser")==0) {
         comp_rates_allser(pos);
     }
+    else if (strcmp((chem->mechstyle[mid]).c_str(),"micro")==0) {
+        comp_rates_micro(pos);
+    }
     //else if (strcmp((chem->mechstyle[mid]).c_str(),"shvab")==0) {
       //  comp_rates_shvab(pos);
     //}
@@ -386,10 +394,12 @@ void Fix_delete::sample(int pos)
     
     
     if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
-        tolmp = "uncompute tempPAT";
-        lammpsIO->lammpsdo(tolmp);
-        tolmp = "uncompute tempDIST";
-        lammpsIO->lammpsdo(tolmp);
+        if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+            tolmp = "uncompute tempPAT";
+            lammpsIO->lammpsdo(tolmp);
+            tolmp = "uncompute tempDIST";
+            lammpsIO->lammpsdo(tolmp);
+        }
     }
     
     delete [] rate_each;
@@ -397,6 +407,7 @@ void Fix_delete::sample(int pos)
     delete [] IDuns;
     delete [] IDpos;
     delete [] nID_each;
+    
     
     /*
      fprintf(screen,"Proc %d - EDDIG JO\n",me);
@@ -797,6 +808,217 @@ void Fix_delete::comp_rates_allpar(int pos)
     }
     
 }
+
+
+
+
+// ---------------------------------------------------------------
+//  each processor computes its deletion rates
+void Fix_delete::comp_rates_micro(int pos)
+{
+    
+    // for all particles in current ("each") processor
+    for (int i =0; i<nID_each[key]; i++) {
+        
+        if (msk->wplog) {
+            std::string msg = "\nPARTICLE ";
+            std::ostringstream ss;    ss << tID[i];     msg = msg+ss.str()+" ";
+            ss.str("");     ss.clear();   ss << tR[i];  msg = msg+ss.str();
+            output->toplog(msg);
+        }
+        
+       
+        double Pv = 4./3. * M_PI * tR[i] * tR[i] * tR[i];  // particle volume  FOR SPHERICAL
+        double Ps = 4. * M_PI * tR[i] * tR[i];  // particle surface   FOR SPHERICAL
+        
+        int nrt = 1;    //number of reaction in series in chain
+        double nrv = 1;    // number of unit reactions or unit chains in particle volume
+        
+        int chID = -1;  // chain ID: will be > -1 only if mechanism calls indeed a chain
+        int rxid = -1;  // reaction ID: will be used now but later in loop too
+        
+        bool errflag = false;   // error to spot if wrong volume changes defined for reactions: see below
+        double fgdV = 0;
+        
+        if (chem->mechchain[mid]) {  //if reaction is a chain
+            chID = chem -> mechrcID[mid];
+            nrt = (chem->ch_rxID[chID]).size();
+            if (chem -> ch_dV_fgd[chID] < 0) {
+                // default for allpar mechanism is linear changes in surface and energy with number of molecules in particle volume, i.e. int_lin
+                nrv = round( - Pv / chem -> ch_dV_fgd[chID]);   // minus because a proper dissolution reax should have negative fgd changes in chemDB
+            } else {errflag = true; fgdV=chem -> ch_dV_fgd[chID];}
+        }
+        else{ //if instead it is a single reaction
+            nrt = 1;
+            rxid = chem->mechrcID[mid];
+            if (chem -> rx_dV_fgd[rxid] < 0) {
+                nrv = round( - Pv / chem -> rx_dV_fgd[rxid]);
+            } else {errflag = true; fgdV=chem -> rx_dV_fgd[rxid];}
+        }
+        
+        
+        if (errflag == true) {
+            std::ostringstream wd1,wd2,wd3,wd4;
+            wd1<<me; wd2<<universe->color; wd3<<msk->tempo,wd4<<fgdV;
+            std::string msg = "****************************************************\n***********************************************\n PROC "+wd1.str()+" SUBCOM "+wd2.str()+" tempo "+wd3.str()+" \n ERROR: fix "+fix->fKMCname[pos]+" is of deletion type, which requires negative fgd volume changes, whereas its associated mechanism has fgd volume change = "+wd4.str()+" \n****************************************************\n***********************************************\n";
+            fprintf(screen,"%s",msg.c_str());
+        }
+        
+        std::string msg;
+  
+        
+        
+        
+        
+         // change of surface energy and interaction energy per reaction unit (single reaction or chain: to be further subdivided per step in chain later on)
+        double DSpu;  // negative becasue delation removes energy
+        double DUpu;;  // change in energy caused by removing the particle
+        
+        if (strcmp(chem->mechinter[mid].c_str(),"int_1lin")==0)  {
+            DSpu = -Ps/pow((double)nrv,1./3.);
+            DUpu = -2.*tE[i]/pow((double)nrv,1./3.);
+        }
+        else if (strcmp(chem->mechinter[mid].c_str(),"int_2lin")==0) {
+            DSpu = -Ps/pow((double)nrv,68.5/100.);      // power artificailly tuned to get hetero nucleation in cg sim... just to fiddle around: do not use those in a proper simulation
+            DUpu = -2.*tE[i]/pow((double)nrv,68.5/100.);
+        }
+        else{
+            DSpu = -Ps/((double)nrv);
+            DUpu = -2.*tE[i]/((double)nrv);
+        }
+        
+        
+        // number of repetitions of reaction of chain to delete particle. For "allpar" just 1.
+        int nrx = 1;
+        
+        // compute rate looking at each reaction in the mechanism sequence
+        double ri=0. , DTi = 0., DTtot = 0.;  // rate of each reaction in sequence, associated time increement and total cumulative time increment
+        
+        
+        for (int j=0; j<nrx; j++) {
+            
+            if (msk->wplog) { msg += "; rx "; std::ostringstream ss;    ss << j;   msg = msg+ss.str(); }
+            
+            // compute rate of reaction sequence
+            for (int k=0; k< nrt; k++) { //all the reaction in series in chain seq.
+                
+                if (msk->wplog) { msg += "; rx_step ";    std::ostringstream ss;    ss << k;   msg += ss.str(); }
+                
+                // find reaction id, either from chain or the single one
+                if (chem->mechchain[mid]) rxid = chem->ch_rxID[chID][k];
+                else rxid = chem->mechrcID[mid];   // probably redundant as already defined above: to be checked
+                
+                double DGx = chem -> compDGx(rxid); // reaction specific
+                double cx = chem -> cx[chem->rx_DGID[rxid]];
+                double dim = chem -> dim[chem->rx_DGID[rxid]];
+                double gammax = chem -> compgammax(rxid);
+                double KT = msk->kB * solution->Temp;
+                
+                if (msk->wplog) {
+                    std::ostringstream ss;
+                    msg += "; DG* ";    ss << DGx;   msg += ss.str();    ss.str(""); ss.clear();
+                    msg += "; gamma* ";    ss << gammax;   msg += ss.str();    ss.str(""); ss.clear();
+                    msg += "; KB ";    ss << (msk->kB);   msg += ss.str();    ss.str(""); ss.clear();
+                    msg += "; T ";    ss << (solution->Temp);   msg += ss.str();    ss.str(""); ss.clear();
+                }
+                
+                double kappa = 1.;       // transmission coefficient
+                double Sen = chem->compSen(mid);
+                
+            
+                //bool net = false; // the beta calculator in simulation.cpp uses stoichio coefficients that are defined by used in chemDB for forward reaction. If beta is computed for the net rate, the reaction is backward hence stoichio coeff need multiplication by -1
+                //double beta = 1.; // beta in prefactor: for "allpar" one should take 1 as per TST. Maybe in future a calculator for this too.
+                std::string topass = "reac";
+                double Qreac = solution->compQ(rxid,topass,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
+                
+                double Vt = - (chem -> rx_dVt_fgd[rxid]);  // Tributary volume of fgd deleted by the reaction at the current step in the chain. Minus sign because dV of fdg < 0 for a proper dissolution reaction.
+                
+               //Delta surface and Delta U are assumed to be proportional to the number of reaction/chain units and relative importance of each step in chain
+                double DSi = DSpu;
+                if (chem->mechchain[mid]) DSi *= (chem->ch_rdV_fgd[chID][k]);
+                
+                double DUi = 0.;
+                if (strcmp(chem->mechinter[mid].c_str(),"int_no")!=0) {
+                    DUi = DUpu;
+                    if (chem->mechchain[mid]) DUi *= (chem->ch_rdV_fgd[chID][k]);
+                }
+                
+                double r0 = kappa * KT / msk->hpl / gammax * cx * exp(-DGx / KT);
+                
+                if (msk->wplog) {
+                    std::ostringstream ss;
+                    msg += "; r0 ";    ss << r0;   msg += ss.str();    ss.str(""); ss.clear();
+                    msg += "; Qreac ";    ss << Qreac;   msg += ss.str();    ss.str(""); ss.clear();
+                    msg += "; Sen ";    ss << Sen;   msg += ss.str();    ss.str(""); ss.clear();
+                    msg += "; DSi ";    ss << DSi;   msg += ss.str();    ss.str(""); ss.clear();
+                    msg += "; DUi ";    ss << DUi;   msg += ss.str();    ss.str(""); ss.clear();
+                    msg += "; Vti ";    ss << Vt;   msg += ss.str();    ss.str(""); ss.clear();
+                }
+                
+                
+               // double fa = 1.;
+                //if (dim==2 || dim==1) fa=3.;
+                
+                r0 = r0*pow(Vt,dim/3.);
+                
+                double ki = (chem -> ki[rxid]);
+                
+                // Rate equation as per TST (see notes_on_TST.pdf by Masoero, 2019, where ki=0 was assumed as per classical TST)
+                ri = r0 * Qreac * exp((1.-ki)*(-Sen * DSi - DUi)/KT ) ;
+                
+                
+                // if net rate is requested by user in chemDB, then add rate backward
+                if (strcmp((chem->mechmode[mid]).c_str(),"net")==0) {
+                    
+                    topass = "prod";
+                    double Qprod = solution->compQ(rxid,topass,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
+                    ri -= r0 * Qprod / chem->Keq[rxid]     * exp(ki*(Sen * DSi + DUi)/KT );
+                    
+                    if (msk->wplog) {
+                        std::ostringstream ss;
+                        msg += "; ri ";    ss << ri;   msg += ss.str();    ss.str(""); ss.clear();
+                        msg += "; Qprod ";    ss << Qprod;   msg += ss.str();    ss.str(""); ss.clear();
+                        msg += "; Keq ";    ss << chem->Keq[rxid] ;   msg += ss.str();    ss.str(""); ss.clear();
+                    }
+                    
+                }
+                
+                
+                
+                if (ri < 0.) ri = 0.;
+                
+                DTi = 1./ri;
+                DTtot += DTi;
+                
+                if (msk->wplog) {
+                    msg += ", DT ";
+                    std::ostringstream ss;    ss << DTi;   msg += ss.str(); ss.str("");   ss.clear();
+                    msg += ", DTtot ";
+                    ss << DTtot;   msg += ss.str();
+                }
+            }
+            
+            if (msk->wplog) {
+                msg += "\n";
+                output->toplog(msg);
+            }
+        }
+        rate_each[i] = 1./DTtot;
+        if (rate_each[i]<0.) rate_each[i] = 0.;    // if the backward ri's are > forward ri's the overall rate may end up < 0, which means that the current deletion event should not happen, hence its rate should be zero (not negative..)   CHECK THAT THIS DOES NOT GIVE PROBLEMS WHEN SELECTING THE EVENT TO CARRY OUT FROM CUMULATIVE RATE VECTORS, IN PARTICULAR WITH THE BINARY SEARCH ALGORITHM
+    
+        
+        if (msk->wplog) {
+            std::ostringstream ss;
+            std::string msg = "\nPARTICLE ";
+            ss << tID[i];   msg += ss.str();  ss.str("");   ss.clear();
+            msg += " has deletion rate  ";
+            ss << rate_each[i];   msg += ss.str();
+            output->toplog(msg);
+        }
+    }
+    
+}
+
 
 
 

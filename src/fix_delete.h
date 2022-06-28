@@ -80,6 +80,7 @@ namespace MASKE_NS {
         double *rate_each;     // array storing rates in each processor
         double **locLMP;   // array to extract content of compute property/local from LAMMPS, used in "micro" style to obtain IDs and types of interacting pairs of atoms from neighbour list
         double *aDIST;   // vector to extract content of compute pair/local from LAMMPS, used in "micro" style to obtain distances between interacting pairs of atoms from neighbour list
+        int nlocR, nlocC, nDIST; // number of rows and columns read from LAMMPS property/local (neighbour list) and number of distances between interacting atoms
 
 
         
@@ -101,7 +102,7 @@ namespace MASKE_NS {
         void comp_rates_allpar(int);    // each proc computes deletion rates
         void rates_to_submaster(int);   // submaster assembles rates in vector corresponding to unsorted IDs
         void comp_rates_allser(int);    // each proc computes deletion rates for an all-series mechanism
-
+        void comp_rates_micro(int);     // each proc computes deletion rates for a "micro" type of mechanism
         
         
         

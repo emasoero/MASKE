@@ -697,6 +697,11 @@ void Chemistry::addmech()
         if(ss >> param) tempvec.push_back(param);   // coverage calculator style name
         else  error->errsimple(msg);
         
+        if (strcmp(param.c_str(),"pair") != 0){
+            msg = "ERROR: Unknown coverage calculator style \""+param+"\". For now, only style \"pair\" has been implemented. Future styles may be \"bond\", \"ellipse\", etc.\n";
+            error->errsimple(msg);
+        }
+        
         if(ss >> param) tempvec.push_back(param);   // filename for coverage calculator
         else error->errsimple(msg);
 
