@@ -6,7 +6,7 @@
 
 # command structure: subcomm Nsubcomms name1 Nproc1 lmp_yes/no seed name2 Nproc2 lammps_yes/no seed .... etc
 # NB: the first subcomm should always be lmp_yes, otherwise thermos cannot be produced
-subcomm 1 Antonello 2 lmp_yes 123
+subcomm 2 Antonello 2 lmp_yes 123
 
 
 

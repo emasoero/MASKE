@@ -353,6 +353,15 @@ void Fix_delete::sample(int pos)
     // SUBMASTER ASSEMBLES THE UNSORTED ID ARRAYS FROM EACH PROCESSOR IN AN UNSORTED VECTOR
     ids_to_submaster(pos);
     
+    if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+        if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+            // HERE WE NEED A FUNCTION TO COMMUNICATE THE PAIR ARRAYS TO THE SUBMASTER.
+            // then, in map_ID function below, we need to create a StoU map too
+            // then we will need another function, after map_ID, to ask the submaster to go through the assembled pair array, compute for each pair (including desired type) the coverage area and add it to a unsorted vector of such areas per atom (using the StoU map to read the radii and to place correctly the final areas)
+            // then the sumbaser, in that same function, should communicate back its coverage areas to each slave processor in chunks of same size as local IDs
+            // finally, in the comp_rates_micro function, each processor will have what is needed to compute rates
+        }
+    }
     
     // SUBMASTER SORTS IDs (only if fix was just reset in krun.cpp, otherwise sorted vector already exists)
     if (key==0 && krun->fMC_justreset) submaster_sort_IDs(pos);
@@ -407,6 +416,12 @@ void Fix_delete::sample(int pos)
     delete [] IDuns;
     delete [] IDpos;
     delete [] nID_each;
+    
+    if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+        if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+            delete [] Runs;
+        }
+    }
     
     
     /*
@@ -465,12 +480,18 @@ void Fix_delete::ids_to_submaster(int pos)
             //fprintf(screen,"i =  %d  --> nID_each = %d \n",i,nID_each[i]);
             IDpos[i] =IDpos[i-1]+nID_each[i-1];
         }
-        
     }
+    
     IDuns = new int[Ng];    // array storing the IDs of delete events in current fix (hence local, in the sense that it is both local of the subcomm but also local to current fix_delete)
     if (key>0) {
         int dest = 0;
         MPI_Send(&tIDarr[0], naP, MPI_INT, dest, 1, (universe->subcomm));
+        
+        if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+            if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+                MPI_Send(&tR[0], naP, MPI_DOUBLE, dest, 2, (universe->subcomm));
+            }
+        }
     }
     if (key==0) {
         for (int i=0; i<nID_each[0]; i++) {
@@ -480,22 +501,45 @@ void Fix_delete::ids_to_submaster(int pos)
             MPI_Recv(&IDuns[IDpos[source]], nID_each[source], MPI_INT, source, 1, (universe->subcomm), &status);
         }
         
-        /*
+        if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+            if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+                Runs = new double[Ng];
+                
+                for (int i=0; i<nID_each[0]; i++) {
+                    Runs[i] = tR[i];
+                }
+                for (int source=1; source<nploc; source++) {
+                    MPI_Recv(&Runs[IDpos[source]], nID_each[source], MPI_DOUBLE, source, 2, (universe->subcomm), &status);
+                }
+            }
+        }
+        
         // print assembled IDuns on submaster
         if (msk->wplog) {
             std::string msg = "\nNumber of atoms in this fix: ";
             std::ostringstream ss;    ss << Ng;   msg = msg+ss.str();
             output->toplog(msg);
             msg="";   ss.str("");   ss.clear();
-            output->toplog("\npos IDuns");
+            if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+                if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+                    output->toplog("\npos IDuns Runs");
+                }
+            }
+            else output->toplog("\npos IDuns");
+            
             for (int i=0; i<Ng; i++){
                 ss << i;        msg = ss.str()+" ";   ss.str("");   ss.clear();
                 ss << IDuns[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+                    if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+                        ss << Runs[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                    }
+                }
                 output->toplog(msg);
                 msg="";
             }
         }
-         */
+         
         
     }
 }
