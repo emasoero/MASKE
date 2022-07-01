@@ -6,7 +6,7 @@
 
 # command structure: subcomm Nsubcomms name1 Nproc1 lmp_yes/no seed name2 Nproc2 lammps_yes/no seed .... etc
 # NB: the first subcomm should always be lmp_yes, otherwise thermos cannot be produced
-subcomm 1 Antonello 1 lmp_yes 123 subB 2 lmp_yes 456
+subcomm 2 Antonello 2 lmp_yes 123 subB 2 lmp_yes 456
 
 
 # ===== READ CHEMISTRY DATA BASE ========
@@ -16,7 +16,7 @@ chemDB ./chemDB.dat
 
 
 # ===== LIST REAL AND TRIAL PARTICLE TYPES TO BE USED IN THE SIM =======
-real_types 1 
+real_types 2
 
 # type 1 = real Ca(OH)2 to dissolve
 
@@ -58,10 +58,7 @@ lammps all 	set type 2 diameter $(v_DCSH)
 lammps all 	pair_style 	table linear 4000
 lammps all	pair_coeff 	1 1 ./table.potential_CH-CH.txt Spring_Ca(OH)2-Ca(OH)2	
 lammps all	pair_coeff 	1 2 ./table.potential_CSH-CH.txt Spring_Ca(OH)2-CSH
-lammps all	pair_coeff 	1 3 ./table.potential_CSH-CH.txt Spring_Ca(OH)2-CSH
 lammps all	pair_coeff 	2 2 ./table.potential_CSH-CSH.txt Spring_CSH-CSH
-lammps all	pair_coeff 	2 3 ./table.potential_CSH-CSH.txt Spring_CSH-CSH
-lammps all	pair_coeff 	3 3 ./table.potential_CSH-CSH.txt Spring_CSH-CSH
 lammps all	pair_write 1 2 4000 r 1.00E-030 0.62 tableOUT.txt Spring_CSH-CH
 
 

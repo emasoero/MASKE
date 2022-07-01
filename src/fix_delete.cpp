@@ -26,6 +26,7 @@ Fix_delete::Fix_delete(MASKE *maske) : Pointers(maske)
     // The inputcprs class is run by all processors in COMM_WORLD. This reads the id of the processor
     MPI_Comm_rank(MPI_COMM_WORLD, &me);
     EVpID = -1;
+    SAR = nullptr;
     //Ntrans = 0;
     //Ntsc=0;
 }
@@ -61,6 +62,8 @@ void Fix_delete::init(int pos)
     lammpsIO->lammpsdo("variable tempNgroup delete");
     // the subsequent two lines will be used in fix_del to know where to start and where to finish scanning events in the assembled vectors of ids, rates, etc..
     fix->fKMCnevents[pos] = Ng;
+    
+    
 }
 
 
@@ -353,13 +356,10 @@ void Fix_delete::sample(int pos)
     // SUBMASTER ASSEMBLES THE UNSORTED ID ARRAYS FROM EACH PROCESSOR IN AN UNSORTED VECTOR
     ids_to_submaster(pos);
     
+    // FOR MICRO-PAIR MECHANISM ONLY Communicate local arrays (from neighbour list) to submaster
     if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
         if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
-            // HERE WE NEED A FUNCTION TO COMMUNICATE THE PAIR ARRAYS TO THE SUBMASTER.
-            // then, in map_ID function below, we need to create a StoU map too
-            // then we will need another function, after map_ID, to ask the submaster to go through the assembled pair array, compute for each pair (including desired type) the coverage area and add it to a unsorted vector of such areas per atom (using the StoU map to read the radii and to place correctly the final areas)
-            // then the sumbaser, in that same function, should communicate back its coverage areas to each slave processor in chunks of same size as local IDs
-            // finally, in the comp_rates_micro function, each processor will have what is needed to compute rates
+            pair_arr_to_submaster(pos);
         }
     }
     
@@ -368,6 +368,19 @@ void Fix_delete::sample(int pos)
     
     // EACH PROCESSOR MAPS THEIR ID TO THE CORRESPONDING POSITION IN THE SUBMASTER IDsrt ARRAY
     if(key==0) submaster_map_ID(pos);
+    
+    // FOR MICRO-PAIR MECHANISM ONLY, SUBMASTER COMPUTES COVERAGE AREAS AND PASSES THEM BACK TO SLAVES
+    
+    if(key==0){
+        if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+            if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+                submaster_comp_cover(pos);
+                // this function asks the submaster to go through the assembled pair array, compute for each pair (including desired type) the coverage area and add it to a unsorted vector of such areas per atom (using the StoU map to read the radii and to place correctly the final areas)
+                // then the sumbaster, in that same function, should communicate back its coverage areas to each slave processor in chunks of same size as local IDs
+                // finally, in the comp_rates_micro function, each processor will have what is needed to compute rates
+            }
+        }
+    }
     
     // EACH PROCESSOR COMPUTES RATES OF EACH EVENT AND CUMULATIVES DEPENDING ON MECHANISM
     rate_each = new double[nID_each[key]];  //array with processor-specific rates. These will be passed to the submaster which will sort them to match ids into the rates vector. Then this array can be forgotten
@@ -416,21 +429,25 @@ void Fix_delete::sample(int pos)
     delete [] IDuns;
     delete [] IDpos;
     delete [] nID_each;
+
     
     if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
         if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
             delete [] Runs;
+            
+            if (!(SAR == nullptr)){
+                free(SAR[0]);
+                free(SAR);
+                SAR = nullptr;
+            }
+            
+            delete [] nlocR_each;
+            delete [] SARpos;
+            delete [] Dsub;
+            delete [] CAuns;
         }
     }
-    
-    
-    /*
-     fprintf(screen,"Proc %d - EDDIG JO\n",me);
-    MPI_Barrier(MPI_COMM_WORLD);
-    sleep(1);
-     */
-    
-    
+
 }
 
 
@@ -546,6 +563,94 @@ void Fix_delete::ids_to_submaster(int pos)
 
 
 
+// ---------------------------------------------------------------
+// assembles all pair arrays from each processor into block-wise array in submaster, where each block is the locLMP and aDIST in a processor
+void Fix_delete::pair_arr_to_submaster(int pos)
+{
+    
+   
+    //MPI send size of each local array to submaster. Submaster creates array with enough space and assigns positions to accept local arrays.  All procs then send local arrays to submaster
+    nlocR_each = new int[nploc];
+    nlocR_each[key] = nlocR;
+    
+    if (key>0) {
+        int dest = 0;
+        MPI_Send(&nlocR_each[key], 1, MPI_INT, dest, 1, (universe->subcomm));
+    }
+    if (key==0 && nploc>1) {
+        for (int source=1; source<nploc; source++) {
+            MPI_Recv(&nlocR_each[source], 1, MPI_INT, source, 1, (universe->subcomm), &status);
+        }
+    }
+    
+    
+    // pass local arrays to submaster
+    SARpos = new int[nploc];  // position of local array in submaster's  array
+    if (key==0) {
+        SARpos[0]=0;
+        for (int i=1; i<nploc; i++) {
+            SARpos[i] =SARpos[i-1]+nlocR_each[i-1];
+        }
+    
+        // allocating array storing the local arrays for the interactions in current fix
+        int allrows = SARpos[nploc-1]+nlocR_each[nploc-1];
+        int nbytes = ((int) sizeof(double)) * 4 * allrows;
+        double *data = (double *) malloc(nbytes);
+        nbytes = ((int) sizeof(double *)) * allrows;
+        SAR = (double **) malloc(nbytes);
+        
+        int n = 0;
+        for (int i = 0; i < allrows ; i++) {
+            SAR[i] = &data[n];
+            n += 4;
+        }
+        Dsub = new double[allrows];
+    }
+    
+    
+    if (key>0) {
+        int dest = 0;
+        MPI_Send(&locLMP[0][0], 4.*nlocR , MPI_DOUBLE, dest, 3, (universe->subcomm));
+        MPI_Send(&aDIST[0], nlocR , MPI_DOUBLE, dest, 4, (universe->subcomm));
+    }
+    if (key==0) {
+        for (int j=0; j<nlocR; j++){
+            for (int i=0; i<4; i++) {
+                SAR[j][i] = locLMP[j][i];
+            }
+            Dsub[j] = aDIST[j];
+        }
+        for (int source=1; source<nploc; source++) {
+            MPI_Recv(&SAR[SARpos[source]][0], 4.*nlocR_each[source], MPI_DOUBLE, source, 3, (universe->subcomm), &status);
+            MPI_Recv(&Dsub[SARpos[source]], nlocR_each[source], MPI_DOUBLE, source, 4, (universe->subcomm), &status);
+        }
+        
+        // print assembled SAR on submaster
+        if (msk->wplog) {
+            std::string msg = "\nNumber of local pairs: ";
+            std::ostringstream ss;    ss << SARpos[nploc-1]+nlocR_each[nploc-1];   msg = msg+ss.str();
+            output->toplog(msg);
+            msg="";   ss.str("");   ss.clear();
+            output->toplog("\npos lmp_pos id1 id2 type1 type2 dist");
+            //sleep(1);
+            for (int i=0; i<SARpos[nploc-1]+nlocR_each[nploc-1]; i++){
+                //sleep(1);
+                ss << i;        msg = ss.str()+" ";   ss.str("");   ss.clear();
+                ss << SAR[i][0];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                ss << SAR[i][1];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                ss << SAR[i][2];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                ss << SAR[i][3];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                ss << Dsub[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                output->toplog(msg);
+                msg="";
+            }
+        }
+    }
+    
+
+}
+
+
 
 
 // ---------------------------------------------------------------
@@ -604,6 +709,14 @@ void Fix_delete::submaster_map_ID(int pos)
     // find ID position in existing sorted vector (portion of IDsrt corresponding to current event, knowing first position id from fix-fMKCfirst and number of events Ng)
     int posit;
     UtoS.clear();
+    
+    if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+        if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+            StoU.clear();
+            StoU.resize(Ng);   // set map vector size
+        }
+    }
+    
     for (int j=0; j<Ng; j++) {
         //binary search
         int pre = fix->fKMCfirst[pos];
@@ -615,6 +728,11 @@ void Fix_delete::submaster_map_ID(int pos)
             }
         posit=pre;
         UtoS.push_back(posit);
+        if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+            if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+                StoU[posit-fix->fKMCfirst[pos]] = j;
+            }
+        }
     }
 
     
@@ -632,15 +750,80 @@ void Fix_delete::submaster_map_ID(int pos)
             output->toplog(msg);
             msg="";
         }
-        output->toplog("\nIDsrt");
+        output->toplog("\nWhole sorted ID vector up to current fix \npos IDsrt");
         for (int i=0; i<IDsrt.size(); i++){
             ss << i;        msg = ss.str()+" ";   ss.str("");   ss.clear();
             ss << IDsrt[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
             output->toplog(msg);
             msg="";
         }
+        if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+            if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+                output->toplog("\nFix-specific sorted-to-unsorted map\npos IDsrt StoU");
+                for (int i=0; i<Ng; i++){
+                    ss << i;        msg = ss.str()+" ";   ss.str("");   ss.clear();
+                    ss << IDsrt[fix->fKMCfirst[pos]+i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                    ss << StoU[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                    output->toplog(msg);
+                    msg="";
+                }
+            }
+        }
     }
-   
+}
+
+
+
+
+// ---------------------------------------------------------------
+//  map IDs positions from IDuns to IDsrt (the former with size Ng, the latter with size comprising all particles for all delete fixes on that subcom)
+void Fix_delete::submaster_comp_cover(int pos)
+{
+    CAuns = new double[Ng];
+    for (int i=0; i<Ng; i++) CAuns[i]=0.;
+    
+    for (int i=0; i<SARpos[nploc-1]+nlocR_each[nploc-1]; i++){
+        int id1 = SAR[i][0];
+        int id2 = SAR[i][1];
+        bool flag_t1 = (SAR[i][2] ==fix->fKMCptype[pos]);
+        bool flag_t2 = (SAR[i][3]==fix->fKMCptype[pos]);
+        int up1,up2;   // positions of particles 1 and 2 in pair in unsorted vectors (ID and radii)
+        if (flag_t1 || flag_t2){
+            // if any of the atoms in pair is of correct type, compute contribution to coverage
+            
+            // first find particle positions in unsorted IDs vector
+            int pre = fix->fKMCfirst[pos];
+            int post = fix->fKMCfirst[pos]+Ng-1;
+            while (pre < post) {
+                posit = (int)((pre+post)/2.);
+                if (IDsrt[posit] < id1) pre=posit+1;
+                    else post=posit;
+                }
+            posit=pre;
+            up1 = StoU[posit - fix->fKMCfirst[pos]];
+            
+            pre = fix->fKMCfirst[pos];
+            post = fix->fKMCfirst[pos]+Ng-1;
+            while (pre < post) {
+                posit = (int)((pre+post)/2.);
+                if (IDsrt[posit] < id2) pre=posit+1;
+                    else post=posit;
+                }
+            posit=pre;
+            up2 = StoU[posit - fix->fKMCfirst[pos]];
+            
+            // PLACEHOLDER FOR NOW
+            double Rmin = min(Runs[up1],Runs[up2]);
+            double CAi = M_PI * Rmin * Rmin + Dsub[i]/100000.;
+            // if first atom is of correct type for this fix
+            if (flag_t1)  CAuns[up1] += CAi;
+            if (flag_t2)  CAuns[up2] += CAi;
+        }
+    }
+    
+    for (int i=0; i<Ng; i++){
+        if (Cuns[i] > 4.*M_PI*Runs[i]*Runs[i]) Cuns[i] = 4.*M_PI*Runs[i]*Runs[i];
+    }
 }
 
 
