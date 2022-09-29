@@ -370,7 +370,6 @@ void Fix_delete::sample(int pos)
     if(key==0) submaster_map_ID(pos);
     
     // FOR MICRO-PAIR MECHANISM ONLY, SUBMASTER COMPUTES COVERAGE AREAS AND PASSES THEM BACK TO SLAVES
-    
     if(key==0){
         if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
             if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
@@ -776,24 +775,37 @@ void Fix_delete::submaster_map_ID(int pos)
 
 
 // ---------------------------------------------------------------
-//  map IDs positions from IDuns to IDsrt (the former with size Ng, the latter with size comprising all particles for all delete fixes on that subcom)
+//  The submaster computes coverage areas of particles in the current fix and communicates them back to the other processors in its subcomm
 void Fix_delete::submaster_comp_cover(int pos)
 {
     CAuns = new double[Ng];
     for (int i=0; i<Ng; i++) CAuns[i]=0.;
     
+    if (msk->wplog) {
+        std::string msg = "Number of pairs in neighbor array for "+fix->fKMCname[pos]+" :";
+        std::ostringstream ss;    ss << SARpos[nploc-1]+nlocR_each[nploc-1];   msg = msg+ss.str();
+        output->toplog(msg);
+        msg="";   ss.str("");   ss.clear();
+        // pring ids and positions in unsorted atom arrays
+        output->toplog("npos id1 id2 type1 type2 upos1 upos2");
+    }
+    
+    
+    // for all the rows in the assembled arrays in the submaster...
     for (int i=0; i<SARpos[nploc-1]+nlocR_each[nploc-1]; i++){
         int id1 = SAR[i][0];
         int id2 = SAR[i][1];
         bool flag_t1 = (SAR[i][2] ==fix->fKMCptype[pos]);
         bool flag_t2 = (SAR[i][3]==fix->fKMCptype[pos]);
         int up1,up2;   // positions of particles 1 and 2 in pair in unsorted vectors (ID and radii)
-        if (flag_t1 || flag_t2){
-            // if any of the atoms in pair is of correct type, compute contribution to coverage
-            
-            // first find particle positions in unsorted IDs vector
+        up1 = -1;
+        up2 = -1;
+        
+        if (flag_t1){
+            // find first particle position in unsorted IDs vector
             int pre = fix->fKMCfirst[pos];
             int post = fix->fKMCfirst[pos]+Ng-1;
+            int posit;
             while (pre < post) {
                 posit = (int)((pre+post)/2.);
                 if (IDsrt[posit] < id1) pre=posit+1;
@@ -801,9 +813,13 @@ void Fix_delete::submaster_comp_cover(int pos)
                 }
             posit=pre;
             up1 = StoU[posit - fix->fKMCfirst[pos]];
-            
-            pre = fix->fKMCfirst[pos];
-            post = fix->fKMCfirst[pos]+Ng-1;
+        }
+        
+        if (flag_t2){
+            // find second particle position in unsorted IDs vector
+            int pre = fix->fKMCfirst[pos];
+            int post = fix->fKMCfirst[pos]+Ng-1;
+            int posit;
             while (pre < post) {
                 posit = (int)((pre+post)/2.);
                 if (IDsrt[posit] < id2) pre=posit+1;
@@ -811,6 +827,24 @@ void Fix_delete::submaster_comp_cover(int pos)
                 }
             posit=pre;
             up2 = StoU[posit - fix->fKMCfirst[pos]];
+        }
+        
+        if (msk->wplog) {
+            std::string msg;
+            std::ostringstream ss;
+            ss << i;        msg = ss.str()+" ";   ss.str("");   ss.clear();
+            ss << id1;   msg += ss.str()+" ";  ss.str("");   ss.clear();
+            ss << id2;   msg += ss.str()+" ";  ss.str("");   ss.clear();
+            ss << SAR[i][2];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+            ss << SAR[i][3];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+            ss << up1;   msg += ss.str()+" ";  ss.str("");   ss.clear();
+            ss << up2;   msg += ss.str()+" ";  ss.str("");   ss.clear();
+            output->toplog(msg);
+        }
+        
+       
+        if (flag_t1 || flag_t2){
+            // if any of the atoms in pair is of correct type, compute contribution to coverage
             
             // PLACEHOLDER FOR NOW
             double Rmin = min(Runs[up1],Runs[up2]);
@@ -819,11 +853,13 @@ void Fix_delete::submaster_comp_cover(int pos)
             if (flag_t1)  CAuns[up1] += CAi;
             if (flag_t2)  CAuns[up2] += CAi;
         }
+        
     }
     
     for (int i=0; i<Ng; i++){
-        if (Cuns[i] > 4.*M_PI*Runs[i]*Runs[i]) Cuns[i] = 4.*M_PI*Runs[i]*Runs[i];
+        if (CAuns[i] > 4.*M_PI*Runs[i]*Runs[i]) Cuns[i] = 4.*M_PI*Runs[i]*Runs[i];
     }
+    
 }
 
 

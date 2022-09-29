@@ -80,7 +80,7 @@ namespace MASKE_NS {
         double *rate_each;     // array storing rates in each processor
         double **locLMP;   // array to extract content of compute property/local from LAMMPS, used in "micro" style to obtain IDs and types of interacting pairs of atoms from neighbour list
         double *aDIST;   // vector to extract content of compute pair/local from LAMMPS, used in "micro" style to obtain distances between interacting pairs of atoms from neighbour list
-        int nlocR, nlocC, nDIST; // number of rows and columns read from LAMMPS property/local (neighbour list) and number of distances between interacting atoms
+        int nlocR; // number of rows from LAMMPS property/local (neighbour list)
         int *nlocR_each;     // array storing numcber of local array rows in each processor: used by submaster for assembly and back (only used for "micro" style)
 
         
@@ -96,7 +96,7 @@ namespace MASKE_NS {
         std::vector<int> UtoS;   //pointing each-proc unsorted IDuns to corresponding sorted IDsrt in global vector containing all rfreeKMC fixes in current subcomm.  Its size is Ng (number of particles in current fix).     Needed to send rates computed by each processor and assembled unsorted by submaster to global sorted-ID rate vector
         std::vector<int> StoU;   //pointing sorted IDs in current fix_delete (pos) to position in unsorted list assembled from processors on submaster. NOTE: the IDsrt vector contains all IDs for all fix_deletes on this subcomm. Instead , the StoU map only refers to IDs in current fix delete
         int *SARpos;  // "Submaster ARray position" vector, storing starting positions of local arrays (from neighbour list) in submaster's ARuns and Duns
-        double **SAR;  //Submater ARray, bloc-wise with each block being the locLMP of a processor
+        double **SAR;  //Submaster ARray, bloc-wise with each block being the locLMP of a processor
         double *Dsub;    // vector on the submaster gathering all interaction distances from lammps pair/local
     
 
