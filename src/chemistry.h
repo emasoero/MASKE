@@ -74,7 +74,9 @@ namespace MASKE_NS {
         std::vector<std::vector<int> > ch_rxID, ch_nrx;   // vectors of vectors containing the IDs and the number of reactions involved in each chain.
 
         
-        
+        double **e0;    // 2D array containing the e0 threshold for the "micro" mechanism with "pair" style
+        double **ef;    // as above, with ef thrshold
+        double **gij;   // as above, with inter-type interfacial energies
 
         
         int me;

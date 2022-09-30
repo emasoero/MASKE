@@ -16,7 +16,7 @@ chemDB ./chemDB.dat
 
 
 # ===== LIST REAL AND TRIAL PARTICLE TYPES TO BE USED IN THE SIM =======
-real_types 2
+real_types 1 2
 
 # type 1 = real Ca(OH)2 to dissolve
 

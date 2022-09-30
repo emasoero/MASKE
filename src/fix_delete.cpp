@@ -443,7 +443,7 @@ void Fix_delete::sample(int pos)
             delete [] nlocR_each;
             delete [] SARpos;
             delete [] Dsub;
-            delete [] CAuns;
+            delete [] CFuns;
         }
     }
 
@@ -778,8 +778,8 @@ void Fix_delete::submaster_map_ID(int pos)
 //  The submaster computes coverage areas of particles in the current fix and communicates them back to the other processors in its subcomm
 void Fix_delete::submaster_comp_cover(int pos)
 {
-    CAuns = new double[Ng];
-    for (int i=0; i<Ng; i++) CAuns[i]=0.;
+    CFuns = new double[Ng];
+    for (int i=0; i<Ng; i++) CFuns[i]=0.;
     
     if (msk->wplog) {
         std::string msg = "Number of pairs in neighbor array for "+fix->fKMCname[pos]+" :";
@@ -844,20 +844,29 @@ void Fix_delete::submaster_comp_cover(int pos)
         
        
         if (flag_t1 || flag_t2){
-            // if any of the atoms in pair is of correct type, compute contribution to coverage
+            // compute coverage area, used later to compute number of layers to dissolve in micro particle
+            // coverage is given by contact cross section weighted by a distance-dependent factor; the latter is user-provided through two thresholds, e0 below which contact is 100%, ef above which contact is 0%. Linear interpolation in between
             
-            // PLACEHOLDER FOR NOW
-            double Rmin = min(Runs[up1],Runs[up2]);
-            double CAi = M_PI * Rmin * Rmin + Dsub[i]/100000.;
+            double Aij;    // cross section of inter-particle contact
+            double Rij;     // harmonic average of radii of particles in contact
+            Rij = 2. * Runs[up1] * Runs[up2]/( Runs[up1] + Runs[up2]);
+            Aij = M_PI * Rij * Rij;
+            
+            // weigh the contact cross section by the distance
+            
+
             // if first atom is of correct type for this fix
-            if (flag_t1)  CAuns[up1] += CAi;
-            if (flag_t2)  CAuns[up2] += CAi;
+            if (flag_t1)  CFuns[up1] += Aij;
+            if (flag_t2)  CFuns[up2] += Aij;
         }
         
     }
     
     for (int i=0; i<Ng; i++){
-        if (CAuns[i] > 4.*M_PI*Runs[i]*Runs[i]) Cuns[i] = 4.*M_PI*Runs[i]*Runs[i];
+        // convert coverage areas to coverage fractions
+        CFuns[i] /= 4.*M_PI*Runs[i]*Runs[i];
+        
+        //if (CAuns[i] > 4.*M_PI*Runs[i]*Runs[i]) Cuns[i] = 4.*M_PI*Runs[i]*Runs[i];
     }
     
 }

@@ -90,7 +90,7 @@ namespace MASKE_NS {
         int nploc;  // number of processor in subcom
         int *IDuns;     // unsorted IDs of all Ng particles in fix. This is bloc-wise, with each block being the tIDarr of a processor
         double *Runs;    // unsorted radii of all Ng particles in fix
-        double *CAuns;    // coverage area of Ng particles in the fix
+        double *CFuns;    // coverage fraction area of Ng particles in the fix
         double *unsRates;   // array in subcomm storing unsorted rates corresponding to IDuns above (size Ng)
         int *IDpos;  // array storing starting positions of local tID arrays in submaster's IDuns
         std::vector<int> UtoS;   //pointing each-proc unsorted IDuns to corresponding sorted IDsrt in global vector containing all rfreeKMC fixes in current subcomm.  Its size is Ng (number of particles in current fix).     Needed to send rates computed by each processor and assembled unsorted by submaster to global sorted-ID rate vector

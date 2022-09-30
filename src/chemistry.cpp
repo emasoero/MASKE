@@ -38,6 +38,7 @@ Chemistry::Chemistry(MASKE *maske) : Pointers(maske)
     Nchain = 0;
     Nsen = 0;
     Nmech=0;
+    e0 = nullptr;
 }
 
 
@@ -47,6 +48,12 @@ Chemistry::Chemistry(MASKE *maske) : Pointers(maske)
 Chemistry::~Chemistry()
 {
     //delete lmp;
+    
+    if (!(e0 == nullptr)){
+        free(e0[0]);
+        free(e0);
+        e0 = nullptr;
+    }
 }
 
 
@@ -704,6 +711,47 @@ void Chemistry::addmech()
         
         if(ss >> param) tempvec.push_back(param);   // filename for coverage calculator
         else error->errsimple(msg);
+        
+        // copy content of coverage calculator file into e0, ef and gij arrays here...
+        
+        // ... first we allocate the arrays
+        int rows = 0;   // number of raws in e0, ef and gij matrices. This equals the largest particle type among user-listed real and trial types in input file
+        for (int i =0; i<msk->Rtypes.size(); i++){
+            if (msk->Rtypes[i] > rows) rows = msk->Rtypes[i];
+        }
+        for (int i =0; i<msk->Ttypes.size(); i++){
+            if (msk->Ttypes[i] > rows) rows = msk->Ttypes[i];
+        }
+        
+        int nbytes = ((int) sizeof(double)) * rows * rows;
+        double *data = (double *) malloc(nbytes);
+        double *data1 = (double *) malloc(nbytes);
+        double *data2 = (double *) malloc(nbytes);
+        nbytes = ((int) sizeof(double *)) * rows;
+        e0 = (double **) malloc(nbytes);
+        ef = (double **) malloc(nbytes);
+        gij = (double **) malloc(nbytes);
+        
+        int n = 0;
+        for (int i = 0; i < rows ; i++) {
+            e0[i] = &data[n];
+            ef[i] = &data1[n];
+            gij[i] = &data2[n];
+            n += rows;
+        }
+        
+        // ... then we pre-populate them with "-1"
+        for (int i=0; i<rows; i++){
+            for (int j=0; j<rows; j++){
+                e0[i][j]=-1.;
+                ef[i][j]=-1.;
+                gij[i][j]=-1.;
+            }
+        }
+        
+        
+        // ... finally we go thorugh the coverage file and import the correct values
+        
 
     }
     mechpar.push_back(tempvec);
