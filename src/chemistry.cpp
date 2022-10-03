@@ -697,6 +697,8 @@ void Chemistry::addmech()
     
     
     std::vector<std::string> tempvec;
+    int rows = 0;   // number of raws in e0, ef and gij matrices. This equals the largest particle type among user-listed real and trial types in input file
+    
     if(strcmp(mechstyle.back().c_str(),"micro")==0){
         std::string param;
         std::string msg = "ERROR: Mechanism \""+mechnames.back()+"\" is of style \"micro\" which requires coverage_calculator_style and associated filename at the end of the \"mech\" command in chemDB\n";
@@ -715,12 +717,16 @@ void Chemistry::addmech()
         // copy content of coverage calculator file into e0, ef and gij arrays here...
         
         // ... first we allocate the arrays
-        int rows = 0;   // number of raws in e0, ef and gij matrices. This equals the largest particle type among user-listed real and trial types in input file
         for (int i =0; i<msk->Rtypes.size(); i++){
             if (msk->Rtypes[i] > rows) rows = msk->Rtypes[i];
         }
         for (int i =0; i<msk->Ttypes.size(); i++){
             if (msk->Ttypes[i] > rows) rows = msk->Ttypes[i];
+        }
+        
+        if (rows == 0){
+            msg = "ERROR: The matrices associated to file \""+param+"\" have size = 0. In your input script, make sure to list the real and trial types before reading the ChemDB file\n";
+            error->errsimple(msg);
         }
         
         int nbytes = ((int) sizeof(double)) * rows * rows;
@@ -750,7 +756,160 @@ void Chemistry::addmech()
         }
         
         
-        // ... finally we go thorugh the coverage file and import the correct values
+        // ... finally we go thorugh the coverage file and import the correct values...
+        std::ifstream inPfile(param.c_str());
+        if (!inPfile.is_open()) {
+            std::string msg = "ERROR: Additional parameters file for micro mechanism not found: \""+param+"\"";
+            error->errsimple(msg);
+        }
+        else {
+            fprintf(screen,"PROC %d: Reading additional parameters file %s\n",me,param.c_str());
+
+            while (!inPfile.eof()) {
+                std::string line, word;
+                std::getline (inPfile, line);
+                ss.clear();
+                ss.str(line);
+                fprintf(screen,"PROC %d: Reading line: %s\n",me,line.c_str());
+                int it = -1;
+                int jt = -1;
+                int rcol = 0;
+                bool errflag = false;
+                if (ss >> word){
+                    rcol = 1;
+                    if (strncmp(word.c_str(), "#", 1) == 0) int foo = 1; // Do nothing. Lines starting with # are comments
+                    else {
+                        // read i type
+                        bool istar = false;
+                        if (strcmp(word.c_str(), "*") == 0) istar = true;
+                        else {
+                            it = atoi(word.c_str());
+                            if (it < 1 || it > rows){
+                                std::string msg = "\nERROR: In the additional parameters file (\""+param+"\") you have entered, in column 1, a type that is either <= 0 or greater than the largest type listed among real and trial types in the input script\n\n";
+                                error->errsimple(msg);
+                            }
+                        }
+                        
+                        // read j type
+                        bool jstar = false;
+                        if (ss >> word){
+                            if (strcmp(word.c_str(), "*") == 0) jstar = true;
+                            else {
+                                jt = atoi(word.c_str());
+                                if (jt < 1 || jt > rows){
+                                    std::string msg = "\nERROR: In the additional parameters file (\""+param+"\") you have entered, in column 1, a type that is either <= 0 or greater than the largest type listed among real and trial types in the input script\n\n";
+                                    error->errsimple(msg);
+                                }
+                            }
+                        }
+                        else errflag = true;
+                        
+                        
+                        
+                        // record e0 value(s)
+                        // NB: "-1" everywhere because LAMMPS types start from 1 and arrays in C++ start from 0
+                        double val;
+                        if (ss >> val){
+                            if (!istar && !jstar){
+                                e0[it-1][jt-1] = val;
+                                e0[jt-1][it-1] = val;
+                            }
+                            else if(istar && !jstar){
+                                for (int i=1; i<rows+1; i++){
+                                    e0[i-1][jt-1] = val;
+                                    e0[jt-1][i-1] = val;
+                                }
+                            }
+                            else if(jstar && !istar){
+                                for (int i=1; i<rows+1; i++){
+                                    e0[i-1][it-1] = val;
+                                    e0[it-1][i-1] = val;
+                                }
+                            }
+                            else if(jstar && istar){
+                                for (int i=1; i<rows+1; i++){
+                                    for (int j=1; j<rows+1; j++){
+                                        e0[i-1][j-1] = val;
+                                    }
+                                }
+                            }
+                        }
+                        else errflag = true;
+                        
+                        
+                        // record ef value(s)
+                        // NB: "-1" everywhere because LAMMPS types start from 1 and arrays in C++ start from 0
+                        if (ss >> val){
+                            if (!istar && !jstar){
+                                ef[it-1][jt-1] = val;
+                                ef[jt-1][it-1] = val;
+                            }
+                            else if(istar && !jstar){
+                                for (int i=1; i<rows+1; i++){
+                                    ef[i-1][jt-1] = val;
+                                    ef[jt-1][i-1] = val;
+                                }
+                            }
+                            else if(jstar && !istar){
+                                for (int i=1; i<rows+1; i++){
+                                    ef[i-1][it-1] = val;
+                                    ef[it-1][i-1] = val;
+                                }
+                            }
+                            else if(jstar && istar){
+                                for (int i=1; i<rows+1; i++){
+                                    for (int j=1; j<rows+1; j++){
+                                        ef[i-1][j-1] = val;
+                                    }
+                                }
+                            }
+                        }
+                        else errflag = true;
+                        
+                        
+                        // record gij value(s)
+                        // NB: "-1" everywhere because LAMMPS types start from 1 and arrays in C++ start from 0
+                        if (ss >> val){
+                            if (!istar && !jstar){
+                                gij[it-1][jt-1] = val;
+                                gij[jt-1][it-1] = val;
+                            }
+                            else if(istar && !jstar){
+                                for (int i=1; i<rows+1; i++){
+                                    gij[i-1][jt-1] = val;
+                                    gij[jt-1][i-1] = val;
+                                }
+                            }
+                            else if(jstar && !istar){
+                                for (int i=1; i<rows+1; i++){
+                                    gij[i-1][it-1] = val;
+                                    gij[it-1][i-1] = val;
+                                }
+                            }
+                            else if(jstar && istar){
+                                for (int i=1; i<rows+1; i++){
+                                    for (int j=1; j<rows+1; j++){
+                                        gij[i-1][j-1] = val;
+                                    }
+                                }
+                            }
+                        }
+                        else errflag = true;
+
+
+                        
+                        if (errflag){
+                            std::string msg = "\nERROR: Each row in the additional parameters file (\""+param+"\") must have 5 entries. At least one row has fewer - double check the file\n\n";
+                            error->errsimple(msg);
+                        }
+                    }
+                }
+                    
+                    
+                
+            }
+        }
+        
         
 
     }
@@ -766,8 +925,38 @@ void Chemistry::addmech()
     if (me==MASTER) fprintf(screen," Interaction scaling: %s \n",mechinter[Nmech-1].c_str());
     if (me==MASTER) fprintf(screen," Additional parameters:");
     if (me==MASTER) {
-            for (int pp=0;pp<mechpar[Nmech-1].size();pp++){
+        for (int pp=0;pp<mechpar[Nmech-1].size();pp++){
             fprintf(screen," %s",mechpar[Nmech-1][pp].c_str());
+        }
+        fprintf(screen,"\n\n");
+    }
+    if (me==MASTER){
+        if(strcmp(mechstyle.back().c_str(),"micro")==0){
+            if (strcmp(mechpar[Nmech-1][0].c_str(),"pair") == 0){
+                fprintf(screen," Values in e0 matrix from file %s \n",(mechpar[Nmech-1].back()).c_str());
+                for (int i=0; i<rows; i++){
+                    for (int j=0; j<rows; j++){
+                        fprintf(screen,"%e ",e0[i][j]);
+                    }
+                    fprintf(screen,"\n");
+                }
+                
+                fprintf(screen," Values in ef matrix from file %s\n",(mechpar[Nmech-1].back()).c_str());
+                for (int i=0;i<rows;i++){
+                    for (int j=0; j<rows; j++){
+                        fprintf(screen,"%e ",ef[i][j]);
+                    }
+                    fprintf(screen,"\n");
+                }
+                
+                fprintf(screen," Values in gij matrix from file %s\n",(mechpar[Nmech-1].back()).c_str());
+                for (int i=0;i<rows;i++){
+                    for (int j=0; j<rows; j++){
+                        fprintf(screen,"%e ",gij[i][j]);
+                    }
+                    fprintf(screen,"\n");
+                }
+            }
         }
     }
     if (me==MASTER) fprintf(screen,"\n\n");

@@ -9,16 +9,16 @@
 subcomm 2 Antonello 2 lmp_yes 123 subB 2 lmp_yes 456
 
 
-# ===== READ CHEMISTRY DATA BASE ========
-
-# Load chemistry database file, containing molecule types, reactions, and mechanisms
-chemDB ./chemDB.dat
-
 
 # ===== LIST REAL AND TRIAL PARTICLE TYPES TO BE USED IN THE SIM =======
 real_types 1 2
-
 # type 1 = real Ca(OH)2 to dissolve
+
+
+# ===== READ CHEMISTRY DATA BASE ========
+# Load chemistry database file, containing molecule types, reactions, and mechanisms
+chemDB ./chemDB.dat
+
 
 
 # ========= INITIALISE LAMMPS AND CREATE FIRST PARTICLEs =========
