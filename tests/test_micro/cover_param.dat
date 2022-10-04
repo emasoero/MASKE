@@ -3,6 +3,6 @@
 #	ef = threshold such that rij > ef (Di+Dj)/2 entails 0% of contact area between particles
 # Typically, for soft interactions with equilibrium distance r0, one can pick e0 such that threshold corresponds to r0, and ef to match interaction cutoff. Instead, for hard interactions (e.g. contact), e0 would typically be < 1 (i.e. at some overlap) and ef = 1 (i.e. no contact as soon as there is no diameter overlap)
  
-1 1 1.05 1.1 68.4
-2 2 1.05 1.1 87.6
-1 * 1.05 1.1 70
+1 1 1 1.1 68.4
+2 2 1 1.1 87.6
+1 2 0.1 0.11 70

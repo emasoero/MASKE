@@ -370,16 +370,17 @@ void Fix_delete::sample(int pos)
     if(key==0) submaster_map_ID(pos);
     
     // FOR MICRO-PAIR MECHANISM ONLY, SUBMASTER COMPUTES COVERAGE AREAS AND PASSES THEM BACK TO SLAVES
-    if(key==0){
-        if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
-            if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+    if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+        if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+            if(key==0){
+                // submaster computes coverage area fraction of each particle in the fix (stored in unsorted array in submaster)
                 submaster_comp_cover(pos);
-                // this function asks the submaster to go through the assembled pair array, compute for each pair (including desired type) the coverage area and add it to a unsorted vector of such areas per atom (using the StoU map to read the radii and to place correctly the final areas)
-                // then the sumbaster, in that same function, should communicate back its coverage areas to each slave processor in chunks of same size as local IDs
-                // finally, in the comp_rates_micro function, each processor will have what is needed to compute rates
             }
+            // submaster communicates back its areas to each slave processor in chunks of same size as local IDs
+            cover_from_submaster(pos);
         }
     }
+    
     
     // EACH PROCESSOR COMPUTES RATES OF EACH EVENT AND CUMULATIVES DEPENDING ON MECHANISM
     rate_each = new double[nID_each[key]];  //array with processor-specific rates. These will be passed to the submaster which will sort them to match ids into the rates vector. Then this array can be forgotten
@@ -428,6 +429,7 @@ void Fix_delete::sample(int pos)
     delete [] IDuns;
     delete [] IDpos;
     delete [] nID_each;
+    delete [] tCF;
 
     
     if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
@@ -795,8 +797,10 @@ void Fix_delete::submaster_comp_cover(int pos)
     for (int i=0; i<SARpos[nploc-1]+nlocR_each[nploc-1]; i++){
         int id1 = SAR[i][0];
         int id2 = SAR[i][1];
-        bool flag_t1 = (SAR[i][2] ==fix->fKMCptype[pos]);
-        bool flag_t2 = (SAR[i][3]==fix->fKMCptype[pos]);
+        int t1 = SAR[i][2];
+        int t2 = SAR[i][3];
+        bool flag_t1 = (t1 == fix->fKMCptype[pos]);
+        bool flag_t2 = (t2 == fix->fKMCptype[pos]);
         int up1,up2;   // positions of particles 1 and 2 in pair in unsorted vectors (ID and radii)
         up1 = -1;
         up2 = -1;
@@ -853,9 +857,15 @@ void Fix_delete::submaster_comp_cover(int pos)
             Aij = M_PI * Rij * Rij;
             
             // weigh the contact cross section by the distance
+            double Dij; // arithmetic average of diameters in contact
+            Dij = Runs[up1] + Runs[up2];
+            double efij = chem->ef[t1-1][t2-1];
+            double e0ij = chem->e0[t1-1][t2-1];
             
+            if (Dsub[i] > efij * Dij)        Aij = 0.;
+            else if (Dsub[i] > e0ij * Dij)   Aij *= (efij - Dsub[i]/Dij) / (efij- e0ij);
 
-            // if first atom is of correct type for this fix
+            // if first atom is of correct type for this fix, add contact area to the contact fraction arrays (still areas here; will be converted to area fractions later on below)
             if (flag_t1)  CFuns[up1] += Aij;
             if (flag_t2)  CFuns[up2] += Aij;
         }
@@ -864,12 +874,73 @@ void Fix_delete::submaster_comp_cover(int pos)
     
     for (int i=0; i<Ng; i++){
         // convert coverage areas to coverage fractions
-        CFuns[i] /= 4.*M_PI*Runs[i]*Runs[i];
+        CFuns[i] /= 4.*M_PI*Runs[i]*Runs[i];    // here we divide contact area by particle surface area
+        CFuns[i] /= 3.;    // this is a correction such that a speherical particle in contact with 12 equally sized neighbours in an FCC lattice ends up having coverage fraction = 1   (If we did not divide by 3, such a bulk particle would have a coverage fraction of 300%)
+    }
+    
+    
+    if (msk->wplog) {
+        std::string msg = "\nPer-particle coverage fraction";
+        output->toplog(msg);
+        msg="";
+        // pring ids and covrage fractions of unsorted atoms
+        output->toplog("npos id CFuns");
+        std::ostringstream ss;
+        for (int i=0; i<Ng; i++){
+            ss << i;        msg = ss.str()+" ";   ss.str("");   ss.clear();
+            ss << IDuns[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+            ss << CFuns[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+            output->toplog(msg);
+        }
         
-        //if (CAuns[i] > 4.*M_PI*Runs[i]*Runs[i]) Cuns[i] = 4.*M_PI*Runs[i]*Runs[i];
     }
     
 }
+
+
+
+// ---------------------------------------------------------------
+//  each processor in the subcommunicator receives its chunk of unsorted coverage area fractions from the submaster
+void Fix_delete::cover_from_submaster(int pos)
+{
+    
+    if (key==0) {
+        for (int dest=1; dest<nploc; dest++) {
+            MPI_Send(&CFuns[IDpos[dest]], nID_each[dest], MPI_DOUBLE, dest, 1, (universe->subcomm));
+        }
+        tCF = new double[nID_each[0]];
+        for (int i=0; i<nID_each[0]; i++){
+            tCF[i] = CFuns[i];
+        }
+    }
+    else{
+        tCF = new double[nID_each[key]];
+        int source = 0;
+        MPI_Recv(&tCF[0], nID_each[key], MPI_DOUBLE, source, 1, (universe->subcomm), &status);
+    }
+    
+    // Each processor prints its coverage fraction array to its log file
+    if (msk->wplog) {
+        std::string msg = "\nNumber of local coverage area fractions: ";
+        std::ostringstream ss;    ss << nID_each[key];   msg = msg+ss.str();
+        output->toplog(msg);
+        msg="";   ss.str("");   ss.clear();
+        output->toplog("\npos id tCF");
+        //sleep(1);
+        for (int i=0; i<nID_each[key]; i++){
+            //sleep(1);
+            ss << i;        msg = ss.str()+" ";   ss.str("");   ss.clear();
+            ss << tID[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+            ss << tCF[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+            output->toplog(msg);
+            msg="";
+        }
+    }
+    
+    sleep(1);
+}
+
+
 
 
 

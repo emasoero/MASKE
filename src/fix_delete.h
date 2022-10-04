@@ -74,6 +74,7 @@ namespace MASKE_NS {
         double *aID;    // array with size natoms, with IDs from lammps but meaningful entries only for atoms in current processor
         std::vector<int> tID;   // proc-specific IDs
         std::vector<double> tR, tE;// same as aR and aE but with meaningful entries only for atoms in current processor
+        double *tCF; // coverage fractions of atoms in current processor
         int naP;      // number of atoms in current fix in current processor
         int *tIDarr ;   // array of size naP with unsorted IDs of atoms in current processor only
         int *nID_each;     // array storing number of IDs in each processor: used by submaster for assembly and back
@@ -113,7 +114,7 @@ namespace MASKE_NS {
         void comp_rates_micro(int);     // each proc computes deletion rates for a "micro" type of mechanism
         void pair_arr_to_submaster(int);     // each proc communicates its portion of pair array (from neighbour list) to the submaster - used by style "micro" only, to compute coverage areas
         void submaster_comp_cover(int);     // The submaster computes coverage areas of particles in the current fix and communicates them back to the other processors in its subcomm
-        
+        void cover_from_submaster(int);     // each processor in the subcommunicator receives its chunk of unsorted coverage area fractions from the submaster
         
         
 	};
