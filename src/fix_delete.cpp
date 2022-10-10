@@ -871,11 +871,11 @@ void Fix_delete::submaster_comp_cover(int pos)
         }
         
     }
-    
+    double nbulk = 12.;   // number of particles in the bulk for a monodisperse system of particls with type selected for dissolution. In future implementations, this could be passed as an input when calling the fix_delete (becasue it applies to all particles to be considered for deletion here)
     for (int i=0; i<Ng; i++){
         // convert coverage areas to coverage fractions
         CFuns[i] /= 4.*M_PI*Runs[i]*Runs[i];    // here we divide contact area by particle surface area
-        CFuns[i] /= 3.;    // this is a correction such that a speherical particle in contact with 12 equally sized neighbours in an FCC lattice ends up having coverage fraction = 1   (If we did not divide by 3, such a bulk particle would have a coverage fraction of 300%)
+        CFuns[i] *= 4./nbulk;    // this is a correction such that a speherical particle in contact with 12 equally sized neighbours in an FCC lattice ends up having coverage fraction = 1   (If we did not divide by 3, such a bulk particle would have a coverage fraction of 300%)
     }
     
     
@@ -1160,8 +1160,8 @@ void Fix_delete::comp_rates_allpar(int pos)
 void Fix_delete::comp_rates_micro(int pos)
 {
     
-    // for all particles in current ("each") processor
-    for (int i =0; i<nID_each[key]; i++) {
+    // for all particles in current processor, compute the dissolution rate
+    for (int i=0; i<nID_each[key]; i++) {
         
         if (msk->wplog) {
             std::string msg = "\nPARTICLE ";
@@ -1170,9 +1170,8 @@ void Fix_delete::comp_rates_micro(int pos)
             output->toplog(msg);
         }
         
-       
         double Pv = 4./3. * M_PI * tR[i] * tR[i] * tR[i];  // particle volume  FOR SPHERICAL
-        double Ps = 4. * M_PI * tR[i] * tR[i];  // particle surface   FOR SPHERICAL
+        //double Ps = 4. * M_PI * tR[i] * tR[i];  // particle surface   FOR SPHERICAL - this was used to compute changes in surface area per molecule, but in this micro mechanism, surface energy is not considered (particle dissolution is assumed to be kink-driven)
         
         int nrt = 1;    //number of reaction in series in chain
         double nrv = 1;    // number of unit reactions or unit chains in particle volume
@@ -1211,28 +1210,41 @@ void Fix_delete::comp_rates_micro(int pos)
   
         
         
-        
-        
-         // change of surface energy and interaction energy per reaction unit (single reaction or chain: to be further subdivided per step in chain later on)
-        double DSpu;  // negative becasue delation removes energy
+         // change of surface energy (not needed for this micro mechanism, which is kink-driven) and interaction energy per reaction unit (single reaction or chain: to be further subdivided per step in chain later on)
+        //double DSpu;  // negative becasue delation removes energy
         double DUpu;;  // change in energy caused by removing the particle
         
         if (strcmp(chem->mechinter[mid].c_str(),"int_1lin")==0)  {
-            DSpu = -Ps/pow((double)nrv,1./3.);
-            DUpu = -2.*tE[i]/pow((double)nrv,1./3.);
+            //DSpu = -Ps/pow((double)nrv,1./3.);
+            //DUpu = -2.*tE[i]/pow((double)nrv,1./3.);
         }
         else if (strcmp(chem->mechinter[mid].c_str(),"int_2lin")==0) {
-            DSpu = -Ps/pow((double)nrv,68.5/100.);      // power artificailly tuned to get hetero nucleation in cg sim... just to fiddle around: do not use those in a proper simulation
-            DUpu = -2.*tE[i]/pow((double)nrv,68.5/100.);
+            //DSpu = -Ps/pow((double)nrv,68.5/100.);      // power artificailly tuned to get hetero nucleation in cg sim... just to fiddle around: do not use those in a proper simulation
+            //DUpu = -2.*tE[i]/pow((double)nrv,68.5/100.);
         }
         else{
-            DSpu = -Ps/((double)nrv);
+            //DSpu = -Ps/((double)nrv);
             DUpu = -2.*tE[i]/((double)nrv);
         }
         
         
         // number of repetitions of reaction of chain to delete particle. For "allpar" just 1.
-        int nrx = 1;
+        int nrL = 1;    // number of layers to dissolve (it will depend on fractional coverage area)
+        int nrS = 1;    // number of units to dissolve a full layer (depends on density of kinks per layer)
+        
+        if (chem->mechchain[mid])  nrS = 1./chem->ch_Fk[chID];
+        else nrS = 1./chem->rx_Fk[rxID];
+           
+        
+        
+        
+        int nrx = 1;     // TO BE DELETED: JUST A PLACEHOLDER TO COMPILE THE MICRO MECHANISM WHILE IMPLEMENTING IT
+
+        
+        //MUST ADD INTERNAL STRAIN ENRGY PER PARTICLE TO DUpu ABOVE
+        
+        // MUST INCLUDE INTERNAL POROSITY OF PHASE WHEN COMPUTING nrv ABOVE   (LATER, ALSO CONSIDER PORES WHEN UPDATING A SOLUTION)
+        
         
         // compute rate looking at each reaction in the mechanism sequence
         double ri=0. , DTi = 0., DTtot = 0.;  // rate of each reaction in sequence, associated time increement and total cumulative time increment
@@ -1277,8 +1289,9 @@ void Fix_delete::comp_rates_micro(int pos)
                 double Vt = - (chem -> rx_dVt_fgd[rxid]);  // Tributary volume of fgd deleted by the reaction at the current step in the chain. Minus sign because dV of fdg < 0 for a proper dissolution reaction.
                 
                //Delta surface and Delta U are assumed to be proportional to the number of reaction/chain units and relative importance of each step in chain
-                double DSi = DSpu;
-                if (chem->mechchain[mid]) DSi *= (chem->ch_rdV_fgd[chID][k]);
+                double DSi = 0.;     // TO BE DELETED: JUST A PLACEHOLDER TO COMPILE THE MICRO MECHANISM WHILE IMPLEMENTING IT
+               // double DSi = DSpu;
+               // if (chem->mechchain[mid]) DSi *= (chem->ch_rdV_fgd[chID][k]);
                 
                 double DUi = 0.;
                 if (strcmp(chem->mechinter[mid].c_str(),"int_no")!=0) {
@@ -1293,7 +1306,7 @@ void Fix_delete::comp_rates_micro(int pos)
                     msg += "; r0 ";    ss << r0;   msg += ss.str();    ss.str(""); ss.clear();
                     msg += "; Qreac ";    ss << Qreac;   msg += ss.str();    ss.str(""); ss.clear();
                     msg += "; Sen ";    ss << Sen;   msg += ss.str();    ss.str(""); ss.clear();
-                    msg += "; DSi ";    ss << DSi;   msg += ss.str();    ss.str(""); ss.clear();
+                    //msg += "; DSi ";    ss << DSi;   msg += ss.str();    ss.str(""); ss.clear();
                     msg += "; DUi ";    ss << DUi;   msg += ss.str();    ss.str(""); ss.clear();
                     msg += "; Vti ";    ss << Vt;   msg += ss.str();    ss.str(""); ss.clear();
                 }

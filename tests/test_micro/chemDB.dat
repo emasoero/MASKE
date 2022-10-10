@@ -25,27 +25,19 @@ molecule CaCO3      0.3943535  0.3943535	1.071942986 	0    	0     	0	0	0	0	null
 molecule CSH(II)      0.653534355  0.653534355	1.064791198 	0    	0     	0	0	0	0	null 
 molecule CSH(II)gel      0.653534355  0.653534355	1.064791198 	0    	0     	0	0	0	0	null
 
+
+
 # molecule_modify allows adding more parameters to molecules. First argument is type of parameters to be added. Only "solid_par" allowed so far; these are:
-# Emod = Young modulus of the solid phase 
-# Gmod = Shear modulus of the solid phase
-# Ustrain = Background strain energy of the solid phase (e.g. due to dislocations and other defects)
-# pors = intrinsic internal porosity in the solid phase
-# fkink = fraction of kink sites on surface
+# Em = Young modulus of the solid phase 
+# Gm = Shear modulus of the solid phase
+# Us = Background strain energy density of the solid phase (e.g. due to dislocations and other defects)
+# Pr = intrinsic internal porosity in the solid phase
+# Fk = fraction of kink sites on surface
 
-# =============
-# =============
-# =============
-# =============
-# UNCOMMENT WHEN IMPLEMENTED!!
-# molecule_modify solid_par Ca(OH)2 38000 16000 0 0 0.2
-# molecule_modify solid_par CaCO3 69900 35000 0 0 0.2 
-# molecule_modify solid_par CSH(II) 63600 21000 0 0 0.2
-# molecule_modify solid_par CSH(II)gel 19588 6468  0 0.346 0.2
-# =============
-# =============
-# =============
-# =============
-
+molecule_modify Ca(OH)2 Em 38000 Gm 16000 Us 0 Pr 0 Fk 0.2
+molecule_modify CaCO3 Em 69900 Gm 35000 Us 0 Pr 0 Fk 0.2 
+molecule_modify CSH(II) Em 63600 Gm 21000 Us 0 Pr 0 Fk 0.2
+molecule_modify CSH(II)gel Em 19588 Gm 6468  Us 0 Pr 0.346 Fk 0.2
 
 
 #  E moduli from interaction potential tables, 
@@ -126,7 +118,7 @@ reax CaCO3_diss   simple gxSolid DG_CaCO3_diss 	3.31157E-09  0.5 bkg Ca+2 +1 CO3
 reax CSHdis    simple gxSolid DG_CSHdis 1e-20 0 bkg Ca+2 +2  H4SiO4 +1  OH- +4  H2O +1   fgd CSH(II) -1 solvent H2O
 
 reax CSHprec    simple gxSolid DG_CSHprec 1e+20 0 bkg Ca+2 -2  H4SiO4 -1  OH- -4  H2O -1   fgd CSH(II) +1  solvent H2O
- 
+
 
 # OLDER REACTIONS
 
@@ -141,11 +133,17 @@ reax CSHprec    simple gxSolid DG_CSHprec 1e+20 0 bkg Ca+2 -2  H4SiO4 -1  OH- -4
 #reax C3S_prec_test simple g_C3Sdis_test DG_gC3Sprec_test 7.092e+17   0.5    bkg Ca -3 H3SiO4 -1 H2O +5 OH -5    fgd C3S +1   solvent H2O
 
 
+molecule_modify CH_dis Fk 0.2
+molecule_modify CSHdis Fk 0.2
+
+
 
 # Reaction chains -- list of reaction types contains number of reactions per type: this number occurs in parallel
 #reax C3Sdis_ch0 chain  parall C3S_dis 1  C3S_dis 1
 #reax C3Sdis_ch1 chain series C3S_dis 1  C3S_dis 2  CSHI_dis 1
 
+chain_modify C3Sdis_ch1 Fk 0.2
+ 
 
 
 # Surface energy -- rules to compute surface energy depending on particle and background compositions
@@ -174,9 +172,10 @@ sen sen_CSH const 87.6
 # mech   C3Sdel_apnet  allpar net   C3S_dis_Bul  sen_C3S  int_lin
 
 
-#   mech  name type net/straight reax surface_nrg interact_interpol coverage_calc_style param_filename 
-mech   CHdel_micro  micro net   CH_dis  sen_CH  int_uni pair cover_param.dat
-mech   CSHdel_micro  micro net   CSHdis  sen_CSH  int_uni pair cover_param.dat
+#   mech  name type net/straight reax surface_nrg interact_interpol coverage_calc_style param_filename energy_calc
+# 	energy_calc can be "energy" or "stress". If "energy", then the user must adopt interaction potentials with zero energy at equilibrium (deepest well) and the code will directly use the LAMMMPS energy/pair to compute rate contribution from interactions. If "stress", the user can adopt any potential and MASKE will use the LAMMPS stress/atom to work out strain energy from the 6 stresses (with per-molecule E and G defined above and with averaging volume = particle volume).  NB: only "energy" implemented for now.
+mech   CHdel_micro  micro net   CH_dis  sen_CH  int_uni pair cover_param.dat energy
+mech   CSHdel_micro  micro net   CSHdis  sen_CSH  int_uni pair cover_param.dat energy
 
 # int_uni = uniform distribution of intraction energy from LAMMPS for all molecules in cg particle
 # coverage_calc_style is either "pair" or other things to be implemented, thinking of "bond" or "ellipse" or "3body" etc. If "pair", the code reads the pair neighbour list from LAMMPS. If "bond" it should use the bond topology. If "ellipse" or else, we would probably need pseudo-potentials

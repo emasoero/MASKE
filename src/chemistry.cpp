@@ -84,6 +84,8 @@ void Chemistry::readDB(std::string fname)
             else if (strcmp(word.c_str(), "reax") == 0)   addreax();
             else if (strcmp(word.c_str(), "sen") == 0)   addsen();
             else if (strcmp(word.c_str(), "mech") == 0)   addmech();
+            else if (strcmp(word.c_str(), "molecule_modify") == 0)   mol_modify();
+            else if (strcmp(word.c_str(), "reaction_modify") == 0)   reax_modify();
             else if (!word.empty()){
                 std::string msg = "\nERROR: Unknown command in chemistry database file: "+word+"\n\n";
                 error->errsimple(msg);
@@ -147,8 +149,101 @@ void Chemistry::addmolecule()
     
       //just a check
     if (me==MASTER) fprintf(screen," New molecule added: %s %f %f %f %f %f\n",molnames[Nmol-1].c_str(),mol_arad[Nmol-1],mol_acir[Nmol-1],mol_vapp[Nmol-1],mol_ahyd[Nmol-1],mol_z[Nmol-1]);
+    
+    // assigning default valus to additional properties
+    mol_Em.push_back(1.);
+    mol_Gm.push_back(1.);
+    mol_Us.push_back(0.);
+    mol_Pr.push_back(0.);
+    
+    //just a check
+  if (me==MASTER) fprintf(screen," Defaul additional propertis for the molecule: %f %f %f %f %f\n",mol_Em[Nmol-1],mol_Gm[Nmol-1],mol_Us[Nmol-1],mol_Pr[Nmol-1],mol_Fk[Nmol-1]);
+  
+
 }
 
+
+// ---------------------------------------------------------------
+// Add parameters to existing molecule
+void Chemistry::mol_modify()
+{
+    // read molecule name
+    std::string newname;
+    ss >> newname;
+    
+    // find molecule ID
+    int molID = -1;
+    for (int i=0; i<molnames.size(); i++){
+        if (strcmp(newname.c_str(), molnames[i].c_str()) == 0) molID = i;
+    }
+    if (molID == -1){
+        std::string msg = "\nERROR: Unknown molecule invoked by molecule_modify command: "+newname+"\n\n";
+        error->errsimple(msg);
+    }
+    
+    // read through the rest of entries and, if recognized, record value for corresponding property
+    while (ss >> newname){
+        if (strcmp(newname.c_str(), "Em") == 0)  {
+            ss >> mol_Em[molID];
+            if (me==MASTER) fprintf(screen," Added property for molecule %s: Em = %f\n",molnames[molID].c_str(),mol_Em[molID]);
+        }
+        else if (strcmp(newname.c_str(), "Gm") == 0)  {
+            ss >> mol_Gm[molID];
+            if (me==MASTER) fprintf(screen," Added property for molecule %s: Gm = %f\n",molnames[molID].c_str(),mol_Gm[molID]);
+        }
+        else if (strcmp(newname.c_str(), "Us") == 0)  {
+            ss >> mol_Us[molID];
+            if (me==MASTER) fprintf(screen," Added property for molecule %s: Us = %f\n",molnames[molID].c_str(),mol_Us[molID]);
+        }
+        else if (strcmp(newname.c_str(), "Pr") == 0)  {
+            ss >> mol_Pr[molID];
+            if (me==MASTER) fprintf(screen," Added property for molecule %s: Pr = %f\n",molnames[molID].c_str(),mol_Pr[molID]);
+        }
+        else if (strcmp(newname.c_str(), "Fk") == 0)  {
+            ss >> mol_Fk[molID];
+            if (me==MASTER) fprintf(screen," Added property for molecule %s: Fk = %f\n",molnames[molID].c_str(),mol_Fk[molID]);
+        }
+        else {
+            std::string msg = "\nERROR: Unknown molecule property invoked by molecule_modify command for molecule  "+molnames[molID]+": "+newname+"\n\n";
+            error->errsimple(msg);
+        }
+    }
+
+}
+
+
+
+// ---------------------------------------------------------------
+// Add parameters to existing reaction
+void Chemistry::reax_modify()
+{
+    // read reaction name
+    std::string newname;
+    ss >> newname;
+    
+    // find reaction ID
+    int rxID = -1;
+    for (int i=0; i<rxnames.size(); i++){
+        if (strcmp(rxnames.c_str(), rxnames[i].c_str()) == 0) rxID = i;
+    }
+    if (rxID == -1){
+        std::string msg = "\nERROR: Unknown reaction invoked by reaction_modify command: "+newname+"\n\n";
+        error->errsimple(msg);
+    }
+    
+    // read through the rest of entries and, if recognized, record value for corresponding property
+    while (ss >> newname){
+        if (strcmp(newname.c_str(), "Fk") == 0)  {
+            ss >> rx_Fk[rxID];
+            if (me==MASTER) fprintf(screen," Added property to reaction %s: Fk = %f\n",rxnames[rxID].c_str(),rx_Fk[rxID]);
+        }
+        else {
+            std::string msg = "\nERROR: Unknown molecule property invoked by reaction_modify command for reaction  "+rxnames[rxID]+": "+newname+"\n\n";
+            error->errsimple(msg);
+        }
+    }
+
+}
 
 
 
@@ -455,6 +550,7 @@ void Chemistry::addreax()
         rx_ac_avg.push_back(sum/((double)fvec.size()));
         rx_ac_avv.push_back(pow(rx_dV_fgd.back(),1./3.));
 
+        rx_Fk.push_back(1.);     // Initialising kink fraction for new reaction. This can be modified later via the reaction_modify input command
         
         
         // print read simple reaction to screen to debug
@@ -535,6 +631,8 @@ void Chemistry::addreax()
         }
         ch_rxID.push_back(irxvec);
         ch_nrx.push_back(nrxvec);
+        
+        ch_Fk.push_back(1.);    // Initialising kink fraction for the chain. This can be changed later using chain_modify in the chemDB input file
         
         // compute relative volume change due to each reaction in chain
         for (int i=0; i<irxvec.size(); i++) {
@@ -766,16 +864,17 @@ void Chemistry::addmech()
             fprintf(screen,"PROC %d: Reading additional parameters file %s\n",me,param.c_str());
 
             while (!inPfile.eof()) {
+                std::stringstream iss;
                 std::string line, word;
                 std::getline (inPfile, line);
-                ss.clear();
-                ss.str(line);
+                iss.clear();
+                iss.str(line);
                 fprintf(screen,"PROC %d: Reading line: %s\n",me,line.c_str());
                 int it = -1;
                 int jt = -1;
                 int rcol = 0;
                 bool errflag = false;
-                if (ss >> word){
+                if (iss >> word){
                     rcol = 1;
                     if (strncmp(word.c_str(), "#", 1) == 0) int foo = 1; // Do nothing. Lines starting with # are comments
                     else {
@@ -792,7 +891,7 @@ void Chemistry::addmech()
                         
                         // read j type
                         bool jstar = false;
-                        if (ss >> word){
+                        if (iss >> word){
                             if (strcmp(word.c_str(), "*") == 0) jstar = true;
                             else {
                                 jt = atoi(word.c_str());
@@ -809,7 +908,7 @@ void Chemistry::addmech()
                         // record e0 value(s)
                         // NB: "-1" everywhere because LAMMPS types start from 1 and arrays in C++ start from 0
                         double val;
-                        if (ss >> val){
+                        if (iss >> val){
                             if (!istar && !jstar){
                                 e0[it-1][jt-1] = val;
                                 e0[jt-1][it-1] = val;
@@ -839,7 +938,7 @@ void Chemistry::addmech()
                         
                         // record ef value(s)
                         // NB: "-1" everywhere because LAMMPS types start from 1 and arrays in C++ start from 0
-                        if (ss >> val){
+                        if (iss >> val){
                             if (!istar && !jstar){
                                 ef[it-1][jt-1] = val;
                                 ef[jt-1][it-1] = val;
@@ -869,7 +968,7 @@ void Chemistry::addmech()
                         
                         // record gij value(s)
                         // NB: "-1" everywhere because LAMMPS types start from 1 and arrays in C++ start from 0
-                        if (ss >> val){
+                        if (iss >> val){
                             if (!istar && !jstar){
                                 gij[it-1][jt-1] = val;
                                 gij[jt-1][it-1] = val;
@@ -910,6 +1009,16 @@ void Chemistry::addmech()
             }
         }
         
+        
+        //fprintf(screen,"DEBUG 0: PROC %d param value is %s",me,param.c_str());
+        if(ss >> param) tempvec.push_back(param);   // interaction energy calculator style ("energy" or "stress")
+        //fprintf(screen,"DEBUG 1: PROC %d param value is %s",me,param.c_str());
+        //sleep (1);
+    
+        if (strcmp(param.c_str(),"energy") != 0){
+            msg = "ERROR: Unknown energy calculator style \""+param+"\". For now, only style \"energy\" has been implemented. Future style may be \"stress\".\n";
+            error->errsimple(msg);
+        }
         
 
     }
