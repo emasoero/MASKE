@@ -37,7 +37,7 @@ namespace MASKE_NS {
 		
         std::vector<std::string> molnames;
         std::vector<double> mol_arad, mol_acir, mol_rcr0, mol_vapp, mol_ahyd, mol_bDH, mol_z;  // molecule linear sizes in radial and circumferential directions (when pertaining to a solid particle), ratio of interaction cutoff to equilibrium distance to go from molecular volume to tributary volume, apparent volume of molecule in solution, a and b parameters for Debye Huckel, molecule charge
-        std::vector<double> mol_Em, mol_Gm, mol_Us, mol_Pr, mol_Fk;   // additional molecule proporties that can be added via the "molecule_modify" command in chemDB. This list makes sense for SOLID phases. For liquid ones, other properties may be implemented in the future. Em = Young modulus; Gm = shear modulus; Us = internal strain energy in a particle; Pr = internal porosity in a particle; Fk = fraction of kinks on the phase's surface
+        std::vector<double> mol_Em, mol_Gm, mol_Us, mol_Pr;   // additional molecule proporties that can be added via the "molecule_modify" command in chemDB. This list makes sense for SOLID phases. For liquid ones, other properties may be implemented in the future. Em = Young modulus; Gm = shear modulus; Us = internal strain energy in a particle; Pr = internal porosity in a particle; Fk = fraction of kinks on the phase's surface
 	std::vector<int> mol_nufeb; // nufeb's chemical species index
 	std::vector<int> mol_nufeb_form; // nufeb's chemical species form index: 0 = not hydrated, 1 = fully protonated, 2 = 1st deprotonated, 3 = 2nd deprotonated, 4 = 3rd deprotonated
 	std::vector<std::string> mol_spec; // speciation element name  (I guess this is the name of the corresponding SOLUTION_MASTER_SPECIES in phreeqc)
@@ -94,6 +94,7 @@ namespace MASKE_NS {
         void addmech();
         void mol_modify();
         void reax_modify();
+        void ch_modify();
         void printall();
         double compDGx(int);
         double compgammax(int);

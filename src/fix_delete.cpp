@@ -1233,11 +1233,11 @@ void Fix_delete::comp_rates_micro(int pos)
         int nrS = 1;    // number of units to dissolve a full layer (depends on density of kinks per layer)
         
         if (chem->mechchain[mid])  nrS = 1./chem->ch_Fk[chID];
-        else nrS = 1./chem->rx_Fk[rxID];
+        else nrS = 1./chem->rx_Fk[rxid];
            
         
         
-        
+    
         int nrx = 1;     // TO BE DELETED: JUST A PLACEHOLDER TO COMPILE THE MICRO MECHANISM WHILE IMPLEMENTING IT
 
         

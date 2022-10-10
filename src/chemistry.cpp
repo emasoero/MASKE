@@ -86,6 +86,7 @@ void Chemistry::readDB(std::string fname)
             else if (strcmp(word.c_str(), "mech") == 0)   addmech();
             else if (strcmp(word.c_str(), "molecule_modify") == 0)   mol_modify();
             else if (strcmp(word.c_str(), "reaction_modify") == 0)   reax_modify();
+            else if (strcmp(word.c_str(), "chain_modify") == 0)   ch_modify();
             else if (!word.empty()){
                 std::string msg = "\nERROR: Unknown command in chemistry database file: "+word+"\n\n";
                 error->errsimple(msg);
@@ -199,10 +200,6 @@ void Chemistry::mol_modify()
             ss >> mol_Pr[molID];
             if (me==MASTER) fprintf(screen," Added property for molecule %s: Pr = %f\n",molnames[molID].c_str(),mol_Pr[molID]);
         }
-        else if (strcmp(newname.c_str(), "Fk") == 0)  {
-            ss >> mol_Fk[molID];
-            if (me==MASTER) fprintf(screen," Added property for molecule %s: Fk = %f\n",molnames[molID].c_str(),mol_Fk[molID]);
-        }
         else {
             std::string msg = "\nERROR: Unknown molecule property invoked by molecule_modify command for molecule  "+molnames[molID]+": "+newname+"\n\n";
             error->errsimple(msg);
@@ -224,7 +221,7 @@ void Chemistry::reax_modify()
     // find reaction ID
     int rxID = -1;
     for (int i=0; i<rxnames.size(); i++){
-        if (strcmp(rxnames.c_str(), rxnames[i].c_str()) == 0) rxID = i;
+        if (strcmp(newname.c_str(), rxnames[i].c_str()) == 0) rxID = i;
     }
     if (rxID == -1){
         std::string msg = "\nERROR: Unknown reaction invoked by reaction_modify command: "+newname+"\n\n";
@@ -238,13 +235,43 @@ void Chemistry::reax_modify()
             if (me==MASTER) fprintf(screen," Added property to reaction %s: Fk = %f\n",rxnames[rxID].c_str(),rx_Fk[rxID]);
         }
         else {
-            std::string msg = "\nERROR: Unknown molecule property invoked by reaction_modify command for reaction  "+rxnames[rxID]+": "+newname+"\n\n";
+            std::string msg = "\nERROR: Unknown reaction property invoked by reaction_modify command for reaction  "+rxnames[rxID]+": "+newname+"\n\n";
             error->errsimple(msg);
         }
     }
 
 }
 
+// Add parameters to existing chain
+void Chemistry::ch_modify()
+{
+    // read chain name
+    std::string newname;
+    ss >> newname;
+    
+    // find chain ID
+    int chID = -1;
+    for (int i=0; i<chnames.size(); i++){
+        if (strcmp(newname.c_str(), chnames[i].c_str()) == 0) chID = i;
+    }
+    if (chID == -1){
+        std::string msg = "\nERROR: Unknown chain invoked by chain_modify command: "+newname+"\n\n";
+        error->errsimple(msg);
+    }
+    
+    // read through the rest of entries and, if recognized, record value for corresponding property
+    while (ss >> newname){
+        if (strcmp(newname.c_str(), "Fk") == 0)  {
+            ss >> ch_Fk[chID];
+            if (me==MASTER) fprintf(screen," Added property to chain %s: Fk = %f\n",chnames[chID].c_str(),ch_Fk[chID]);
+        }
+        else {
+            std::string msg = "\nERROR: Unknown chain property invoked by chain_modify command for chain  "+chnames[chID]+": "+newname+"\n\n";
+            error->errsimple(msg);
+        }
+    }
+
+}
 
 
 // ---------------------------------------------------------------

@@ -32,12 +32,11 @@ molecule CSH(II)gel      0.653534355  0.653534355	1.064791198 	0    	0     	0	0	
 # Gm = Shear modulus of the solid phase
 # Us = Background strain energy density of the solid phase (e.g. due to dislocations and other defects)
 # Pr = intrinsic internal porosity in the solid phase
-# Fk = fraction of kink sites on surface
 
-molecule_modify Ca(OH)2 Em 38000 Gm 16000 Us 0 Pr 0 Fk 0.2
-molecule_modify CaCO3 Em 69900 Gm 35000 Us 0 Pr 0 Fk 0.2 
-molecule_modify CSH(II) Em 63600 Gm 21000 Us 0 Pr 0 Fk 0.2
-molecule_modify CSH(II)gel Em 19588 Gm 6468  Us 0 Pr 0.346 Fk 0.2
+molecule_modify Ca(OH)2 Em 38000 Gm 16000 Us 0 Pr 0
+molecule_modify CaCO3 Em 69900 Gm 35000 Us 0 Pr 0
+molecule_modify CSH(II) Em 63600 Gm 21000 Us 0 Pr 0
+molecule_modify CSH(II)gel Em 19588 Gm 6468  Us 0 Pr 0.346
 
 
 #  E moduli from interaction potential tables, 
@@ -91,15 +90,6 @@ DGx DG_CSHprec const -44.4  cx 0.6022  dim 2
 #   = DGxdis above + kT ln(Keq_dis) with Keq_dis = 1e-20 as below
 
 
-
-
-
-
-
-
-
-
-
 #  CHEMICAL REACTIONS
 # reax name  style  args keywords
 # style can be simple or chain.
@@ -132,9 +122,11 @@ reax CSHprec    simple gxSolid DG_CSHprec 1e+20 0 bkg Ca+2 -2  H4SiO4 -1  OH- -4
 #reax C3S_dis_test simple g_C3Sdis_test DG_gC3Sdis_test 1.41e-18   0.5    bkg Ca +3 H3SiO4 +1 H2O -5 OH +5    fgd C3S -1   solvent H2O
 #reax C3S_prec_test simple g_C3Sdis_test DG_gC3Sprec_test 7.092e+17   0.5    bkg Ca -3 H3SiO4 -1 H2O +5 OH -5    fgd C3S +1   solvent H2O
 
+# reaction_modify allows adding more parameters to reactions. First argument is type of parameters to be added. these are:
+# Fk = fraction of kink sites on surface
 
-molecule_modify CH_dis Fk 0.2
-molecule_modify CSHdis Fk 0.2
+reaction_modify CH_dis Fk 0.2
+reaction_modify CSHdis Fk 0.2
 
 
 
@@ -143,8 +135,6 @@ molecule_modify CSHdis Fk 0.2
 #reax C3Sdis_ch1 chain series C3S_dis 1  C3S_dis 2  CSHI_dis 1
 
 chain_modify C3Sdis_ch1 Fk 0.2
- 
-
 
 # Surface energy -- rules to compute surface energy depending on particle and background compositions
 
