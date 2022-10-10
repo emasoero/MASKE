@@ -1212,7 +1212,8 @@ void Fix_delete::comp_rates_micro(int pos)
         
          // change of surface energy (not needed for this micro mechanism, which is kink-driven) and interaction energy per reaction unit (single reaction or chain: to be further subdivided per step in chain later on)
         //double DSpu;  // negative becasue delation removes energy
-        double DUpu;;  // change in energy caused by removing the particle
+        double DUpu;  // change in energy caused by removing the particle
+        double DUs;     // change in internal strain energy
         
         if (strcmp(chem->mechinter[mid].c_str(),"int_1lin")==0)  {
             //DSpu = -Ps/pow((double)nrv,1./3.);
@@ -1232,18 +1233,18 @@ void Fix_delete::comp_rates_micro(int pos)
         int nrL = 1;    // number of layers to dissolve (it will depend on fractional coverage area)
         int nrS = 1;    // number of units to dissolve a full layer (depends on density of kinks per layer)
         
-        if (chem->mechchain[mid])  nrS = 1./chem->ch_Fk[chID];
-        else nrS = 1./chem->rx_Fk[rxid];
+        if (chem->mechchain[mid])  nrS = round(1./chem->ch_Fk[chID]);
+        else nrS = round(1./chem->rx_Fk[rxid]);
            
+        
+        // MUST INCLUDE INTERNAL POROSITY OF PHASE WHEN COMPUTING nrv ABOVE   (LATER, ALSO CONSIDER PORES WHEN UPDATING A SOLUTION). See chemistry.cpp at line 550 for notes 
         
         
     
         int nrx = 1;     // TO BE DELETED: JUST A PLACEHOLDER TO COMPILE THE MICRO MECHANISM WHILE IMPLEMENTING IT
 
         
-        //MUST ADD INTERNAL STRAIN ENRGY PER PARTICLE TO DUpu ABOVE
-        
-        // MUST INCLUDE INTERNAL POROSITY OF PHASE WHEN COMPUTING nrv ABOVE   (LATER, ALSO CONSIDER PORES WHEN UPDATING A SOLUTION)
+      
         
         
         // compute rate looking at each reaction in the mechanism sequence
@@ -1297,6 +1298,12 @@ void Fix_delete::comp_rates_micro(int pos)
                 if (strcmp(chem->mechinter[mid].c_str(),"int_no")!=0) {
                     DUi = DUpu;
                     if (chem->mechchain[mid]) DUi *= (chem->ch_rdV_fgd[chID][k]);
+                    
+                    // Add change in strain energy internal to the molecules
+                    for (int j=0; j<chem->fgd_molID[rxid].size(); j++){
+                        int molid = chem->fgd_molID[rxid][j];
+                        DUi += chem->mol_Us[molid] * chem->mol_vm[molid] * chem->fgd_nmol[rxid][j];
+                    }
                 }
                 
                 double r0 = kappa * KT / msk->hpl / gammax * cx * exp(-DGx / KT);

@@ -121,6 +121,10 @@ void Chemistry::addmolecule()
     ss >> size;
     mol_acir.push_back(size);
     ss >> size;
+    
+    // compute volume of (solid) molecule
+    mol_vm.push_back(mol_arad[Nmol-1] * mol_acir[Nmol-1] * mol_acir[Nmol-1]);
+    
     mol_rcr0.push_back(size);
     ss >> size;
     mol_vapp.push_back(size);
@@ -149,7 +153,7 @@ void Chemistry::addmolecule()
     
     
       //just a check
-    if (me==MASTER) fprintf(screen," New molecule added: %s %f %f %f %f %f\n",molnames[Nmol-1].c_str(),mol_arad[Nmol-1],mol_acir[Nmol-1],mol_vapp[Nmol-1],mol_ahyd[Nmol-1],mol_z[Nmol-1]);
+    if (me==MASTER) fprintf(screen," New molecule added: %s %f %f %f %f %f %f\n",molnames[Nmol-1].c_str(),mol_arad[Nmol-1],mol_acir[Nmol-1],mol_vapp[Nmol-1],mol_ahyd[Nmol-1],mol_z[Nmol-1], mol_vm[Nmol-1]);
     
     // assigning default valus to additional properties
     mol_Em.push_back(1.);
@@ -158,7 +162,7 @@ void Chemistry::addmolecule()
     mol_Pr.push_back(0.);
     
     //just a check
-  if (me==MASTER) fprintf(screen," Defaul additional propertis for the molecule: %f %f %f %f %f\n",mol_Em[Nmol-1],mol_Gm[Nmol-1],mol_Us[Nmol-1],mol_Pr[Nmol-1],mol_Fk[Nmol-1]);
+  if (me==MASTER) fprintf(screen," Defaul additional propertis for the molecule: %f %f %f %f \n",mol_Em[Nmol-1],mol_Gm[Nmol-1],mol_Us[Nmol-1],mol_Pr[Nmol-1]);
   
 
 }
@@ -242,6 +246,8 @@ void Chemistry::reax_modify()
 
 }
 
+
+// ---------------------------------------------------------------
 // Add parameters to existing chain
 void Chemistry::ch_modify()
 {
@@ -538,9 +544,12 @@ void Chemistry::addreax()
         
         rx_dV_fgd.push_back(0.);
         rx_dVt_fgd.push_back(0.);
-        for (int i=0; i<fvec.size(); i++)  { rx_dV_fgd.back() += (mol_arad[ifvec[i]]*mol_acir[ifvec[i]]*mol_acir[ifvec[i]]) * fvec[i];
-        
+        for (int i=0; i<fvec.size(); i++)  {
+            rx_dV_fgd.back() += (mol_arad[ifvec[i]]*mol_acir[ifvec[i]]*mol_acir[ifvec[i]]) * fvec[i];
             rx_dVt_fgd.back() += (mol_arad[ifvec[i]]*mol_acir[ifvec[i]]*mol_acir[ifvec[i]]) * fvec[i] * mol_rcr0[ifvec[i]];
+            // YOU WILL NEED TO ADD an rx dvp which includes porosity and will be used in fix_delete to compute nrv. Also, porosity should be include in dVt which is used to compute molecular cross-sectional area of rates per unit surface. You must also keep rx_dV which is used to compute dV of chain steps, which are used to distribute interaction energy between steps in chain during fix_delete and fix_nucleate.  NB: you must edit other mechanisms too to use dVp when computing nrv
+            // rx_dVp_fgd.back() += (mol_arad[ifvec[i]]*mol_acir[ifvec[i]]*mol_acir[ifvec[i]]) * fvec[i] * (1+Pr);
+            // rx_dVt_fgd.back() += (mol_arad[ifvec[i]]*mol_acir[ifvec[i]]*mol_acir[ifvec[i]]) * fvec[i] * mol_rcr0[ifvec[i]] * (1+Pr);
         }
 
         rx_ar_min.push_back(0.);

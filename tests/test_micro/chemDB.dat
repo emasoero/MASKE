@@ -30,7 +30,7 @@ molecule CSH(II)gel      0.653534355  0.653534355	1.064791198 	0    	0     	0	0	
 # molecule_modify allows adding more parameters to molecules. First argument is type of parameters to be added. Only "solid_par" allowed so far; these are:
 # Em = Young modulus of the solid phase 
 # Gm = Shear modulus of the solid phase
-# Us = Background strain energy density of the solid phase (e.g. due to dislocations and other defects)
+# Us = Background strain energy density (per unit volume) of the solid phase (e.g. due to dislocations and other defects)
 # Pr = intrinsic internal porosity in the solid phase
 
 molecule_modify Ca(OH)2 Em 38000 Gm 16000 Us 0 Pr 0
@@ -132,7 +132,7 @@ reaction_modify CSHdis Fk 0.2
 
 # Reaction chains -- list of reaction types contains number of reactions per type: this number occurs in parallel
 #reax C3Sdis_ch0 chain  parall C3S_dis 1  C3S_dis 1
-#reax C3Sdis_ch1 chain series C3S_dis 1  C3S_dis 2  CSHI_dis 1
+reax C3Sdis_ch1 chain series CSHdis 1  CSHdis 2  CH_dis 1
 
 chain_modify C3Sdis_ch1 Fk 0.2
 

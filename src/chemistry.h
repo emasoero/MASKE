@@ -37,7 +37,8 @@ namespace MASKE_NS {
 		
         std::vector<std::string> molnames;
         std::vector<double> mol_arad, mol_acir, mol_rcr0, mol_vapp, mol_ahyd, mol_bDH, mol_z;  // molecule linear sizes in radial and circumferential directions (when pertaining to a solid particle), ratio of interaction cutoff to equilibrium distance to go from molecular volume to tributary volume, apparent volume of molecule in solution, a and b parameters for Debye Huckel, molecule charge
-        std::vector<double> mol_Em, mol_Gm, mol_Us, mol_Pr;   // additional molecule proporties that can be added via the "molecule_modify" command in chemDB. This list makes sense for SOLID phases. For liquid ones, other properties may be implemented in the future. Em = Young modulus; Gm = shear modulus; Us = internal strain energy in a particle; Pr = internal porosity in a particle; Fk = fraction of kinks on the phase's surface
+        std::vector<double> mol_vm;  //molecular volume (as radial x circumferential x circumferential  sizes)
+        std::vector<double> mol_Em, mol_Gm, mol_Us, mol_Pr;   // additional molecule proporties that can be added via the "molecule_modify" command in chemDB. This list makes sense for SOLID phases. For liquid ones, other properties may be implemented in the future. Em = Young modulus; Gm = shear modulus; Us = internal strain energy per unit volume for this molecule's phase; Pr = internal porosity in a particle; Fk = fraction of kinks on the phase's surface
 	std::vector<int> mol_nufeb; // nufeb's chemical species index
 	std::vector<int> mol_nufeb_form; // nufeb's chemical species form index: 0 = not hydrated, 1 = fully protonated, 2 = 1st deprotonated, 3 = 2nd deprotonated, 4 = 3rd deprotonated
 	std::vector<std::string> mol_spec; // speciation element name  (I guess this is the name of the corresponding SOLUTION_MASTER_SPECIES in phreeqc)
@@ -55,7 +56,7 @@ namespace MASKE_NS {
         std::vector<double> Keq;    // vectors of equilibrium constants of chemical reactions
         std::vector<double> ki;    // vectors of energy penalty factors for chemical reactions (0 = no penalty, suggested < 1)
         std::vector<double> rx_dV_fgd, rx_dV_bkg, rx_dVt_fgd;    // change of foreground and backgroun volume due to reaction. Change of tributary foreground volume too
-        std::vector<double> ch_dV_fgd, ch_dV_bkg;   // change of foreground and backgroun volume due to reaction chain.
+        std::vector<double> ch_dV_fgd, ch_dV_bkg;   // change of foreground and background volume due to reaction chain.
         std::vector<double> ch_Fk;   // Fraction of kinks associated to a reaction chain (consider this as a parameter whose inverse (Fk^-1) approximates how many chains of reactions you need to carry in series to dissolve one layer). THIS OVERRIDES per-reaction Fk's
         std::vector<std::vector<double> > ch_rdV_fgd, ch_rdV_bkg;    // relative importance in terms of volme change for each step in chain reaction: wil be used in fix_delete sometimes to compute fraction of surface and volume change to be attributed to each reaction in chain
         std::vector<double> ch_arac;    // ratio between radial and circumferential size of chain
