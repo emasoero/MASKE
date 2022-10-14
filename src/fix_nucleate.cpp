@@ -748,16 +748,16 @@ void Fix_nucleate::comp_rates_allpar(int pos)
         if (chem->mechchain[mid]) {  //if reaction is a chain
             chID = chem -> mechrcID[mid];
             nrt = (chem->ch_rxID[chID]).size();
-            if (chem -> ch_dV_fgd[chID] > 0) {
-                nrv = round( Pv / chem -> ch_dV_fgd[chID]);   // NB: a proper nucleation reax should have positive fgd changes defined in the chemDB file
-            } else {errflag = true; fgdV=chem -> ch_dV_fgd[chID];}
+            if (chem -> ch_dVp_fgd[chID] > 0) {
+                nrv = round( Pv / chem -> ch_dVp_fgd[chID]);   // NB: a proper nucleation reax should have positive fgd changes defined in the chemDB file
+            } else {errflag = true; fgdV=chem -> ch_dVp_fgd[chID];}
         }
         else{ //if instead it is a single reaction
             nrt = 1;
             rxid = chem->mechrcID[mid];
-            if (chem -> rx_dV_fgd[rxid] > 0) {
-                nrv = round( Pv / chem -> rx_dV_fgd[rxid]);
-            } else {errflag = true; fgdV=chem -> rx_dV_fgd[rxid];}
+            if (chem -> rx_dVp_fgd[rxid] > 0) {
+                nrv = round( Pv / chem -> rx_dVp_fgd[rxid]);
+            } else {errflag = true; fgdV=chem -> rx_dVp_fgd[rxid];}
         }
         
         if (errflag == true) {
@@ -839,7 +839,7 @@ void Fix_nucleate::comp_rates_allpar(int pos)
                 
                 //Delta surface and Delta U are assumed to be proportional to the number of reaction/chain units and relative importance of each step in chain
                 double DSi = DSpu;
-                if (chem->mechchain[mid]) DSi *= (chem->ch_rdV_fgd[chID][k]);
+                if (chem->mechchain[mid]) DSi *= (chem->ch_rdVp_fgd[chID][k]);
                 
                 double DUi = 0.;
                 if (strcmp(chem->mechinter[mid].c_str(),"int_no")!=0) {

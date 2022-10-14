@@ -976,17 +976,17 @@ void Fix_delete::comp_rates_allpar(int pos)
         if (chem->mechchain[mid]) {  //if reaction is a chain
             chID = chem -> mechrcID[mid];
             nrt = (chem->ch_rxID[chID]).size();
-            if (chem -> ch_dV_fgd[chID] < 0) {
+            if (chem -> ch_dVp_fgd[chID] < 0) {
                 // default for allpar mechanism is linear changes in surface and energy with number of molecules in particle volume, i.e. int_lin
-                nrv = round( - Pv / chem -> ch_dV_fgd[chID]);   // minus because a proper dissolution reax should have negative fgd changes in chemDB
-            } else {errflag = true; fgdV=chem -> ch_dV_fgd[chID];}
+                nrv = round( - Pv / chem -> ch_dVp_fgd[chID]);   // minus because a proper dissolution reax should have negative fgd changes in chemDB
+            } else {errflag = true; fgdV=chem -> ch_dVp_fgd[chID];}
         }
         else{ //if instead it is a single reaction
             nrt = 1;
             rxid = chem->mechrcID[mid];
-            if (chem -> rx_dV_fgd[rxid] < 0) {
-                nrv = round( - Pv / chem -> rx_dV_fgd[rxid]);
-            } else {errflag = true; fgdV=chem -> rx_dV_fgd[rxid];}
+            if (chem -> rx_dVp_fgd[rxid] < 0) {
+                nrv = round( - Pv / chem -> rx_dVp_fgd[rxid]);
+            } else {errflag = true; fgdV=chem -> rx_dVp_fgd[rxid];}
         }
         
         
@@ -1068,7 +1068,7 @@ void Fix_delete::comp_rates_allpar(int pos)
                 
                //Delta surface and Delta U are assumed to be proportional to the number of reaction/chain units and relative importance of each step in chain
                 double DSi = DSpu;
-                if (chem->mechchain[mid]) DSi *= (chem->ch_rdV_fgd[chID][k]);
+                if (chem->mechchain[mid]) DSi *= (chem->ch_rdVp_fgd[chID][k]);
                 
                 double DUi = 0.;
                 if (strcmp(chem->mechinter[mid].c_str(),"int_no")!=0) {
@@ -1185,17 +1185,17 @@ void Fix_delete::comp_rates_micro(int pos)
         if (chem->mechchain[mid]) {  //if reaction is a chain
             chID = chem -> mechrcID[mid];
             nrt = (chem->ch_rxID[chID]).size();
-            if (chem -> ch_dV_fgd[chID] < 0) {
+            if (chem -> ch_dVp_fgd[chID] < 0) {
                 // default for allpar mechanism is linear changes in surface and energy with number of molecules in particle volume, i.e. int_lin
-                nrv = round( - Pv / chem -> ch_dV_fgd[chID]);   // minus because a proper dissolution reax should have negative fgd changes in chemDB
-            } else {errflag = true; fgdV=chem -> ch_dV_fgd[chID];}
+                nrv = round( - Pv / chem -> ch_dVp_fgd[chID]);   // minus because a proper dissolution reax should have negative fgd changes in chemDB
+            } else {errflag = true; fgdV=chem -> ch_dVp_fgd[chID];}
         }
         else{ //if instead it is a single reaction
             nrt = 1;
             rxid = chem->mechrcID[mid];
-            if (chem -> rx_dV_fgd[rxid] < 0) {
-                nrv = round( - Pv / chem -> rx_dV_fgd[rxid]);
-            } else {errflag = true; fgdV=chem -> rx_dV_fgd[rxid];}
+            if (chem -> rx_dVp_fgd[rxid] < 0) {
+                nrv = round( - Pv / chem -> rx_dVp_fgd[rxid]);
+            } else {errflag = true; fgdV=chem -> rx_dVp_fgd[rxid];}
         }
         
         
@@ -1228,28 +1228,48 @@ void Fix_delete::comp_rates_micro(int pos)
             DUpu = -2.*tE[i]/((double)nrv);
         }
         
+
+        // number of layers to dissolve (it will depend on fractional coverage area)
+        int nrL = 0;
         
-        // number of repetitions of reaction of chain to delete particle. For "allpar" just 1.
-        int nrL = 1;    // number of layers to dissolve (it will depend on fractional coverage area)
-        int nrS = 1;    // number of units to dissolve a full layer (depends on density of kinks per layer)
+        double unit_thick;    // thickness of dissolving unit in radial direction of particle
+        if (chem->mechchain[mid]) {  //if reaction is a chain
+            unit_thick = pow(-ch_dVp_fgd[chID],1./3.);
+        }
+        else{ //if instead it is a single reaction
+            unit_thick = pow(-rx_dVp_fgd[rxid],1./3.);
+        }
         
+        if (tCF[i] <= 0.5) nrL = tR[i]/unit_thick;
+        else if (tCF[i] <= 0.9) nrL = 2.*tR[i]/unit_thick;
+        
+        bool flag_bulk = false;
+        if (nrL == 0) flag_bulk = true;
+        
+        
+        
+        
+        // number of units to dissolve a full layer (depends on density of kinks per layer)
+        int nrS = 1;
         if (chem->mechchain[mid])  nrS = round(1./chem->ch_Fk[chID]);
         else nrS = round(1./chem->rx_Fk[rxid]);
            
-        
-        // MUST INCLUDE INTERNAL POROSITY OF PHASE WHEN COMPUTING nrv ABOVE   (LATER, ALSO CONSIDER PORES WHEN UPDATING A SOLUTION). See chemistry.cpp at line 550 for notes 
-        
+    
         
     
-        int nrx = 1;     // TO BE DELETED: JUST A PLACEHOLDER TO COMPILE THE MICRO MECHANISM WHILE IMPLEMENTING IT
-
-        
-      
-        
+        int nrx = 1;     // TO BE DELETED: JUST A PLACEHOLDER TO COMPILE THE MICRO MECHANISM WHILE IMPLEMENTING IT        
         
         // compute rate looking at each reaction in the mechanism sequence
         double ri=0. , DTi = 0., DTtot = 0.;  // rate of each reaction in sequence, associated time increement and total cumulative time increment
         
+        // 3 LINeS ABOVe TO Be ReCONSIDeReD
+        // BeFORe GOIN ON BeLOW, IMPROVe LOG OUTPU TO START WITH PARTICLe ID, THéN LAYeR NUMBeR, THeN LISTING RéACCTIONS ON SURFACé WITH VARIOUS STePS IN THe CHAIN
+        
+        for (int j=0; j<nrL; j++){
+            for (int jj=0; jj<nrS; jj++){
+                //....
+            }
+        }
         
         for (int j=0; j<nrx; j++) {
             
@@ -1292,7 +1312,7 @@ void Fix_delete::comp_rates_micro(int pos)
                //Delta surface and Delta U are assumed to be proportional to the number of reaction/chain units and relative importance of each step in chain
                 double DSi = 0.;     // TO BE DELETED: JUST A PLACEHOLDER TO COMPILE THE MICRO MECHANISM WHILE IMPLEMENTING IT
                // double DSi = DSpu;
-               // if (chem->mechchain[mid]) DSi *= (chem->ch_rdV_fgd[chID][k]);
+               // if (chem->mechchain[mid]) DSi *= (chem->ch_rdVp_fgd[chID][k]);
                 
                 double DUi = 0.;
                 if (strcmp(chem->mechinter[mid].c_str(),"int_no")!=0) {
@@ -1366,7 +1386,10 @@ void Fix_delete::comp_rates_micro(int pos)
                 output->toplog(msg);
             }
         }
-        rate_each[i] = 1./DTtot;
+        
+        if (flag_bulk) rate_each[i] = 0.;
+        else rate_each[i] = 1./DTtot;
+        
         if (rate_each[i]<0.) rate_each[i] = 0.;    // if the backward ri's are > forward ri's the overall rate may end up < 0, which means that the current deletion event should not happen, hence its rate should be zero (not negative..)   CHECK THAT THIS DOES NOT GIVE PROBLEMS WHEN SELECTING THE EVENT TO CARRY OUT FROM CUMULATIVE RATE VECTORS, IN PARTICULAR WITH THE BINARY SEARCH ALGORITHM
     
         

@@ -55,10 +55,11 @@ namespace MASKE_NS {
         std::vector<int> rx_gxID,rx_DGID;   // pointers to gammax and DG calculators, specified for each simple reaction
         std::vector<double> Keq;    // vectors of equilibrium constants of chemical reactions
         std::vector<double> ki;    // vectors of energy penalty factors for chemical reactions (0 = no penalty, suggested < 1)
-        std::vector<double> rx_dV_fgd, rx_dV_bkg, rx_dVt_fgd;    // change of foreground and backgroun volume due to reaction. Change of tributary foreground volume too
-        std::vector<double> ch_dV_fgd, ch_dV_bkg;   // change of foreground and background volume due to reaction chain.
+        std::vector<double> rx_dV_fgd, rx_dV_bkg, rx_dVt_fgd;    // change of foreground and backgroun volume due to reaction. Change of tributary foreground volume too. dV only includes volume of molecules, excluding splid phase porosity. dVt instead includes porosity and ratio between equilibrium distance and interaction cutoff of solid phas (r0rc above)
+        std::vector<double> rx_dVp_fgd;   // same as dV above, but including solid phase porosity
+        std::vector<double> ch_dV_fgd, ch_dV_bkg, ch_dVp_fgd;   // change of foreground and background volume due to reaction chain. dV does not include solid phase porosities, while dVp does
         std::vector<double> ch_Fk;   // Fraction of kinks associated to a reaction chain (consider this as a parameter whose inverse (Fk^-1) approximates how many chains of reactions you need to carry in series to dissolve one layer). THIS OVERRIDES per-reaction Fk's
-        std::vector<std::vector<double> > ch_rdV_fgd, ch_rdV_bkg;    // relative importance in terms of volme change for each step in chain reaction: wil be used in fix_delete sometimes to compute fraction of surface and volume change to be attributed to each reaction in chain
+        std::vector<std::vector<double> > ch_rdV_fgd, ch_rdV_bkg, ch_rdVp_fgd;    // relative importance in terms of volme change for each step in chain reaction: wil be used in fix_delete sometimes to compute fraction of surface and volume change to be attributed to each reaction in chain
         std::vector<double> ch_arac;    // ratio between radial and circumferential size of chain
         std::vector<double> rx_ar_min, rx_ar_max, rx_ar_avg, rx_ar_avv, rx_ar_cum;    // change of foreground length in radial direction due to reaction: min, max, average (sum/N), volume-based average (sumV^1/3), cumulative (sum_ar)
         std::vector<double> rx_ac_min, rx_ac_max, rx_ac_avg, rx_ac_avv, rx_ac_cum;    // same as above, in circumferential direaction

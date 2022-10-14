@@ -543,13 +543,16 @@ void Chemistry::addreax()
         for (int i=0; i<bvec.size(); i++)   rx_dV_bkg.back() += mol_vapp[ibvec[i]]*bvec[i];
         
         rx_dV_fgd.push_back(0.);
+        rx_dVp_fgd.push_back(0.);
         rx_dVt_fgd.push_back(0.);
         for (int i=0; i<fvec.size(); i++)  {
+            // dV will be used to compute dV of chain steps, which are used to distribute interaction energy between steps in chain during fix_delete and fix_nucleate. Hence it does not include phase porosity
             rx_dV_fgd.back() += (mol_arad[ifvec[i]]*mol_acir[ifvec[i]]*mol_acir[ifvec[i]]) * fvec[i];
-            rx_dVt_fgd.back() += (mol_arad[ifvec[i]]*mol_acir[ifvec[i]]*mol_acir[ifvec[i]]) * fvec[i] * mol_rcr0[ifvec[i]];
-            // YOU WILL NEED TO ADD an rx dvp which includes porosity and will be used in fix_delete to compute nrv. Also, porosity should be include in dVt which is used to compute molecular cross-sectional area of rates per unit surface. You must also keep rx_dV which is used to compute dV of chain steps, which are used to distribute interaction energy between steps in chain during fix_delete and fix_nucleate.  NB: you must edit other mechanisms too to use dVp when computing nrv
-            // rx_dVp_fgd.back() += (mol_arad[ifvec[i]]*mol_acir[ifvec[i]]*mol_acir[ifvec[i]]) * fvec[i] * (1+Pr);
-            // rx_dVt_fgd.back() += (mol_arad[ifvec[i]]*mol_acir[ifvec[i]]*mol_acir[ifvec[i]]) * fvec[i] * mol_rcr0[ifvec[i]] * (1+Pr);
+            
+            // dVt will be used to compute molecular cross-sectional area of rates per unit surface. Hence must include phase porosity
+            rx_dVt_fgd.back() += (mol_arad[ifvec[i]]*mol_acir[ifvec[i]]*mol_acir[ifvec[i]]) * fvec[i] * mol_rcr0[ifvec[i]] * (1.+mol_Pr[i]);
+            // dVp = sam as dV above, but including phase porosity (to be used to compute number of units to dissolve or nucleate in a particle (nrv in fix delete and nucleate)
+            rx_dVp_fgd.back() += (mol_arad[ifvec[i]]*mol_acir[ifvec[i]]*mol_acir[ifvec[i]]) * fvec[i] * (1.+mol_Pr[i]);
         }
 
         rx_ar_min.push_back(0.);
@@ -614,6 +617,7 @@ void Chemistry::addreax()
         Nchain++;
         
         ch_dV_fgd.push_back(0.);
+        ch_dVp_fgd.push_back(0.);
         ch_dV_bkg.push_back(0.);
         chnames.push_back(newname);
         ch_arac.push_back(1.);
@@ -625,7 +629,7 @@ void Chemistry::addreax()
         }
         chstyle.push_back(style);
        
-        std::vector<double> rdVvec_fgd,rdVvec_bkg;  // will be used to compute relative volume change due to each reaction in chain
+        std::vector<double> rdVvec_fgd, rdVvec_bkg, rdVpvec_fgd;  // will be used to compute relative volume change due to each reaction in chain
 
 
         std::string entry, trx;
@@ -649,9 +653,11 @@ void Chemistry::addreax()
                     if (strcmp(trx.c_str(), rxnames[i].c_str()) == 0) {
                         irxvec.push_back(i);
                         ch_dV_fgd[Nchain-1] += ( rx_dV_fgd[i] * tnrx );
+                        ch_dVp_fgd[Nchain-1] += ( rx_dVp_fgd[i] * tnrx );
                         ch_dV_bkg[Nchain-1] += ( rx_dV_bkg[i] * tnrx );
                         
                         rdVvec_fgd.push_back(rx_dV_fgd[i] * tnrx);
+                        rdVpvec_fgd.push_back(rx_dVp_fgd[i] * tnrx);
                         rdVvec_bkg.push_back(rx_dV_bkg[i] * tnrx);
                         
                         rxfound = true;
@@ -673,9 +679,11 @@ void Chemistry::addreax()
         // compute relative volume change due to each reaction in chain
         for (int i=0; i<irxvec.size(); i++) {
             rdVvec_fgd[i] /= ch_dV_fgd[Nchain-1];
+            rdVpvec_fgd[i] /= ch_dVp_fgd[Nchain-1];
             rdVvec_bkg[i] /= ch_dV_bkg[Nchain-1];
         }
         ch_rdV_fgd.push_back(rdVvec_fgd);
+        ch_rdVp_fgd.push_back(rdVpvec_fgd);
         ch_rdV_bkg.push_back(rdVvec_bkg);
         
         
@@ -688,7 +696,7 @@ void Chemistry::addreax()
             }
             fprintf(screen,"\n Relative fgd volume changes of reactions are: ");
             for (int i=0; i<(ch_rdV_fgd.back()).size(); i++) {
-                fprintf(screen," %f",ch_rdV_fgd[Nchain-1][i]);
+                fprintf(screen," %f, %f",ch_rdV_fgd[Nchain-1][i],ch_rdVp_fgd[Nchain-1][i]);
             }
             fprintf(screen,"\n\n");
         }

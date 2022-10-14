@@ -464,12 +464,12 @@ void Solution::update(int apos, double pV, int EVtype)
         // compute number of chains depending on mechanism (allpar and allser should be the same, but shvab may be different due to radial growth idea
         if (chem->mechchain[mid]) {  //if reaction is a chain
             chID = chem->mechrcID[mid];
-            nrv =  fabs(pV / chem->ch_dV_fgd[chID]);   //  made positive for either dissolution or nucleation events, i.e. irresepective of dV_fgd being negative or positive
+            nrv =  fabs(pV / chem->ch_dVp_fgd[chID]);   //  made positive for either dissolution or nucleation events, i.e. irresepective of dV_fgd being negative or positive
             nrxCH = (chem->ch_rxID[chID]).size();
         }
         else{ //if instead it is a single reaction
             rxid = chem->mechrcID[mid];
-            nrv = fabs(pV / chem -> rx_dV_fgd[rxid]);
+            nrv = fabs(pV / chem -> rx_dVp_fgd[rxid]);
             nrxCH = 1;
         }
     }
