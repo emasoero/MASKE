@@ -550,9 +550,9 @@ void Chemistry::addreax()
             rx_dV_fgd.back() += (mol_arad[ifvec[i]]*mol_acir[ifvec[i]]*mol_acir[ifvec[i]]) * fvec[i];
             
             // dVt will be used to compute molecular cross-sectional area of rates per unit surface. Hence must include phase porosity
-            rx_dVt_fgd.back() += (mol_arad[ifvec[i]]*mol_acir[ifvec[i]]*mol_acir[ifvec[i]]) * fvec[i] * mol_rcr0[ifvec[i]] * (1.+mol_Pr[i]);
+            rx_dVt_fgd.back() += (mol_arad[ifvec[i]]*mol_acir[ifvec[i]]*mol_acir[ifvec[i]]) * fvec[i] * mol_rcr0[ifvec[i]] * (1.+mol_Pr[ifvec[i]]);
             // dVp = sam as dV above, but including phase porosity (to be used to compute number of units to dissolve or nucleate in a particle (nrv in fix delete and nucleate)
-            rx_dVp_fgd.back() += (mol_arad[ifvec[i]]*mol_acir[ifvec[i]]*mol_acir[ifvec[i]]) * fvec[i] * (1.+mol_Pr[i]);
+            rx_dVp_fgd.back() += (mol_arad[ifvec[i]]*mol_acir[ifvec[i]]*mol_acir[ifvec[i]]) * fvec[i] * (1.+mol_Pr[ifvec[i]]);
         }
 
         rx_ar_min.push_back(0.);
@@ -606,6 +606,7 @@ void Chemistry::addreax()
             for (int i=0; i<(fgd_molID.back()).size(); i++) {
                 fprintf(screen," %s %f",molnames[(fgd_molID.back())[i]].c_str(),(fgd_nmol.back())[i]);
             }
+            fprintf(screen," FGD volume change without (%e) and with (%e) pores\n", rx_dV_fgd[Nreax-1], rx_dVp_fgd[Nreax-1]);
             fprintf(screen,"\n\n");
         }
         
