@@ -75,6 +75,7 @@ namespace MASKE_NS {
         std::vector<int> tID;   // proc-specific IDs
         std::vector<double> tR, tE;// same as aR and aE but with meaningful entries only for atoms in current processor
         double *tCF; // coverage fractions of atoms in current processor
+        double *tGM; // maximum interfacial energy change of atoms in current processor
         int naP;      // number of atoms in current fix in current processor
         int *tIDarr ;   // array of size naP with unsorted IDs of atoms in current processor only
         int *nID_each;     // array storing number of IDs in each processor: used by submaster for assembly and back
@@ -92,6 +93,8 @@ namespace MASKE_NS {
         int *IDuns;     // unsorted IDs of all Ng particles in fix. This is bloc-wise, with each block being the tIDarr of a processor
         double *Runs;    // unsorted radii of all Ng particles in fix
         double *CFuns;    // coverage fraction area of Ng particles in the fix
+        double *GMuns;    // maximum interfacial enrgy change of Ng particles in the fix
+        bool *fGMuns;    // is this the first interfacial enrgy change computed for each of the Ng particles in the fix?
         double *unsRates;   // array in subcomm storing unsorted rates corresponding to IDuns above (size Ng)
         int *IDpos;  // array storing starting positions of local tID arrays in submaster's IDuns
         std::vector<int> UtoS;   //pointing each-proc unsorted IDuns to corresponding sorted IDsrt in global vector containing all rfreeKMC fixes in current subcomm.  Its size is Ng (number of particles in current fix).     Needed to send rates computed by each processor and assembled unsorted by submaster to global sorted-ID rate vector

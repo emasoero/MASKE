@@ -430,6 +430,7 @@ void Fix_delete::sample(int pos)
     delete [] IDpos;
     delete [] nID_each;
     delete [] tCF;
+    delete [] tGM;
 
     
     if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
@@ -446,6 +447,8 @@ void Fix_delete::sample(int pos)
             delete [] SARpos;
             delete [] Dsub;
             delete [] CFuns;
+            delete [] GMuns;
+            delete [] fGMuns;
         }
     }
 
@@ -781,7 +784,14 @@ void Fix_delete::submaster_map_ID(int pos)
 void Fix_delete::submaster_comp_cover(int pos)
 {
     CFuns = new double[Ng];
-    for (int i=0; i<Ng; i++) CFuns[i]=0.;
+    GMuns = new double[Ng];
+    fGMuns = new bool[Ng];
+    
+    for (int i=0; i<Ng; i++) {
+        CFuns[i]=0.;
+        GMuns[i]=0.;
+        fGMuns[i]=true;
+    }
     
     if (msk->wplog) {
         std::string msg = "Number of pairs in neighbor array for "+fix->fKMCname[pos]+" :";
@@ -866,8 +876,19 @@ void Fix_delete::submaster_comp_cover(int pos)
             else if (Dsub[i] > e0ij * Dij)   Aij *= (efij - Dsub[i]/Dij) / (efij- e0ij);
 
             // if first atom is of correct type for this fix, add contact area to the contact fraction arrays (still areas here; will be converted to area fractions later on below)
-            if (flag_t1)  CFuns[up1] += Aij;
-            if (flag_t2)  CFuns[up2] += Aij;
+            if (flag_t1)  {
+                CFuns[up1] += Aij;
+                double tempGM = - chem->gij[t1-1][t1-1] - chem->gij[t1-1][t2-1] + chem->gij[t2-1][t2-1];
+                if (fGMuns[up1]) GMuns[up1] = tempGM;
+                else if (tempGM > GMuns[up1]) GMuns[up1] = tempGM;
+            }
+            
+            if (flag_t2){
+                CFuns[up2] += Aij;
+                double tempGM = - chem->gij[t2-1][t2-1] - chem->gij[t2-1][t1-1] + chem->gij[t1-1][t1-1];
+                if (fGMuns[up2]) GMuns[up2] = tempGM;
+                else if (tempGM > GMuns[up2]) GMuns[up2] = tempGM;
+            }
         }
         
     }
@@ -884,12 +905,13 @@ void Fix_delete::submaster_comp_cover(int pos)
         output->toplog(msg);
         msg="";
         // pring ids and covrage fractions of unsorted atoms
-        output->toplog("npos id CFuns");
+        output->toplog("npos id CFuns GMuns");
         std::ostringstream ss;
         for (int i=0; i<Ng; i++){
             ss << i;        msg = ss.str()+" ";   ss.str("");   ss.clear();
             ss << IDuns[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
             ss << CFuns[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+            ss << GMuns[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
             output->toplog(msg);
         }
         
@@ -907,16 +929,21 @@ void Fix_delete::cover_from_submaster(int pos)
     if (key==0) {
         for (int dest=1; dest<nploc; dest++) {
             MPI_Send(&CFuns[IDpos[dest]], nID_each[dest], MPI_DOUBLE, dest, 1, (universe->subcomm));
+            MPI_Send(&GMuns[IDpos[dest]], nID_each[dest], MPI_DOUBLE, dest, 1, (universe->subcomm));
         }
         tCF = new double[nID_each[0]];
+        tGM = new double[nID_each[0]];
         for (int i=0; i<nID_each[0]; i++){
             tCF[i] = CFuns[i];
+            tGM[i] = GMuns[i];
         }
     }
     else{
         tCF = new double[nID_each[key]];
+        tGM = new double[nID_each[key]];
         int source = 0;
         MPI_Recv(&tCF[0], nID_each[key], MPI_DOUBLE, source, 1, (universe->subcomm), &status);
+        MPI_Recv(&tGM[0], nID_each[key], MPI_DOUBLE, source, 1, (universe->subcomm), &status);
     }
     
     // Each processor prints its coverage fraction array to its log file
@@ -925,19 +952,19 @@ void Fix_delete::cover_from_submaster(int pos)
         std::ostringstream ss;    ss << nID_each[key];   msg = msg+ss.str();
         output->toplog(msg);
         msg="";   ss.str("");   ss.clear();
-        output->toplog("\npos id tCF");
+        output->toplog("\npos id tCF tGM");
         //sleep(1);
         for (int i=0; i<nID_each[key]; i++){
             //sleep(1);
             ss << i;        msg = ss.str()+" ";   ss.str("");   ss.clear();
             ss << tID[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
             ss << tCF[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+            ss << tGM[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
             output->toplog(msg);
             msg="";
         }
     }
     
-    sleep(1);
 }
 
 
@@ -1166,7 +1193,9 @@ void Fix_delete::comp_rates_micro(int pos)
         if (msk->wplog) {
             std::string msg = "\n -----------------------------------\nPARTICLE ";
             std::ostringstream ss;    ss << tID[i];     msg = msg+ss.str()+" ";
-            ss.str("");     ss.clear();   ss << tR[i];  msg = msg+ss.str()+"\n";
+            ss.str("");     ss.clear();   ss << tR[i];  msg = msg+ss.str()+" ";
+            ss.str("");     ss.clear();   ss << tCF[i];  msg = msg+ss.str()+" ";
+            ss.str("");     ss.clear();   ss << tGM[i];  msg = msg+ss.str()+"\n";
             output->toplog(msg);
         }
         
@@ -1238,8 +1267,8 @@ void Fix_delete::comp_rates_micro(int pos)
             unit_thick = pow(- chem->rx_dVp_fgd[rxid],1./3.);
         }
         
-        if (tCF[i] <= 0.5) nrL = tR[i]/unit_thick;
-        else if (tCF[i] <= 0.9) nrL = 2.*tR[i]/unit_thick;
+        if (tCF[i] < 0.5) nrL = round(tR[i]/unit_thick);
+        else if (tCF[i] <= 0.9) nrL = round(2.*tR[i]/unit_thick);
         
         bool flag_bulk = false;
         if (nrL == 0) flag_bulk = true;
@@ -1376,11 +1405,122 @@ void Fix_delete::comp_rates_micro(int pos)
         
         
         
+        // Add to Dtot the contribution from the last layer
+        std::string msg;
+        if (msk->wplog) {
+            msg += "PARTICLE ";
+            std::ostringstream ss;    ss << i;   msg = msg+ss.str()+"; Last layer; ";
+        }
         
-        
-        
-        // ADD TO DTOT THE CONTRBUTION OF THE LAST LAYER THAT CAN BE IN CONTACT WITH OTHER PHASES. For this we will need to compute maximum interfacial energy per molecule from comp_cover functions above
-        
+        for (int jj=0; jj<nrS; jj++){
+            
+            if (msk->wplog) {
+                msg += "On-surface unit number ";
+                std::ostringstream ss;    ss << jj+1;   msg = msg+ss.str()+" out of ";
+                ss.str("");     ss.clear();   ss << nrS;  msg = msg+ss.str()+"; ";
+            }
+            
+            // compute rate of reaction sequence
+            for (int k=0; k< nrt; k++) { //all the reaction in series in chain seq.
+                
+                if (msk->wplog) { msg += "; rx_step ";    std::ostringstream ss;    ss << k;   msg += ss.str();}
+                
+                // find reaction id if it is a chain, or keep previous one if a single reax
+                if (chem->mechchain[mid]) rxid = chem->ch_rxID[chID][k];
+                
+                double DGx = chem -> compDGx(rxid); // reaction specific
+                double cx = chem -> cx[chem->rx_DGID[rxid]];
+                double dim = chem -> dim[chem->rx_DGID[rxid]];
+                double gammax = chem -> compgammax(rxid);
+                double KT = msk->kB * solution->Temp;
+                
+                if (msk->wplog) {
+                    std::ostringstream ss;
+                    msg += "; DG* ";    ss << DGx;   msg += ss.str();    ss.str(""); ss.clear();
+                    msg += "; c* ";    ss << cx;   msg += ss.str();    ss.str(""); ss.clear();
+                    msg += "; gamma* ";    ss << gammax;   msg += ss.str();    ss.str(""); ss.clear();
+                    msg += "; KB ";    ss << (msk->kB);   msg += ss.str();    ss.str(""); ss.clear();
+                    msg += "; T ";    ss << (solution->Temp);   msg += ss.str();    ss.str(""); ss.clear();
+                }
+                
+                double kappa = 1.;       // transmission coefficient
+                
+                std::string topass = "reac";
+                double Qreac = solution->compQ(rxid,topass,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
+                
+                double Vt = - (chem -> rx_dVt_fgd[rxid]);  // Tributary volume of fgd deleted by the reaction at the current step in the chain. Minus sign because dV of fdg < 0 for a proper dissolution reaction.
+                
+                double DUi = 0.;
+                if (strcmp(chem->mechinter[mid].c_str(),"int_no")!=0) {
+                    DUi = DUpu;
+                    if (chem->mechchain[mid]) DUi *= (chem->ch_rdV_fgd[chID][k]);
+                    
+                    // Add change in strain energy internal to the molecules
+                    for (int j=0; j<chem->fgd_molID[rxid].size(); j++){
+                        int molid = chem->fgd_molID[rxid][j];
+                        DUi += chem->mol_Us[molid] * chem->mol_vm[molid] * chem->fgd_nmol[rxid][j];
+                    }
+                }
+                
+                double r0 = kappa * KT / msk->hpl / gammax * cx * exp(-DGx / KT);
+                
+                if (msk->wplog) {
+                    std::ostringstream ss;
+                    msg += "; r0 ";    ss << r0;   msg += ss.str();    ss.str(""); ss.clear();
+                    msg += "; Qreac ";    ss << Qreac;   msg += ss.str();    ss.str(""); ss.clear();
+                    msg += "; DUi ";    ss << DUi;   msg += ss.str();    ss.str(""); ss.clear();
+                    msg += "; Vti ";    ss << Vt;   msg += ss.str();    ss.str(""); ss.clear();
+                }
+                
+                r0 = r0*pow(Vt,dim/3.);
+                
+                double ki = (chem -> ki[rxid]);
+                
+                // Forward rate equation: NB this includes contribution from largest interfacial energy at contact with other phases (from function computing coverage areas)
+                double uk_area;    // area of a unit kink (assuming cubic units)
+                if (chem->mechchain[mid]) {  //if reaction is a chain
+                    uk_area = pow(- chem->ch_dVp_fgd[chID],2./3.) * 3.;
+                }
+                else{ //if instead it is a single reaction
+                    uk_area = pow(- chem->rx_dVp_fgd[rxid],2./3.) * 3.;
+                }
+                
+                ri = r0 * Qreac * exp((1.-ki)*( - DUi - tGM[i] * uk_area )/KT ) ;
+                
+                
+                // if net rate is requested by user in chemDB, then add rate backward
+                if (strcmp((chem->mechmode[mid]).c_str(),"net")==0) {
+                    
+                    topass = "prod";
+                    double Qprod = solution->compQ(rxid,topass,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
+                    ri -= r0 * Qprod / chem->Keq[rxid] * exp(ki * ( DUi + tGM[i] * uk_area)/ KT );
+                    
+                    if (msk->wplog) {
+                        std::ostringstream ss;
+                        msg += "; ri ";    ss << ri;   msg += ss.str();    ss.str(""); ss.clear();
+                        msg += "; Qprod ";    ss << Qprod;   msg += ss.str();    ss.str(""); ss.clear();
+                        msg += "; Keq ";    ss << chem->Keq[rxid] ;   msg += ss.str();    ss.str(""); ss.clear();
+                    }
+                    
+                }
+                
+                if (ri < 0.) ri = 0.;
+                
+                DTi = 1./ri;
+                DTtot += DTi;
+                
+                if (msk->wplog) {
+                    msg += ", DT ";
+                    std::ostringstream ss;    ss << DTi;   msg += ss.str(); ss.str("");   ss.clear();
+                    msg += ", DTtot ";
+                    ss << DTtot;   msg += ss.str();
+                }
+            }
+        }
+        if (msk->wplog){
+            msg+="\n";
+            output->toplog(msg);
+        }
         
         
         
@@ -1401,144 +1541,6 @@ void Fix_delete::comp_rates_micro(int pos)
         }
         
     }
-       
-        
-        /*
-        
-        int nrx = 1;     // TO BE DELETED: JUST A PLACEHOLDER TO COMPILE THE MICRO MECHANISM WHILE IMPLEMENTING IT
-        
-        std::string msg;
-        for (int j=0; j<nrx; j++) {
-            
-            if (msk->wplog) { msg += "; rx "; std::ostringstream ss;    ss << j;   msg = msg+ss.str(); }
-            
-            // compute rate of reaction sequence
-            for (int k=0; k< nrt; k++) { //all the reaction in series in chain seq.
-                
-                if (msk->wplog) { msg += "; rx_step ";    std::ostringstream ss;    ss << k;   msg += ss.str(); }
-                
-                // find reaction id, either from chain or the single one
-                if (chem->mechchain[mid]) rxid = chem->ch_rxID[chID][k];
-                else rxid = chem->mechrcID[mid];   // probably redundant as already defined above: to be checked
-                
-                double DGx = chem -> compDGx(rxid); // reaction specific
-                double cx = chem -> cx[chem->rx_DGID[rxid]];
-                double dim = chem -> dim[chem->rx_DGID[rxid]];
-                double gammax = chem -> compgammax(rxid);
-                double KT = msk->kB * solution->Temp;
-                
-                if (msk->wplog) {
-                    std::ostringstream ss;
-                    msg += "; DG* ";    ss << DGx;   msg += ss.str();    ss.str(""); ss.clear();
-                    msg += "; gamma* ";    ss << gammax;   msg += ss.str();    ss.str(""); ss.clear();
-                    msg += "; KB ";    ss << (msk->kB);   msg += ss.str();    ss.str(""); ss.clear();
-                    msg += "; T ";    ss << (solution->Temp);   msg += ss.str();    ss.str(""); ss.clear();
-                }
-                
-                double kappa = 1.;       // transmission coefficient
-                double Sen = chem->compSen(mid);
-                
-            
-                //bool net = false; // the beta calculator in simulation.cpp uses stoichio coefficients that are defined by used in chemDB for forward reaction. If beta is computed for the net rate, the reaction is backward hence stoichio coeff need multiplication by -1
-                //double beta = 1.; // beta in prefactor: for "allpar" one should take 1 as per TST. Maybe in future a calculator for this too.
-                std::string topass = "reac";
-                double Qreac = solution->compQ(rxid,topass,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
-                
-                double Vt = - (chem -> rx_dVt_fgd[rxid]);  // Tributary volume of fgd deleted by the reaction at the current step in the chain. Minus sign because dV of fdg < 0 for a proper dissolution reaction.
-                
-               //Delta surface and Delta U are assumed to be proportional to the number of reaction/chain units and relative importance of each step in chain
-                double DSi = 0.;     // TO BE DELETED: JUST A PLACEHOLDER TO COMPILE THE MICRO MECHANISM WHILE IMPLEMENTING IT
-               // double DSi = DSpu;
-               // if (chem->mechchain[mid]) DSi *= (chem->ch_rdVp_fgd[chID][k]);
-                
-                double DUi = 0.;
-                if (strcmp(chem->mechinter[mid].c_str(),"int_no")!=0) {
-                    DUi = DUpu;
-                    if (chem->mechchain[mid]) DUi *= (chem->ch_rdV_fgd[chID][k]);
-                    
-                    // Add change in strain energy internal to the molecules
-                    for (int j=0; j<chem->fgd_molID[rxid].size(); j++){
-                        int molid = chem->fgd_molID[rxid][j];
-                        DUi += chem->mol_Us[molid] * chem->mol_vm[molid] * chem->fgd_nmol[rxid][j];
-                    }
-                }
-                
-                double r0 = kappa * KT / msk->hpl / gammax * cx * exp(-DGx / KT);
-                
-                if (msk->wplog) {
-                    std::ostringstream ss;
-                    msg += "; r0 ";    ss << r0;   msg += ss.str();    ss.str(""); ss.clear();
-                    msg += "; Qreac ";    ss << Qreac;   msg += ss.str();    ss.str(""); ss.clear();
-                    msg += "; Sen ";    ss << Sen;   msg += ss.str();    ss.str(""); ss.clear();
-                    //msg += "; DSi ";    ss << DSi;   msg += ss.str();    ss.str(""); ss.clear();
-                    msg += "; DUi ";    ss << DUi;   msg += ss.str();    ss.str(""); ss.clear();
-                    msg += "; Vti ";    ss << Vt;   msg += ss.str();    ss.str(""); ss.clear();
-                }
-                
-                
-               // double fa = 1.;
-                //if (dim==2 || dim==1) fa=3.;
-                
-                r0 = r0*pow(Vt,dim/3.);
-                
-                double ki = (chem -> ki[rxid]);
-                
-                // Rate equation as per TST (see notes_on_TST.pdf by Masoero, 2019, where ki=0 was assumed as per classical TST)
-                ri = r0 * Qreac * exp((1.-ki)*(-Sen * DSi - DUi)/KT ) ;
-                
-                
-                // if net rate is requested by user in chemDB, then add rate backward
-                if (strcmp((chem->mechmode[mid]).c_str(),"net")==0) {
-                    
-                    topass = "prod";
-                    double Qprod = solution->compQ(rxid,topass,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
-                    ri -= r0 * Qprod / chem->Keq[rxid]     * exp(ki*(Sen * DSi + DUi)/KT );
-                    
-                    if (msk->wplog) {
-                        std::ostringstream ss;
-                        msg += "; ri ";    ss << ri;   msg += ss.str();    ss.str(""); ss.clear();
-                        msg += "; Qprod ";    ss << Qprod;   msg += ss.str();    ss.str(""); ss.clear();
-                        msg += "; Keq ";    ss << chem->Keq[rxid] ;   msg += ss.str();    ss.str(""); ss.clear();
-                    }
-                    
-                }
-                
-                
-                
-                if (ri < 0.) ri = 0.;
-                
-                DTi = 1./ri;
-                DTtot += DTi;
-                
-                if (msk->wplog) {
-                    msg += ", DT ";
-                    std::ostringstream ss;    ss << DTi;   msg += ss.str(); ss.str("");   ss.clear();
-                    msg += ", DTtot ";
-                    ss << DTtot;   msg += ss.str();
-                }
-            }
-            
-            if (msk->wplog) {
-                msg += "\n";
-                output->toplog(msg);
-            }
-        }
-        
-        if (flag_bulk) rate_each[i] = 0.;
-        else rate_each[i] = 1./DTtot;
-        
-        if (rate_each[i]<0.) rate_each[i] = 0.;    // if the backward ri's are > forward ri's the overall rate may end up < 0, which means that the current deletion event should not happen, hence its rate should be zero (not negative..)   CHECK THAT THIS DOES NOT GIVE PROBLEMS WHEN SELECTING THE EVENT TO CARRY OUT FROM CUMULATIVE RATE VECTORS, IN PARTICULAR WITH THE BINARY SEARCH ALGORITHM
-    
-        
-        if (msk->wplog) {
-            std::ostringstream ss;
-            std::string msg = "\nPARTICLE ";
-            ss << tID[i];   msg += ss.str();  ss.str("");   ss.clear();
-            msg += " has deletion rate  ";
-            ss << rate_each[i];   msg += ss.str();
-            output->toplog(msg);
-        }
-    }*/
     
 }
 

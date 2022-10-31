@@ -162,8 +162,11 @@ sen sen_CSH const 87.6
 
 #   mech  name type net/straight reax surface_nrg interact_interpol coverage_calc_style param_filename energy_calc
 # 	energy_calc can be "energy" or "stress". If "energy", then the user must adopt interaction potentials with zero energy at equilibrium (deepest well) and the code will directly use the LAMMMPS energy/pair to compute rate contribution from interactions. If "stress", the user can adopt any potential and MASKE will use the LAMMPS stress/atom to work out strain energy from the 6 stresses (with per-molecule E and G defined above and with averaging volume = particle volume).  NB: only "energy" implemented for now.
+# micro style note: surface energy calculator not used now, but must point to an existing "sen" above. We might implement it in the future, e.g. to account for energy barrier when nucleating a new layer (island) within a micro particle
 mech   CHdel_micro  micro net   CH_dis  sen_CH  int_uni pair cover_param.dat energy
 mech   CSHdel_micro  micro net   CSHdis  sen_CSH  int_uni pair cover_param.dat energy
+
+mech   CHnuc_micro  micro net   CH_nuc  sen_CH  int_uni pair cover_param.dat energy
 
 # int_uni = uniform distribution of intraction energy from LAMMPS for all molecules in cg particle
 # coverage_calc_style is either "pair" or other things to be implemented, thinking of "bond" or "ellipse" or "3body" etc. If "pair", the code reads the pair neighbour list from LAMMPS. If "bond" it should use the bond topology. If "ellipse" or else, we would probably need pseudo-potentials

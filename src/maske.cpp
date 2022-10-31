@@ -42,7 +42,7 @@ MASKE::MASKE(int narg, char **arg)
     screen = NULL;
     plog = NULL;
     screen=stdout;
-    wplog = true;
+    wplog = false;
     nulog_flag = false;
     speclog_flag = false;
     

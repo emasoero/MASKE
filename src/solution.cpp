@@ -460,8 +460,8 @@ void Solution::update(int apos, double pV, int EVtype)
     int rxid = -1;  // reaction ID: will be used now but later in loop too
     int nrxCH = -1; // number of reactions in series forming the chain
     
-    if (strcmp((chem->mechstyle[mid]).c_str(),"allpar")==0 || strcmp((chem->mechstyle[mid]).c_str(),"allser")==0) {
-        // compute number of chains depending on mechanism (allpar and allser should be the same, but shvab may be different due to radial growth idea
+    if (strcmp((chem->mechstyle[mid]).c_str(),"allpar")==0 || strcmp((chem->mechstyle[mid]).c_str(),"allser")==0 || strcmp((chem->mechstyle[mid]).c_str(),"micro")==0) {
+        // compute number of chains depending on mechanism
         if (chem->mechchain[mid]) {  //if reaction is a chain
             chID = chem->mechrcID[mid];
             nrv =  fabs(pV / chem->ch_dVp_fgd[chID]);   //  made positive for either dissolution or nucleation events, i.e. irresepective of dV_fgd being negative or positive
@@ -473,8 +473,9 @@ void Solution::update(int apos, double pV, int EVtype)
             nrxCH = 1;
         }
     }
-    else if (strcmp((chem->mechstyle[mid]).c_str(),"other_mechanisms_to_implement_here")==0) {
-        
+    else {
+        std::string msg = "ERROR: solution can be updated only for mechanisms of type allpar, allser, or micro. Instead found " + chem->mechstyle[mid];
+        error->errsimple(msg);
     }
     
 
@@ -498,66 +499,125 @@ void Solution::update(int apos, double pV, int EVtype)
     PackF = SolidV/BoxV;
     
     
-    if (strcmp(fix->afKMCsoutUL[apos].c_str(),"uniform")==0) {
-
-        for (int i=0; i<nrxCH; i++) {
-            
-            int nrxpar = 1;     // number of reactions to be run in parallel per chain step (1 if not a chain)
-            if (chem->mechchain[mid]) {
-                rxid = chem->ch_rxID[chID][i];
-                nrxpar = chem->ch_nrx[chID][i];
-            }
-            
-            int nmols = chem->bkg_molID[rxid].size();  // number of molecule types involved in the background solution (to be created or removed depending on deletion or nucleation event type)
-            
-            double Vfrac = 1.;
-            double dVfrac = 0.;  //to distribute molecules between box and dV. Default values assume afKMCsoutbox[apos] == box
-            if (strcmp(fix->afKMCsoutbox[apos].c_str(),"box+dV")==0){
-                Vfrac = SVol/(SVol+dVSVol);
-                dVfrac = dVSVol/(SVol+dVSVol);
-            }
-            else if (strcmp(fix->afKMCsoutbox[apos].c_str(),"box")!=0){
-                std::string msg = "ERROR: solution out should be \"box\" or \"box+dV\", instead "+fix->afKMCsoutbox[apos]+" was found for "+fix->afKMCname[apos];
-                error->errsimple(msg);
-            }
-                
-            // add/remove all types of bkg molecules altered by the reaction
-            
-            if (msk->wplog){
-                std::string msg;
-                msg = "Number of molecules in solution of:\n";
-                output->toplog(msg);
-            }
-            
-            for (int j=0; j<nmols; j++) {
-                int molID = chem->bkg_molID[rxid][j];
-                chem->mol_nins[molID] += (nrv * (double)nrxpar * chem->bkg_nmol[rxid][j] * Vfrac);
-                chem->mol_nindV[molID] += (nrv * (double)nrxpar * chem->bkg_nmol[rxid][j] * dVfrac);
-                
-                if (msk->wplog){
-                    std::string msg;
-                    std::ostringstream ss;
-                    msg = "- "; ss << molID;   msg += ss.str()+"\t";    ss.str(""); ss.clear();
-                    msg += " --> in sol: "; ss << chem->mol_nins[molID] ;   msg += ss.str()+"\t";    ss.str(""); ss.clear();
-                    msg += " --> in dV: "; ss << chem->mol_nindV[molID] ;   msg += ss.str()+"\n";    ss.str(""); ss.clear();
-                    output->toplog(msg);
-                }
-            }
-            // change of solution volume, concentrations, and volume of voids
-            SVol += chem->rx_dV_bkg[rxid] * nrv * (double)nrxpar*Vfrac;
-            dVSVol += chem->rx_dV_bkg[rxid] * nrv * (double)nrxpar*dVfrac;
-            //for (int j=0; j<nmols; j++) {
-                //int molID = chem->bkg_molID[rxid][j];
-            for (int molID=0; molID < chem->mol_cins.size(); molID++)
-            {
-                chem->mol_cins[molID] = chem->mol_nins[molID]/SVol/nAvo/unitC;
-                chem->mol_cindV[molID] = chem->mol_nindV[molID]/dVSVol/nAvo/unitC;
-            }
+    // for each step in the chain
+    for (int i=0; i<nrxCH; i++) {
+        
+        int nrxpar = 1;     // number of reactions to be run in parallel per chain step (1 if not a chain)
+        if (chem->mechchain[mid]) {
+            rxid = chem->ch_rxID[chID][i];
+            nrxpar = chem->ch_nrx[chID][i];
         }
         
-        // update voids in box and dV
-        voidV = BoxV - SolidV - SVol;
-        dVvoidV = dV - dVSVol;
+        int nmols = chem->bkg_molID[rxid].size();  // number of molecule types involved in the background solution (to be created or removed depending on deletion or nucleation event type)
+        
+        
+            
+        // add/remove all types of bkg molecules altered by the reaction
+        
+        if (msk->wplog){
+            std::string msg;
+            msg = "Number of molecules in solution of:\n";
+            output->toplog(msg);
+        }
+        
+        for (int j=0; j<nmols; j++) {
+            int molID = chem->bkg_molID[rxid][j];
+            
+            // if the reax releases these molecules into solution -> solOUT
+            if ( chem->bkg_nmol[rxid][j] > 0.) {
+                
+                double Vfrac = 1.;
+                double dVfrac = 0.;  //to distribute molecules between box and dV. Default values assume afKMCsoutbox[apos] == box
+                if (strcmp(fix->afKMCsoutbox[apos].c_str(),"box+dV")==0){
+                    Vfrac = SVol/(SVol+dVSVol);
+                    dVfrac = dVSVol/(SVol+dVSVol);
+                }
+                else if (strcmp(fix->afKMCsoutbox[apos].c_str(),"box")!=0){
+                    std::string msg = "ERROR: solution out should be \"box\" or \"box+dV\", instead "+fix->afKMCsoutbox[apos]+" was found for "+fix->afKMCname[apos];
+                    error->errsimple(msg);
+                }
+                
+                
+                if (strcmp(fix->afKMCsoutUL[apos].c_str(),"uniform")==0) {
+                    
+                    chem->mol_nins[molID] += (nrv * (double)nrxpar * chem->bkg_nmol[rxid][j] * Vfrac);
+                    chem->mol_nindV[molID] += (nrv * (double)nrxpar * chem->bkg_nmol[rxid][j] * dVfrac);
+                    
+                    // change of solution volumes in box and dV
+                    SVol += chem->mol_vapp[molID] * chem->bkg_nmol[rxid][j] * nrv * (double)nrxpar*Vfrac;
+                    dVSVol += chem->mol_vapp[molID] * chem->bkg_nmol[rxid][j] * nrv * (double)nrxpar*dVfrac;
+                    
+                }
+                else if (strcmp(fix->afKMCsoutUL[apos].c_str(),"local")==0) {
+                    // to be implemented: in this case only the subcommunnicator with managing the solution diffusion algorithm should do operations here. In this case, when compbeta is called by the fixes, it is again the subcomm manageing the solution that should be invoked. All to be implemented, so ERROR GIVEN FOR NOW
+                    std::string msg = "ERROR: local solution out for fix "+fix->afKMCname[apos]+" not implemented yet";
+                    error->errsimple(msg);
+                } else {
+                    std::string msg = "ERROR: solution out should be \"uniform\", instead "+fix->afKMCsoutUL[apos]+" was found for "+fix->afKMCname[apos];
+                    error->errsimple(msg);
+                }
+            }
+            else {  // if the reax takes molecules from solution -> solIN
+                
+                double Vfrac = 1.;
+                double dVfrac = 0.;  //to distribute molecules between box and dV. Default values assume afKMCsoutbox[apos] == box
+                if (strcmp(fix->afKMCsinbox[apos].c_str(),"box+dV")==0){
+                    Vfrac = SVol/(SVol+dVSVol);
+                    dVfrac = dVSVol/(SVol+dVSVol);
+                }
+                else if (strcmp(fix->afKMCsinbox[apos].c_str(),"box")!=0){
+                    std::string msg = "ERROR: solution out should be \"box\" or \"box+dV\", instead "+fix->afKMCsinbox[apos]+" was found for "+fix->afKMCname[apos];
+                    error->errsimple(msg);
+                }
+                
+                if (strcmp(fix->afKMCsinUL[apos].c_str(),"uniform")==0) {
+                    
+                    chem->mol_nins[molID] += (nrv * (double)nrxpar * chem->bkg_nmol[rxid][j] * Vfrac);
+                    chem->mol_nindV[molID] += (nrv * (double)nrxpar * chem->bkg_nmol[rxid][j] * dVfrac);
+                    
+                    // change of solution volumes in box and dV
+                    SVol += chem->mol_vapp[molID] * chem->bkg_nmol[rxid][j] * nrv * (double)nrxpar*Vfrac;
+                    dVSVol += chem->mol_vapp[molID] * chem->bkg_nmol[rxid][j] * nrv * (double)nrxpar*dVfrac;
+                    
+                }
+                else if (strcmp(fix->afKMCsinUL[apos].c_str(),"local")==0) {
+                    // to be implemented: in this case only the subcommunnicator with managing the solution diffusion algorithm should do operations here. In this case, when compbeta is called by the fixes, it is again the subcomm manageing the solution that should be invoked. All to be implemented, so ERROR GIVEN FOR NOW
+                    std::string msg = "ERROR: local solution out for fix "+fix->afKMCname[apos]+" not implemented yet";
+                    error->errsimple(msg);
+                } else {
+                    std::string msg = "ERROR: solution out should be \"uniform\", instead "+fix->afKMCsinUL[apos]+" was found for "+fix->afKMCname[apos];
+                    error->errsimple(msg);
+                }
+            }
+
+            if (msk->wplog){
+                std::string msg;
+                std::ostringstream ss;
+                msg = "- "; ss << molID;   msg += ss.str()+"\t";    ss.str(""); ss.clear();
+                msg += " --> in sol: "; ss << chem->mol_nins[molID] ;   msg += ss.str()+"\t";    ss.str(""); ss.clear();
+                msg += " --> in dV: "; ss << chem->mol_nindV[molID] ;   msg += ss.str()+"\n";    ss.str(""); ss.clear();
+                output->toplog(msg);
+            }
+        }
+       
+    }
+    
+    // update concentrations
+    for (int molID=0; molID < chem->mol_cins.size(); molID++)
+    {
+        chem->mol_cins[molID] = chem->mol_nins[molID]/SVol/nAvo/unitC;
+        chem->mol_cindV[molID] = chem->mol_nindV[molID]/dVSVol/nAvo/unitC;
+    }
+    
+    // update voids in box and dV
+    voidV = BoxV - SolidV - SVol;
+    dVvoidV = dV - dVSVol;
+    
+    
+    
+    /*if (strcmp(fix->afKMCsoutUL[apos].c_str(),"uniform")==0) {
+
+        
     } else if (strcmp(fix->afKMCsoutUL[apos].c_str(),"local")==0) {
         // to be implemented: in this case only the subcommunnicator with managing the solution diffusion algorithm should do operations here. In this case, when compbeta is called by the fixes, it is again the subcomm manageing the solution that should be invoked. All to be implemented, so ERROR GIVEN FOR NOW
         std::string msg = "ERROR: local solution out for fix "+fix->afKMCname[apos]+" not implemented yet";
@@ -566,8 +626,11 @@ void Solution::update(int apos, double pV, int EVtype)
         std::string msg = "ERROR: solution out should be \"uniform\", instead "+fix->afKMCsoutUL[apos]+" was found for "+fix->afKMCname[apos];
         error->errsimple(msg);
     }
+     */
 }
 
+
+//-------------------------------------------
 // For now, only used by fix_nufeb.cpp
 void Solution::updateconc(int apos, const std::vector<double>& dconc)
 {

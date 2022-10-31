@@ -540,7 +540,7 @@ void Chemistry::addreax()
         
         // geometric changes to background and foreground induced by the reaction
         rx_dV_bkg.push_back(0.);
-        for (int i=0; i<bvec.size(); i++)   rx_dV_bkg.back() += mol_vapp[ibvec[i]]*bvec[i];
+        for (int i=0; i<bvec.size(); i++)   rx_dV_bkg.back() += mol_vapp[ibvec[i]] * bvec[i];
         
         rx_dV_fgd.push_back(0.);
         rx_dVp_fgd.push_back(0.);

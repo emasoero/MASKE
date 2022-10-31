@@ -310,6 +310,18 @@ void Fix_nucleate::sample(int pos)
     
     tolmp = "dump tdID all custom 1 dump.tempTRY_"+universe->SCnames[universe->color]+" c_tempID c_tempPE type x y z";    //temp dump to update variables and computes -- NOTICE I removed c_tempRAD compared to fix_delete
     lammpsIO->lammpsdo(tolmp);
+    
+    if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+        if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+            tolmp = "compute tempPAT all property/local patom1 patom2 ptype1 ptype2";
+            lammpsIO->lammpsdo(tolmp);
+            tolmp = "compute tempDIST all pair/local dist";
+            lammpsIO->lammpsdo(tolmp);
+            tolmp = " dump tdLID all local 1 dumpL.tmp index c_tempPAT[1] c_tempPAT[2] c_tempPAT[3] c_tempPAT[4] c_tempDIST";
+            lammpsIO->lammpsdo(tolmp);
+        }
+    }
+    
     lammpsIO->lammpsdo("run 1");     // a run1 in lammps to dump the temp and so prepare variables and computes
     
 
@@ -397,6 +409,15 @@ void Fix_nucleate::sample(int pos)
 
     tolmp = "undump tdID ";     // removing temporary dump
     lammpsIO->lammpsdo(tolmp);
+    
+    if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+        if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+            tolmp = "undump tdLID";     // removing temporary "local" dump for per-pair interactions
+            lammpsIO->lammpsdo(tolmp);
+        }
+    }
+    
+    
     // END OF READING FROM LAMMPS
     // -----------------------------------------------------------------------------
     // -----------------------------------------------------------------------------
@@ -512,7 +533,14 @@ void Fix_nucleate::sample(int pos)
     tolmp = "uncompute tempType";
     lammpsIO->lammpsdo(tolmp);
      
- 
+    if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+        if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+            tolmp = "uncompute tempPAT";
+            lammpsIO->lammpsdo(tolmp);
+            tolmp = "uncompute tempDIST";
+            lammpsIO->lammpsdo(tolmp);
+        }
+    }
     
     // release frozen real particles
     tolmp = "unfix tmpfreeze";
