@@ -878,16 +878,28 @@ void Fix_delete::submaster_comp_cover(int pos)
             // if first atom is of correct type for this fix, add contact area to the contact fraction arrays (still areas here; will be converted to area fractions later on below)
             if (flag_t1)  {
                 CFuns[up1] += Aij;
-                double tempGM = - chem->gij[t1-1][t1-1] - chem->gij[t1-1][t2-1] + chem->gij[t2-1][t2-1];
-                if (fGMuns[up1]) GMuns[up1] = tempGM;
-                else if (tempGM > GMuns[up1]) GMuns[up1] = tempGM;
+                if (Aij > 0.){
+                    double tempGM = 0.;
+                    if (t1 != t2) tempGM = - chem->gij[t1-1][t1-1] - chem->gij[t1-1][t2-1] + chem->gij[t2-1][t2-1];
+                    if (fGMuns[up1]) {
+                        GMuns[up1] = tempGM;
+                        fGMuns[up1] = false;
+                    }
+                    else if (tempGM > GMuns[up1]) GMuns[up1] = tempGM;
+                }
             }
             
             if (flag_t2){
                 CFuns[up2] += Aij;
-                double tempGM = - chem->gij[t2-1][t2-1] - chem->gij[t2-1][t1-1] + chem->gij[t1-1][t1-1];
-                if (fGMuns[up2]) GMuns[up2] = tempGM;
-                else if (tempGM > GMuns[up2]) GMuns[up2] = tempGM;
+                if (Aij > 0.){
+                    double tempGM = 0.;
+                    if (t1 != t2) tempGM = - chem->gij[t2-1][t2-1] - chem->gij[t2-1][t1-1] + chem->gij[t1-1][t1-1];
+                    if (fGMuns[up2]) {
+                        GMuns[up2] = tempGM;
+                        fGMuns[up1] = false;
+                    }
+                    else if (tempGM > GMuns[up2]) GMuns[up2] = tempGM;
+                }
             }
         }
         
