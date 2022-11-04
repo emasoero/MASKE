@@ -429,8 +429,7 @@ void Fix_delete::sample(int pos)
     delete [] IDuns;
     delete [] IDpos;
     delete [] nID_each;
-    delete [] tCF;
-    delete [] tGM;
+
 
     
     if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
@@ -442,6 +441,8 @@ void Fix_delete::sample(int pos)
                 free(SAR);
                 SAR = nullptr;
             }
+            delete [] tCF;
+            delete [] tGM;
             
             delete [] nlocR_each;
             delete [] SARpos;

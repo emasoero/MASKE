@@ -288,9 +288,9 @@ void Fix_nucleate::sample(int pos)
     tolmp = "compute tempID all property/atom id"; // temp compute to get id of all atoms
     lammpsIO->lammpsdo(tolmp);
     
-    // radii were needed for deletion, not for nucleation because radius is input
-    //tolmp = "compute tempRAD all property/atom radius"; // temp compute to get atom radii
-    //lammpsIO->lammpsdo(tolmp);
+    // radii are needed for nucleation onle for coverage fraction in micro mechanism: you can probable improve efficiency by doing this only if a micro mechanism is invoked and not in general (NB: in fix delete instead you need radii to compute number of layers in general, even for non micro mechanisms)
+    tolmp = "compute tempRAD all property/atom radius"; // temp compute to get atom radii
+    lammpsIO->lammpsdo(tolmp);
     
 
     typ << fix->fKMCptypeTRY[pos];
@@ -355,7 +355,7 @@ void Fix_nucleate::sample(int pos)
     
     // arrays of radii and energies
     //aR = new double[natoms];
-    //aR = ((double *) lammps_extract_compute(lammpsIO->lmp,(char *) "tempRAD",1,1));
+    aR = ((double *) lammps_extract_compute(lammpsIO->lmp,(char *) "tempRAD",1,1));
     //aE = new double[natoms];
     aE = ((double *) lammps_extract_compute(lammpsIO->lmp,(char *) "tempPE",1,1));
     //atype = new int[natoms];
@@ -364,7 +364,16 @@ void Fix_nucleate::sample(int pos)
     atype = ((double *) lammps_extract_compute(lammpsIO->lmp,(char *) "tempType",1,1));
     
 
-     /*
+    if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+        if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+            // PAT is a local compute (style = 2 in lammps library) of array (i.e. matrix) type (type = 2 in lammps library)
+            locLMP = ((double **) lammps_extract_compute(lammpsIO->lmp,(char *) "tempPAT",2,2));
+            // DIST is a local compute (style = 2 in lammps library) of vector type (type = 1 in lammps library)
+            aDIST = ((double *) lammps_extract_compute(lammpsIO->lmp,(char *) "tempDIST",2,1));
+            nlocR = *((int*)lammps_extract_compute(lammpsIO->lmp,(char *) "tempPAT",2,4));
+        }
+    }
+
     
     
     //printing group-specific aIDs and all IDs in lammps vectors, for debugging
@@ -398,6 +407,28 @@ void Fix_nucleate::sample(int pos)
             }
         }
         
+        if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+            if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+                msg = msg+"\nNumber of interacting pairs in current processor: ";
+                ss << nlocR;       msg = msg+ss.str(); ss.str("");   ss.clear();
+                output->toplog(msg);
+                msg="";
+                output->toplog("\npos id1 id2 type1 type2 dist");
+                {
+                    for(int i=0; i<nlocR; i++){
+                        ss << i;        msg = ss.str()+" ";   ss.str("");   ss.clear();
+                        ss << locLMP[i][0];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                        ss << locLMP[i][1];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                        ss << locLMP[i][2];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                        ss << locLMP[i][3];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                        ss << aDIST[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                        output->toplog(msg);
+                        msg="";
+                    }
+                }
+            }
+        }
+        
 
     }
     
@@ -405,7 +436,7 @@ void Fix_nucleate::sample(int pos)
     //fprintf(screen,"\n Proc %d, EDDIG JO0? \n",me);
     //MPI_Barrier(MPI_COMM_WORLD);
     //sleep(10);
-    */
+    
 
     tolmp = "undump tdID ";     // removing temporary dump
     lammpsIO->lammpsdo(tolmp);
@@ -432,8 +463,7 @@ void Fix_nucleate::sample(int pos)
     // RECORDING IDs AND ENERGIES IN EACH PROCESSOR (cleaning out those not pertaining to current processor)
     // -----------------------------------------------------------------------------
     // -----------------------------------------------------------------------------
-    tID.clear();    tE.clear();
-    //tR.clear();
+    tID.clear();    tE.clear();   tR.clear();
     naP = 0;  // number of atoms in current processor of type invoked by current fix
     int naf = 0;  // counter of number of atoms in current processor
     {
@@ -443,7 +473,7 @@ void Fix_nucleate::sample(int pos)
                 naf++;
                 if ((int)atype[i]==fix->fKMCptypeTRY[pos]){
                     tID.push_back((int)aID[i]);
-                    //tR.push_back(aR[i]);
+                    tR.push_back(aR[i]);
                     tE.push_back(aE[i]);
                     naP++;
                 }
@@ -474,7 +504,7 @@ void Fix_nucleate::sample(int pos)
             ss << i;        msg = ss.str()+" ";   ss.str("");   ss.clear();
             ss << tID[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
             ss << tIDarr[i];  msg += ss.str()+" ";  ss.str("");   ss.clear();
-            //ss << tR[i];    msg += ss.str()+" ";  ss.str("");   ss.clear();
+            ss << tR[i];    msg += ss.str()+" ";  ss.str("");   ss.clear();
             ss << tE[i];    msg += ss.str();      ss.str("");   ss.clear();
             output->toplog(msg);
             msg="";
@@ -491,6 +521,13 @@ void Fix_nucleate::sample(int pos)
     // SUBMASTER ASSEMBLES THE UNSORTED ID ARRAYS FROM EACH PROCESSOR IN AN UNSORTED VECTOR
     ids_to_submaster(pos);
     
+    
+    // FOR MICRO-PAIR MECHANISM ONLY Communicate local arrays (from neighbour list) to submaster
+    if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+        if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+            pair_arr_to_submaster(pos);
+        }
+    }
 
     // SUBMASTER SORTS IDs (only if fix was just reset in krun.cpp, otherwise sorted vector already exists)
     if (key==0 && krun->fMC_justreset) submaster_sort_IDs(pos);
@@ -499,6 +536,18 @@ void Fix_nucleate::sample(int pos)
     // EACH PROCESSOR MAPS THEIR ID TO THE CORRESPONDING POSITION IN THE SUBMASTER IDsrt ARRAY
     if(key==0) submaster_map_ID(pos);
     
+    
+    // FOR MICRO-PAIR MECHANISM ONLY, SUBMASTER COMPUTES COVERAGE AREAS AND PASSES THEM BACK TO SLAVES
+    if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+        if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+            if(key==0){
+                // submaster computes coverage area fraction of each particle in the fix (stored in unsorted array in submaster)
+                submaster_comp_cover(pos);
+            }
+            // submaster communicates back its areas to each slave processor in chunks of same size as local IDs
+            cover_from_submaster(pos);
+        }
+    }
     
      
     // EACH PROCESSOR COMPUTES RATES OF EACH EVENT AND CUMULATIVES DEPENDING ON MECHANISM
@@ -526,8 +575,8 @@ void Fix_nucleate::sample(int pos)
     
     tolmp = "uncompute tempID";
     lammpsIO->lammpsdo(tolmp);
-    //tolmp = "uncompute tempRAD";
-    //lammpsIO->lammpsdo(tolmp);
+    tolmp = "uncompute tempRAD";
+    lammpsIO->lammpsdo(tolmp);
     tolmp = "uncompute tempPE";
     lammpsIO->lammpsdo(tolmp);
     tolmp = "uncompute tempType";
@@ -571,6 +620,30 @@ void Fix_nucleate::sample(int pos)
     delete [] nID_each;
     delete [] IDpos;
     delete [] IDuns;
+    
+    
+    if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+        if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+            delete [] Runs;
+            
+            if (!(SAR == nullptr)){
+                free(SAR[0]);
+                free(SAR);
+                SAR = nullptr;
+            }
+            
+            delete [] tCF;
+            delete [] tGM;
+            
+            delete [] nlocR_each;
+            delete [] SARpos;
+            delete [] Dsub;
+            delete [] CFuns;
+            delete [] GMuns;
+            delete [] fGMuns;
+        }
+    }
+
     
     
 }
@@ -628,6 +701,12 @@ void Fix_nucleate::ids_to_submaster(int pos)
     if (key>0) {
         int dest = 0;
         MPI_Send(&tIDarr[0], naP, MPI_INT, dest, 1, (universe->subcomm));
+        
+        if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+            if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+                MPI_Send(&tR[0], naP, MPI_DOUBLE, dest, 2, (universe->subcomm));
+            }
+        }
     }
     if (key==0) {
         for (int i=0; i<nID_each[0]; i++) {
@@ -637,10 +716,139 @@ void Fix_nucleate::ids_to_submaster(int pos)
             MPI_Recv(&IDuns[IDpos[source]], nID_each[source], MPI_INT, source, 1, (universe->subcomm), &status);
         }
         
+        if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+            if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+                Runs = new double[Ng];
+                
+                for (int i=0; i<nID_each[0]; i++) {
+                    Runs[i] = tR[i];
+                }
+                for (int source=1; source<nploc; source++) {
+                    MPI_Recv(&Runs[IDpos[source]], nID_each[source], MPI_DOUBLE, source, 2, (universe->subcomm), &status);
+                }
+            }
+        }
+        
+        // print assembled IDuns on submaster
+        if (msk->wplog) {
+            std::string msg = "\nNumber of atoms in this fix: ";
+            std::ostringstream ss;    ss << Ng;   msg = msg+ss.str();
+            output->toplog(msg);
+            msg="";   ss.str("");   ss.clear();
+            if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+                if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+                    output->toplog("\npos IDuns Runs");
+                }
+            }
+            else output->toplog("\npos IDuns");
+            
+            for (int i=0; i<Ng; i++){
+                ss << i;        msg = ss.str()+" ";   ss.str("");   ss.clear();
+                ss << IDuns[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+                    if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+                        ss << Runs[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                    }
+                }
+                output->toplog(msg);
+                msg="";
+            }
+        }
+         
+        
  
         
     }
 }
+
+
+
+// ---------------------------------------------------------------
+// assembles all pair arrays from each processor into block-wise array in submaster, where each block is the locLMP and aDIST in a processor
+void Fix_nucleate::pair_arr_to_submaster(int pos)
+{
+    
+   
+    //MPI send size of each local array to submaster. Submaster creates array with enough space and assigns positions to accept local arrays.  All procs then send local arrays to submaster
+    nlocR_each = new int[nploc];
+    nlocR_each[key] = nlocR;
+    
+    if (key>0) {
+        int dest = 0;
+        MPI_Send(&nlocR_each[key], 1, MPI_INT, dest, 1, (universe->subcomm));
+    }
+    if (key==0 && nploc>1) {
+        for (int source=1; source<nploc; source++) {
+            MPI_Recv(&nlocR_each[source], 1, MPI_INT, source, 1, (universe->subcomm), &status);
+        }
+    }
+    
+    
+    // pass local arrays to submaster
+    SARpos = new int[nploc];  // position of local array in submaster's  array
+    if (key==0) {
+        SARpos[0]=0;
+        for (int i=1; i<nploc; i++) {
+            SARpos[i] =SARpos[i-1]+nlocR_each[i-1];
+        }
+    
+        // allocating array storing the local arrays for the interactions in current fix
+        int allrows = SARpos[nploc-1]+nlocR_each[nploc-1];
+        int nbytes = ((int) sizeof(double)) * 4 * allrows;
+        double *data = (double *) malloc(nbytes);
+        nbytes = ((int) sizeof(double *)) * allrows;
+        SAR = (double **) malloc(nbytes);
+        
+        int n = 0;
+        for (int i = 0; i < allrows ; i++) {
+            SAR[i] = &data[n];
+            n += 4;
+        }
+        Dsub = new double[allrows];
+    }
+    
+    
+    if (key>0) {
+        int dest = 0;
+        MPI_Send(&locLMP[0][0], 4.*nlocR , MPI_DOUBLE, dest, 3, (universe->subcomm));
+        MPI_Send(&aDIST[0], nlocR , MPI_DOUBLE, dest, 4, (universe->subcomm));
+    }
+    if (key==0) {
+        for (int j=0; j<nlocR; j++){
+            for (int i=0; i<4; i++) {
+                SAR[j][i] = locLMP[j][i];
+            }
+            Dsub[j] = aDIST[j];
+        }
+        for (int source=1; source<nploc; source++) {
+            MPI_Recv(&SAR[SARpos[source]][0], 4.*nlocR_each[source], MPI_DOUBLE, source, 3, (universe->subcomm), &status);
+            MPI_Recv(&Dsub[SARpos[source]], nlocR_each[source], MPI_DOUBLE, source, 4, (universe->subcomm), &status);
+        }
+        
+        // print assembled SAR on submaster
+        if (msk->wplog) {
+            std::string msg = "\nNumber of local pairs: ";
+            std::ostringstream ss;    ss << SARpos[nploc-1]+nlocR_each[nploc-1];   msg = msg+ss.str();
+            output->toplog(msg);
+            msg="";   ss.str("");   ss.clear();
+            output->toplog("\npos lmp_pos id1 id2 type1 type2 dist");
+            //sleep(1);
+            for (int i=0; i<SARpos[nploc-1]+nlocR_each[nploc-1]; i++){
+                //sleep(1);
+                ss << i;        msg = ss.str()+" ";   ss.str("");   ss.clear();
+                ss << SAR[i][0];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                ss << SAR[i][1];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                ss << SAR[i][2];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                ss << SAR[i][3];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                ss << Dsub[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                output->toplog(msg);
+                msg="";
+            }
+        }
+    }
+
+}
+
 
 
 
@@ -702,6 +910,15 @@ void Fix_nucleate::submaster_map_ID(int pos)
     // find ID position in existing sorted vector (portion of IDsrt corresponding to current event, knowing first position id from fix-fMKCfirst and number of events Ng)
     int posit;
     UtoS.clear();
+    
+    if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+        if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+            StoU.clear();
+            StoU.resize(Ng);   // set map vector size
+        }
+    }
+    
+    
     for (int j=0; j<Ng; j++) {
         //binary search
         int pre = fix->fKMCfirst[pos];
@@ -713,6 +930,12 @@ void Fix_nucleate::submaster_map_ID(int pos)
         }
         posit=pre;
         UtoS.push_back(posit);
+        
+        if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+            if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+                StoU[posit-fix->fKMCfirst[pos]] = j;
+            }
+        }
     }
     
     
@@ -737,9 +960,230 @@ void Fix_nucleate::submaster_map_ID(int pos)
             output->toplog(msg);
             msg="";
         }
+        if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+            if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+                output->toplog("\nFix-specific sorted-to-unsorted map\npos IDsrt StoU");
+                for (int i=0; i<Ng; i++){
+                    ss << i;        msg = ss.str()+" ";   ss.str("");   ss.clear();
+                    ss << IDsrt[fix->fKMCfirst[pos]+i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                    ss << StoU[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                    output->toplog(msg);
+                    msg="";
+                }
+            }
+        }
     }
     
 }
+
+
+
+// ---------------------------------------------------------------
+//  The submaster computes coverage areas of particles in the current fix and communicates them back to the other processors in its subcomm
+void Fix_nucleate::submaster_comp_cover(int pos)
+{
+    CFuns = new double[Ng];
+    GMuns = new double[Ng];
+    fGMuns = new bool[Ng];
+    
+    for (int i=0; i<Ng; i++) {
+        CFuns[i]=0.;
+        GMuns[i]=0.;
+        fGMuns[i]=true;
+    }
+    
+    if (msk->wplog) {
+        std::string msg = "Number of pairs in neighbor array for "+fix->fKMCname[pos]+" :";
+        std::ostringstream ss;    ss << SARpos[nploc-1]+nlocR_each[nploc-1];   msg = msg+ss.str();
+        output->toplog(msg);
+        msg="";   ss.str("");   ss.clear();
+        // pring ids and positions in unsorted atom arrays
+        output->toplog("npos id1 id2 type1 type2 upos1 upos2");
+    }
+    
+    
+    // for all the rows in the assembled arrays in the submaster...
+    for (int i=0; i<SARpos[nploc-1]+nlocR_each[nploc-1]; i++){
+        int id1 = SAR[i][0];
+        int id2 = SAR[i][1];
+        int t1 = SAR[i][2];
+        int t2 = SAR[i][3];
+        bool flag_t1 = (t1 == fix->fKMCptypeTRY[pos]);
+        bool flag_t2 = (t2 == fix->fKMCptypeTRY[pos]);
+        int up1,up2;   // positions of particles 1 and 2 in pair in unsorted vectors (ID and radii)
+        up1 = -1;
+        up2 = -1;
+        
+        if (flag_t1){
+            // find first particle position in unsorted IDs vector
+            int pre = fix->fKMCfirst[pos];
+            int post = fix->fKMCfirst[pos]+Ng-1;
+            int posit;
+            while (pre < post) {
+                posit = (int)((pre+post)/2.);
+                if (IDsrt[posit] < id1) pre=posit+1;
+                    else post=posit;
+                }
+            posit=pre;
+            up1 = StoU[posit - fix->fKMCfirst[pos]];
+        }
+        
+        if (flag_t2){
+            // find second particle position in unsorted IDs vector
+            int pre = fix->fKMCfirst[pos];
+            int post = fix->fKMCfirst[pos]+Ng-1;
+            int posit;
+            while (pre < post) {
+                posit = (int)((pre+post)/2.);
+                if (IDsrt[posit] < id2) pre=posit+1;
+                    else post=posit;
+                }
+            posit=pre;
+            up2 = StoU[posit - fix->fKMCfirst[pos]];
+        }
+        
+        if (msk->wplog) {
+            std::string msg;
+            std::ostringstream ss;
+            ss << i;        msg = ss.str()+" ";   ss.str("");   ss.clear();
+            ss << id1;   msg += ss.str()+" ";  ss.str("");   ss.clear();
+            ss << id2;   msg += ss.str()+" ";  ss.str("");   ss.clear();
+            ss << SAR[i][2];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+            ss << SAR[i][3];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+            ss << up1;   msg += ss.str()+" ";  ss.str("");   ss.clear();
+            ss << up2;   msg += ss.str()+" ";  ss.str("");   ss.clear();
+            output->toplog(msg);
+        }
+        
+       
+        if (flag_t1 || flag_t2){
+            // compute coverage area, used later to compute number of layers to dissolve in micro particle
+            // coverage is given by contact cross section weighted by a distance-dependent factor; the latter is user-provided through two thresholds, e0 below which contact is 100%, ef above which contact is 0%. Linear interpolation in between
+            
+            double Aij;    // cross section of inter-particle contact
+            double Rij;     // harmonic average of radii of particles in contact
+            Rij = 2. * Runs[up1] * Runs[up2]/( Runs[up1] + Runs[up2]);
+            Aij = M_PI * Rij * Rij;
+            
+            // weigh the contact cross section by the distance
+            double Dij; // arithmetic average of diameters in contact
+            Dij = Runs[up1] + Runs[up2];
+            double efij = chem->ef[t1-1][t2-1];
+            double e0ij = chem->e0[t1-1][t2-1];
+            
+            if (Dsub[i] > efij * Dij)        Aij = 0.;
+            else if (Dsub[i] > e0ij * Dij)   Aij *= (efij - Dsub[i]/Dij) / (efij- e0ij);
+
+            // if first atom is of correct type for this fix, add contact area to the contact fraction arrays (still areas here; will be converted to area fractions later on below)
+            if (flag_t1)  {
+                CFuns[up1] += Aij;
+                if (Aij > 0.){
+                    double tempGM = 0.;
+                    if (t1 != t2) tempGM = - chem->gij[t1-1][t1-1] - chem->gij[t1-1][t2-1] + chem->gij[t2-1][t2-1];
+                    if (fGMuns[up1]) {
+                        GMuns[up1] = tempGM;
+                        fGMuns[up1] = false;
+                    }
+                    else if (tempGM > GMuns[up1]) GMuns[up1] = tempGM;
+                }
+            }
+            
+            if (flag_t2){
+                CFuns[up2] += Aij;
+                if (Aij > 0.){
+                    double tempGM = 0.;
+                    if (t1 != t2) tempGM = - chem->gij[t2-1][t2-1] - chem->gij[t2-1][t1-1] + chem->gij[t1-1][t1-1];
+                    if (fGMuns[up2]) {
+                        GMuns[up2] = tempGM;
+                        fGMuns[up1] = false;
+                    }
+                    else if (tempGM > GMuns[up2]) GMuns[up2] = tempGM;
+                }
+            }
+        }
+        
+    }
+    double nbulk = 12.;   // number of particles in the bulk for a monodisperse system of particls with type selected for dissolution. In future implementations, this could be passed as an input when calling the fix_delete (becasue it applies to all particles to be considered for deletion here)
+    for (int i=0; i<Ng; i++){
+        // convert coverage areas to coverage fractions
+        CFuns[i] /= 4.*M_PI*Runs[i]*Runs[i];    // here we divide contact area by particle surface area
+        CFuns[i] *= 4./nbulk;    // this is a correction such that a speherical particle in contact with 12 equally sized neighbours in an FCC lattice ends up having coverage fraction = 1   (If we did not divide by 3, such a bulk particle would have a coverage fraction of 300%)
+    }
+    
+    
+    if (msk->wplog) {
+        std::string msg = "\nPer-particle coverage fraction";
+        output->toplog(msg);
+        msg="";
+        // pring ids and covrage fractions of unsorted atoms
+        output->toplog("npos id CFuns GMuns");
+        std::ostringstream ss;
+        for (int i=0; i<Ng; i++){
+            ss << i;        msg = ss.str()+" ";   ss.str("");   ss.clear();
+            ss << IDuns[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+            ss << CFuns[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+            ss << GMuns[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+            output->toplog(msg);
+        }
+        
+    }
+    
+}
+
+
+
+
+
+// ---------------------------------------------------------------
+//  each processor in the subcommunicator receives its chunk of unsorted coverage area fractions from the submaster
+void Fix_nucleate::cover_from_submaster(int pos)
+{
+    
+    if (key==0) {
+        for (int dest=1; dest<nploc; dest++) {
+            MPI_Send(&CFuns[IDpos[dest]], nID_each[dest], MPI_DOUBLE, dest, 1, (universe->subcomm));
+            MPI_Send(&GMuns[IDpos[dest]], nID_each[dest], MPI_DOUBLE, dest, 1, (universe->subcomm));
+        }
+        tCF = new double[nID_each[0]];
+        tGM = new double[nID_each[0]];
+        for (int i=0; i<nID_each[0]; i++){
+            tCF[i] = CFuns[i];
+            tGM[i] = GMuns[i];
+        }
+    }
+    else{
+        tCF = new double[nID_each[key]];
+        tGM = new double[nID_each[key]];
+        int source = 0;
+        MPI_Recv(&tCF[0], nID_each[key], MPI_DOUBLE, source, 1, (universe->subcomm), &status);
+        MPI_Recv(&tGM[0], nID_each[key], MPI_DOUBLE, source, 1, (universe->subcomm), &status);
+    }
+    
+    // Each processor prints its coverage fraction array to its log file
+    if (msk->wplog) {
+        std::string msg = "\nNumber of local coverage area fractions: ";
+        std::ostringstream ss;    ss << nID_each[key];   msg = msg+ss.str();
+        output->toplog(msg);
+        msg="";   ss.str("");   ss.clear();
+        output->toplog("\npos id tCF tGM");
+        //sleep(1);
+        for (int i=0; i<nID_each[key]; i++){
+            //sleep(1);
+            ss << i;        msg = ss.str()+" ";   ss.str("");   ss.clear();
+            ss << tID[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+            ss << tCF[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+            ss << tGM[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+            output->toplog(msg);
+            msg="";
+        }
+    }
+    
+}
+
+
+
+
+
 
 
 
