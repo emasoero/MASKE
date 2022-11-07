@@ -176,6 +176,10 @@ mech   CHnuc_micro  micro net   CH_prec  sen_CH  int_uni pair cover_param.dat en
 mech   CSHnuc_micro  micro net   CSHprec  sen_CSH  int_uni pair cover_param.dat energy
 
 
+
+# mech   CHnuc_micro  micro net   CH_nuc  sen_CH  int_uni pair cover_param.dat energy
+
+
 # int_uni = uniform distribution of intraction energy from LAMMPS for all molecules in cg particle
 # coverage_calc_style is either "pair" or other things to be implemented, thinking of "bond" or "ellipse" or "3body" etc. If "pair", the code reads the pair neighbour list from LAMMPS. If "bond" it should use the bond topology. If "ellipse" or else, we would probably need pseudo-potentials
 # cover_param.dat = a text file whose content depends on the coverage calculator. If "pair" a set of param depending on interacting types (min_dist, max_dist, interf_enrgy: see sample file). If "bond", similar to pair but with differences (e.g. strain-based cutoffs). If "ellipse" or else, maybe parameters for pseudo-potentials... to be thought.

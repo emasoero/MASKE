@@ -1,4 +1,6 @@
-#https://polimi-it.zoom.us/j/9036513623?pwd=NUVtc2JLUmlFT01lL0pKTDk5RXJMQT09# Running the code on Enrico's Mac Air
+
+# Running the code on Enrico's Mac Air
+
 #    /opt/local/bin/mpiexec-mpich-mp -np 1 ./maske input.dat
 
 

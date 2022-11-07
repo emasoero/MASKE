@@ -92,28 +92,40 @@ namespace MASKE_NS {
         //double *aR,
         double *atype;
         double *aE;    // arrays with atom radius and energy, to be read from lammps
+        double *aR;    // arrays with atom radius and energy, to be read from lammps
         std::vector<int> tID;   // proc-specific IDs
-        //td::vector<double> tR; // same as aR and aE but with meaningful entries only for atoms in current processor
+        std::vector<double> tR; // same as aR and aE but with meaningful entries only for atoms in current processor
         std::vector<double> tE;// same as aR and aE but with meaningful entries only for atoms in current processor
+        double *tCF; // coverage fractions of atoms in current processor
+        double *tGM; // maximum interfacial energy change of atoms in current processor
         //int *aaID;      // array with size natoms, with IDs from lammps for ALL natoms
         int naP;      // number of atoms in current processor (naP <= Ng)
         int *tIDarr ;   // array of size naP with unsorted IDs of atoms in current processor only
-        
-        
         int *nID_each;     // array storing IDs in each processor: used by submaster for assembly and back
         double *rate_each;     // array storing rates in each processor
-
+        double **locLMP;   // array to extract content of compute property/local from LAMMPS, used in "micro" style to obtain IDs and types of interacting pairs of atoms from neighbour list
+        double *aDIST;   // vector to extract content of compute pair/local from LAMMPS, used in "micro" style to obtain distances between interacting pairs of atoms from neighbour list
+        int nlocR; // number of rows from LAMMPS property/local (neighbour list)
+        int *nlocR_each;     // array storing numcber of local array rows in each processor: used by submaster for assembly and back (only used for "micro" style)
         
         //----------------------------------------
         // quantities here are assembled through all processors in subcomm, but are not kept going from one fix to another one of the same type on the same subcomm
         int Ng;     // number of atoms in group, viz particles involved and managed by the submaster for the current fix
         int nploc;  // number of processor in subcom
         int *IDuns;     // unsorted IDs of all Ng particles in fix. This is bloc-wise, with each block being the tIDarr of a processor
-        
+        double *Runs;    // unsorted radii of all Ng particles in fix
+        double *CFuns;    // coverage fraction area of Ng particles in the fix
+        double *GMuns;    // maximum interfacial enrgy change of Ng particles in the fix
+        bool *fGMuns;    // is this the first interfacial enrgy change computed for each of the Ng particles in the fix?
         double *unsRates;   // array in subcomm storing unsorted rates corresponding to IDuns above (size Ng)
         int *IDpos;  // array storing starting positions of local tID arrays in submaster's IDuns
         
         std::vector<int> UtoS;   //pointing each-proc unsorted IDuns to corresponding sorted IDsrt in global vector containing all rfreeKMC fixes in current subcomm.  Its size is Ng (number of particles in current fix).     Needed to send rates computed by each processor and assembled unsorted by submaster to global sorted-ID rate vector
+        std::vector<int> StoU;   //pointing sorted IDs in current fix_delete (pos) to position in unsorted list assembled from processors on submaster. NOTE: the IDsrt vector contains all IDs for all fix_deletes on this subcomm. Instead , the StoU map only refers to IDs in current fix delete
+        int *SARpos;  // "Submaster ARray position" vector, storing starting positions of local arrays (from neighbour list) in submaster's ARuns and Duns
+        double **SAR;  //Submaster ARray, bloc-wise with each block being the locLMP of a processor
+        double *Dsub;    // vector on the submaster gathering all interaction distances from lammps pair/local
+
 
 	int nmax;
 	int nlocal0;
@@ -128,12 +140,16 @@ namespace MASKE_NS {
         void record_IDRE_proc(int);    // function to record particle ID, R, and E from aID.. to array tID.. arrays containing only the particles in the current processor
         */
         void ids_to_submaster(int);     // assembles all IDs from each processor into block-wise array in submaster, where each block is the tIDarr in a processor
+        void pair_arr_to_submaster(int);     // each proc communicates its portion of pair array (from neighbour list) to the submaster - used by style "micro" only, to compute coverage areas
+
+        void submaster_comp_cover(int);     // The submaster computes coverage areas of particles in the current fix and communicates them back to the other processors in its subcomm
+        void cover_from_submaster(int);     // each processor in the subcommunicator receives its chunk of unsorted coverage area fractions from the submaster
+        
         void submaster_sort_IDs(int);   // submaster sorts IDuns and places them in the block corresponding to the current fix in the global block-wise-sorted vector IDsrt (see in public part of defs)
         
         void submaster_map_ID(int);    // the submaster maps unsorted IDuns to corresponding IDsrt entry in global blockwise-sorted vector containing all fixes run by current subcomm
         
         void comp_rates_allpar(int);    // each proc computes deletion rates
-        
         
          void rates_to_submaster(int);   // submaster assembles rates in vector corresponding to unsorted IDs
         /*
