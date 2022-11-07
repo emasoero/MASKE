@@ -77,6 +77,9 @@ DGx DG_CaCO3_prec const	39.064	cx 0.6022 dim 2
 DGx DG_CaOHdis const 122.85  cx 0.6022  dim 2
 # From rate constant in Bullard 2007. Conversions from kJ/mol to ag nm2 ns-2 multiplying by 1.66.
 
+DGx DG_CaOHprec const 74.052  cx 0.6022  dim 2
+# From rate constant in Bullard 2007. Conversions from kJ/mol to ag nm2 ns-2 multiplying by 1.66.
+
 #DGx DG_CaOHdis const -0.85988  cx 1e-14 dim 2
 # From DHx and DSx in Johannnsen and Rademacher, Acta Hydrochim. hydrobiol. 27 (1999) (with DGx = DHx - TDSx). DHx is equated to Ea - RT = 27.22 kJ/mol from the ref.  TDSx at 298 K computed from same paper in  27.738 KJ/mol with k in s-1 cm-2, so cx in cm-2 (converted to nm-2 in input above).   Result is DGx = 27.22 - 27.738 = -0.518 kJ/mol. Conversions from kJ/mol to ag nm2 ns-2 multiplying by 1.66.
 
@@ -96,6 +99,8 @@ DGx DG_CSHprec const -44.4  cx 0.6022  dim 2
 
 reax CH_dis       simple gxSolid DG_CaOHdis 	6.30866e-6   0    bkg Ca+2 +1 OH- +2   fgd Ca(OH)2 -1
 # Keq,diss from phreeqc CEMDATA18.1, combining CaOH2 = Ca + 2H2O - 2H with H2O = OH + H   
+
+reax CH_prec     simple gxSolid DG_CaOHprec 	1.585122673e5   0    bkg Ca+2 -1 OH- -2   fgd Ca(OH)2 -1
 
 reax CaCO3_prec   simple gxSolid DG_CaCO3_prec 	3.02e8   0.5 bkg Ca+2 -1 CO3-2 -1  fgd CaCO3 +1
 # Keq,prec from Keq,diss^-1 with Keq,diss = 3.31157E-09 from phreeqc CEMDATA18.1
@@ -125,6 +130,8 @@ reax CSHprec    simple gxSolid DG_CSHprec 1e+20 0 bkg Ca+2 -2  H4SiO4 -1  OH- -4
 
 reaction_modify CH_dis Fk 0.2
 reaction_modify CSHdis Fk 0.2
+reaction_modify CH_prec Fk 0.2
+reaction_modify CSHprec Fk 0.2
 
 
 
@@ -165,8 +172,9 @@ sen sen_CSH const 87.6
 # micro style note: surface energy calculator not used now, but must point to an existing "sen" above. We might implement it in the future, e.g. to account for energy barrier when nucleating a new layer (island) within a micro particle
 mech   CHdel_micro  micro net   CH_dis  sen_CH  int_uni pair cover_param.dat energy
 mech   CSHdel_micro  micro net   CSHdis  sen_CSH  int_uni pair cover_param.dat energy
+mech   CHnuc_micro  micro net   CH_prec  sen_CH  int_uni pair cover_param.dat energy
+mech   CSHnuc_micro  micro net   CSHprec  sen_CSH  int_uni pair cover_param.dat energy
 
-mech   CHnuc_micro  micro net   CH_nuc  sen_CH  int_uni pair cover_param.dat energy
 
 # int_uni = uniform distribution of intraction energy from LAMMPS for all molecules in cg particle
 # coverage_calc_style is either "pair" or other things to be implemented, thinking of "bond" or "ellipse" or "3body" etc. If "pair", the code reads the pair neighbour list from LAMMPS. If "bond" it should use the bond topology. If "ellipse" or else, we would probably need pseudo-potentials

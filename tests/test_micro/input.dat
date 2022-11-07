@@ -1,4 +1,4 @@
-https://polimi-it.zoom.us/j/9036513623?pwd=NUVtc2JLUmlFT01lL0pKTDk5RXJMQT09# Running the code on Enrico's Mac Air
+#https://polimi-it.zoom.us/j/9036513623?pwd=NUVtc2JLUmlFT01lL0pKTDk5RXJMQT09# Running the code on Enrico's Mac Air
 #    /opt/local/bin/mpiexec-mpich-mp -np 1 ./maske input.dat
 
 
@@ -9,10 +9,11 @@ https://polimi-it.zoom.us/j/9036513623?pwd=NUVtc2JLUmlFT01lL0pKTDk5RXJMQT09# Run
 subcomm 2 Antonello 2 lmp_yes 123 subB 2 lmp_yes 456
 
 
-
 # ===== LIST REAL AND TRIAL PARTICLE TYPES TO BE USED IN THE SIM =======
 real_types 1 2
-# type 1 = real Ca(OH)2 to dissolve
+trial_types 3 4
+# type 1 = real Ca(OH)2 to dissolve 2 = CSH to dissolve
+# 3 = CH to nucleate, 4 = CSH to nucleate
 
 
 # ===== READ CHEMISTRY DATA BASE ========
@@ -28,7 +29,7 @@ lammps all 	atom_style sphere
 lammps all  	atom_modify map yes   # NEEDED FOR NUCLEATE FIXES!!
 lammps all 	boundary p p p
 lammps all  	region simbox block 0 500 0 500 0 500 units box
-lammps all  	create_box  2 simbox    #make space for enough types when creating box
+lammps all  	create_box  4 simbox    #make space for enough types when creating box
 lammps all  	read_dump ./1_dump.pack 243 x y z box yes add keep	#add atoms keeping their original IDs
 
 
@@ -52,13 +53,27 @@ lammps all 	variable eqDCSH equal v_DCSH*0.64^(1./3.)  # Assuming random close p
 
 lammps all 	set type 1 diameter $(v_DCH)
 lammps all 	set type 2 diameter $(v_DCSH)
-#===== Potentials, neighbours, and minimiser style
+lammps all 	set type 3 diameter $(v_DCH)
+lammps all 	set type 4 diameter $(v_DCSH)
+
+#===== Potentials, neighbours, and minimiser style
 
 # interaction potential from table file
 lammps all 	pair_style 	table linear 4000
 lammps all	pair_coeff 	1 1 ./table.potential_CH-CH.txt Spring_Ca(OH)2-Ca(OH)2	
 lammps all	pair_coeff 	1 2 ./table.potential_CSH-CH.txt Spring_Ca(OH)2-CSH
+lammps all	pair_coeff 	1 3 ./table.potential_CH-CH.txt Spring_Ca(OH)2-Ca(OH)2
+lammps all	pair_coeff 	1 4 ./table.potential_CSH-CH.txt Spring_Ca(OH)2-CSH
+
 lammps all	pair_coeff 	2 2 ./table.potential_CSH-CSH.txt Spring_CSH-CSH
+lammps all	pair_coeff 	2 3 ./table.potential_CSH-CH.txt Spring_Ca(OH)2-CSH
+lammps all	pair_coeff 	2 4 ./table.potential_CSH-CSH.txt Spring_CSH-CSH
+
+lammps all	pair_coeff 	3 3 ./table.potential_CH-CH.txt Spring_Ca(OH)2-Ca(OH)2
+lammps all	pair_coeff 	3 4 ./table.potential_CSH-CH.txt Spring_Ca(OH)2-CSH
+
+lammps all	pair_coeff 	4 4 ./table.potential_CSH-CSH.txt Spring_CSH-CSH
+
 lammps all	pair_write 1 2 4000 r 1.00E-030 0.62 tableOUT.txt Spring_CSH-CH
 
 
@@ -85,6 +100,32 @@ setconc 4 Ca+2 0.000 CO3-2 1.132E-5 OH- 0.03 H4SiO4 0.00001 1 counter H+ box
 fix KMC-free delete DelCH Antonello 1 mech CHdel_micro sol_in fixed uniform box sol_out uniform box+dV
 fix KMC-free delete DelCSH Antonello 2 mech CSHdel_micro sol_in fixed uniform box sol_out uniform box+dV
 
+# ======= NUCLEATION FIXES - approach based on stored regions, lattices, and minimise
+
+# Stored commands are evaluated each time a KMC event is carried out. They can depend on variables which are evaluated during Krun, when the stored quantity is invoked. Hence the variables must exist in the subcomm that invokes the stored quantity during the relevant Krun
+
+lammps 	all	variable zmid equal zlo+(zhi-zlo)/2
+lammps 	all	variable zmin equal zlo+(zhi-zlo)/10
+store region RegNuc block INF INF INF INF $(v_zmin)  $(v_zmid) units box
+
+lammps	all	variable Lx equal (xhi-xlo)/20 
+lammps	all	variable Ly equal (yhi-ylo)/20
+lammps	all	variable Lz equal (v_zmid-zlo)/10 
+lammps	all	variable scale equal v_Lx
+lammps	all	variable aa2 equal v_Ly/v_Lx
+lammps	all	variable aa3 equal v_Lz/v_Lx
+store 	lattice	latNuc custom $(v_scale) a1 1.0 0.0 0.0 a2 0 $(v_aa2) 0.0 a3 0.0 0.0 $(v_aa3) basis 0.5 0.5 0.5
+store 	DV	latNuc variable DVnuc equal v_Lx*v_Ly*v_Lz/1.207949625
+
+lammps	all	variable Qdmax equal v_eqDCH/200
+store minimize minNuc   tstep 0.00045 1e-10 0 600 600 min_modify dmax $(v_Qdmax)
+#store minimize minNuc tstep 0.00045  1e-10 0 600 600 min_modify dmax $(v_Qdmax)
+
+fix KMC-free nucleate NucCH Antonello RegNuc latNuc minNuc 3 1 sphere 47.3745541 wei simple 1 mech CHnuc_micro sol_in fixed uniform box sol_out uniform box+dV
+fix KMC-free nucleate NucCSH Antonello RegNuc latNuc minNuc 4 2 sphere 81.0840716 wei simple 1 mech CSHnuc_micro sol_in fixed uniform box sol_out uniform box+dV
+
+#fix KMC-free nucleate NucCO3 Antonello RegNuc2 latNuc minNuc 4 3 sphere 0.489278566 wei simple 1 mech CaCO3nuc_apnet sol_in fixed uniform box sol_out uniform box
+
 # ========= DEFINE LAMMPS DUMPS AND THERMOS + VARIABLES ALSO FOR MASKE OUTPUT
 
 lammps all variable N equal atoms
@@ -92,23 +133,23 @@ lammps all variable U equal epair
 lammps all variable P equal press
  
 lammps all variable tyCH atom "type == 1"
-lammps all variable tyCO3 atom "type == 2"
+lammps all variable tyCSH atom "type == 2"
 
 lammps all group g_CH dynamic all var tyCH every 1
-lammps all group g_CO3 dynamic all var tyCO3 every 1
+lammps all group g_CSH dynamic all var tyCSH every 1
 
 lammps all variable NCH equal count(g_CH)
-lammps all variable NCO3 equal count(g_CO3)
+lammps all variable NCSH equal count(g_CSH)
 
 lammps all compute  PEall all pe/atom
 
 
 # the lammps thermo must calculate all the thermo variables and compute you want to output via the MASKE's thermo
-lammps all thermo_style	custom step atoms vol epair press v_NCH v_NCO3
+lammps all thermo_style	custom step atoms vol epair press v_NCH v_NCSH
 
 lammps all thermo 1000
 
-thermo 1 thermo.txt conc_Ca+2 conc_H4SiO4 conc_H2O conc_OH- conc_CO3-2 conc_H+ lmp_v_N lmp_v_U lmp_v_P lmp_v_NCH lmp_v_NCO3
+thermo 1 thermo.txt conc_Ca+2 conc_H4SiO4 conc_H2O conc_OH- conc_CO3-2 conc_H+ lmp_v_N lmp_v_U lmp_v_P lmp_v_NCH lmp_v_NCSH
 
 dump Antonello D1 1 all     custom  dump.all id type x y z radius c_PEall
 
