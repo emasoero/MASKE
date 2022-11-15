@@ -150,6 +150,7 @@ namespace MASKE_NS {
         void submaster_map_ID(int);    // the submaster maps unsorted IDuns to corresponding IDsrt entry in global blockwise-sorted vector containing all fixes run by current subcomm
         
         void comp_rates_allpar(int);    // each proc computes deletion rates
+        void comp_rates_micro(int);    // each proc computes deletion rates
         
          void rates_to_submaster(int);   // submaster assembles rates in vector corresponding to unsorted IDs
         /*

@@ -100,7 +100,7 @@ DGx DG_CSHprec const -44.4  cx 0.6022  dim 2
 reax CH_dis       simple gxSolid DG_CaOHdis 	6.30866e-6   0    bkg Ca+2 +1 OH- +2   fgd Ca(OH)2 -1
 # Keq,diss from phreeqc CEMDATA18.1, combining CaOH2 = Ca + 2H2O - 2H with H2O = OH + H   
 
-reax CH_prec     simple gxSolid DG_CaOHprec 	1.585122673e5   0    bkg Ca+2 -1 OH- -2   fgd Ca(OH)2 -1
+reax CH_prec     simple gxSolid DG_CaOHprec 	1.585122673e5   0    bkg Ca+2 -1 OH- -2   fgd Ca(OH)2 +1
 
 reax CaCO3_prec   simple gxSolid DG_CaCO3_prec 	3.02e8   0.5 bkg Ca+2 -1 CO3-2 -1  fgd CaCO3 +1
 # Keq,prec from Keq,diss^-1 with Keq,diss = 3.31157E-09 from phreeqc CEMDATA18.1

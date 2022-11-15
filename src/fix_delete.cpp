@@ -1250,10 +1250,9 @@ void Fix_delete::comp_rates_micro(int pos)
   
         
         
-         // change of surface energy (not needed for this micro mechanism, which is kink-driven) and interaction energy per reaction unit (single reaction or chain: to be further subdivided per step in chain later on)
+         // change of  interaction energy per reaction unit (single reaction or chain: to be further subdivided per step in chain later on)
         //double DSpu;  // negative becasue delation removes energy
         double DUpu;  // change in energy caused by removing the particle
-        double DUs;     // change in internal strain energy
         
         if (strcmp(chem->mechinter[mid].c_str(),"int_1lin")==0)  {
             //DSpu = -Ps/pow((double)nrv,1./3.);
@@ -1389,6 +1388,7 @@ void Fix_delete::comp_rates_micro(int pos)
                         
                         topass = "prod";
                         double Qprod = solution->compQ(rxid,topass,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
+                        
                         ri -= r0 * Qprod / chem->Keq[rxid] * exp(ki * DUi / KT );
                         
                         if (msk->wplog) {
