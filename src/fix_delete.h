@@ -84,6 +84,7 @@ namespace MASKE_NS {
         double *aDIST;   // vector to extract content of compute pair/local from LAMMPS, used in "micro" style to obtain distances between interacting pairs of atoms from neighbour list
         int nlocR; // number of rows from LAMMPS property/local (neighbour list)
         int *nlocR_each;     // array storing numcber of local array rows in each processor: used by submaster for assembly and back (only used for "micro" style)
+        double lim_CF; //limiting coverage fraction associated with micro mechanism
 
         
         //----------------------------------------

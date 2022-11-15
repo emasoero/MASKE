@@ -1270,6 +1270,9 @@ void Fix_delete::comp_rates_micro(int pos)
         
 
         // number of layers to dissolve (it will depend on fractional coverage area)
+        double lim_CF= std::stod(chem->mechpar[mid][3]); //limiting coverage fraction
+        //fprintf(screen,"\n The value of limiting coverage fraction is %f\n",lim_CF);
+
         int nrL = 0;
         
         double unit_thick;    // thickness of dissolving unit in radial direction of particle
@@ -1281,7 +1284,7 @@ void Fix_delete::comp_rates_micro(int pos)
         }
         
         if (tCF[i] < 0.5) nrL = round(tR[i]/unit_thick);
-        else if (tCF[i] <= 0.9) nrL = round(2.*tR[i]/unit_thick);
+        else if (tCF[i] <= lim_CF) nrL = round(2.*tR[i]/unit_thick);
         
         bool flag_bulk = false;
         if (nrL == 0) flag_bulk = true;

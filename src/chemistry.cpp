@@ -1056,7 +1056,9 @@ void Chemistry::addmech()
         
         
         //fprintf(screen,"DEBUG 0: PROC %d param value is %s",me,param.c_str());
+        msg = "ERROR: Mechanism style requires an interaction energy calculator style \n";
         if(ss >> param) tempvec.push_back(param);   // interaction energy calculator style ("energy" or "stress")
+        else error->errsimple(msg);
         //fprintf(screen,"DEBUG 1: PROC %d param value is %s",me,param.c_str());
         //sleep (1);
     
@@ -1064,6 +1066,13 @@ void Chemistry::addmech()
             msg = "ERROR: Unknown energy calculator style \""+param+"\". For now, only style \"energy\" has been implemented. Future style may be \"stress\".\n";
             error->errsimple(msg);
         }
+
+        if(ss >> param) tempvec.push_back(param);   // limiting coverage fraction
+        else{
+            msg = "ERROR: Mechanism style requires a limiting coverage fraction \n";
+            error->errsimple(msg);
+        }
+    
         
 
     }

@@ -170,10 +170,11 @@ sen sen_CSH const 87.6
 #   mech  name type net/straight reax surface_nrg interact_interpol coverage_calc_style param_filename energy_calc
 # 	energy_calc can be "energy" or "stress". If "energy", then the user must adopt interaction potentials with zero energy at equilibrium (deepest well) and the code will directly use the LAMMMPS energy/pair to compute rate contribution from interactions. If "stress", the user can adopt any potential and MASKE will use the LAMMPS stress/atom to work out strain energy from the 6 stresses (with per-molecule E and G defined above and with averaging volume = particle volume).  NB: only "energy" implemented for now.
 # micro style note: surface energy calculator not used now, but must point to an existing "sen" above. We might implement it in the future, e.g. to account for energy barrier when nucleating a new layer (island) within a micro particle
-mech   CHdel_micro  micro net   CH_dis  sen_CH  int_uni pair cover_param.dat energy
-mech   CSHdel_micro  micro net   CSHdis  sen_CSH  int_uni pair cover_param.dat energy
-mech   CHnuc_micro  micro net   CH_prec  sen_CH  int_uni pair cover_param.dat energy
-mech   CSHnuc_micro  micro net   CSHprec  sen_CSH  int_uni pair cover_param.dat energy
+#Limiting coverage fraction: This is the maximum coverage fraction above which a particle cannot be deleted or the minimum coverage fraction below which a particle cannot be nucleated. The value depends on the scale. For micro-scale, the value could be higher (lim_CF=0.9). But closer to molecular scale it would be lower (lim_CF=0.66). In coarse grained systems this would let you observe phenomenons such as tunneling through the crystal, fragmentation and fractal like morphology. But at molecular scale deletions will be more ordered and will have a greater dependancy on the coverage.
+mech   CHdel_micro  micro net   CH_dis  sen_CH  int_uni pair cover_param.dat energy 0.9
+mech   CSHdel_micro  micro net   CSHdis  sen_CSH  int_uni pair cover_param.dat energy 0.9
+mech   CHnuc_micro  micro net   CH_prec  sen_CH  int_uni pair cover_param.dat energy 0.1
+mech   CSHnuc_micro  micro net   CSHprec  sen_CSH  int_uni pair cover_param.dat energy 0.1
 
 
 
