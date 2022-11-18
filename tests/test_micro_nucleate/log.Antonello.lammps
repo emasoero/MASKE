@@ -1,0 +1,510 @@
+units nano 
+atom_style sphere 
+atom_modify map yes # NEEDED FOR NUCLEATE FIXES!! 
+boundary p p p 
+region simbox block 0 20 0 20 0 20 units box 
+create_box 2 simbox #make space for enough types when creating box 
+Created orthogonal box = (0 0 0) to (20 20 20)
+  1 by 1 by 2 MPI processor grid
+variable DCH equal 0.473745541 
+variable eqDCH equal $(v_DCH)*(0.74^(1./3.)) 
+variable eqDCH equal 0.47374554099999999224*(0.74^(1./3.)) 
+variable scale equal sqrt(2)*v_eqDCH 
+lattice fcc $(v_scale) 
+lattice fcc 0.60599732400958894463 
+Lattice spacing in x,y,z = 0.60599732 0.60599732 0.60599732
+region nuc1 sphere 10 10 10 5 units box 
+create_atoms 1 region nuc1 
+Created 9400 atoms
+  using lattice units in orthogonal box = (0 0 0) to (20 20 20)
+  create_atoms CPU = 0.002 seconds
+group nuc1 region nuc1 
+9400 atoms in group nuc1
+set type 1 diameter $(v_DCH) 
+set type 1 diameter 0.47374554099999999224 
+Setting atom values ...
+  9400 settings made for diameter
+set type 2 diameter $(v_DCH) 
+set type 2 diameter 0.47374554099999999224 
+Setting atom values ...
+  0 settings made for diameter
+pair_style table linear 4000 
+pair_coeff 1 1 ./table.potential_CH-CH.txt Spring_Ca(OH)2-Ca(OH)2 
+WARNING: 1693 of 4000 force values in table Spring_Ca(OH)2-Ca(OH)2 are inconsistent with -dE/dr.
+WARNING:  Should only be flagged at inflection points (src/pair_table.cpp:465)
+WARNING: 3999 of 4000 distance values in table 1e-06 with relative error
+WARNING:  over Spring_Ca(OH)2-Ca(OH)2 to re-computed values (src/pair_table.cpp:473)
+pair_coeff 1 2 ./table.potential_CH-CH.txt Spring_Ca(OH)2-Ca(OH)2 
+WARNING: 1693 of 4000 force values in table Spring_Ca(OH)2-Ca(OH)2 are inconsistent with -dE/dr.
+WARNING:  Should only be flagged at inflection points (src/pair_table.cpp:465)
+WARNING: 3999 of 4000 distance values in table 1e-06 with relative error
+WARNING:  over Spring_Ca(OH)2-Ca(OH)2 to re-computed values (src/pair_table.cpp:473)
+pair_coeff 2 2 ./table.potential_CH-CH.txt Spring_Ca(OH)2-Ca(OH)2 
+WARNING: 1693 of 4000 force values in table Spring_Ca(OH)2-Ca(OH)2 are inconsistent with -dE/dr.
+WARNING:  Should only be flagged at inflection points (src/pair_table.cpp:465)
+WARNING: 3999 of 4000 distance values in table 1e-06 with relative error
+WARNING:  over Spring_Ca(OH)2-Ca(OH)2 to re-computed values (src/pair_table.cpp:473)
+pair_write 1 1 4000 r 1.00E-030 0.62 tableOUT.txt Spring_CSH-CH 
+Appending to table file tableOUT.txt with DATE: 2022-11-01
+Generated 0 of 1 mixed pair_coeff terms from geometric mixing rule
+Neighbor list info ...
+  update every 1 steps, delay 10 steps, check yes
+  max neighbors/atom: 2000, page size: 100000
+  master list distance cutoff = 0.61421
+  ghost atom cutoff = 0.61421
+  binsize = 0.307105, bins = 66 66 66
+  1 neighbor lists, perpetual/occasional/extra = 1 0 0
+  (1) pair table, perpetual
+      attributes: half, newton on
+      pair build: half/bin/atomonly/newton
+      stencil: half/bin/3d
+      bin: standard
+variable skin equal $(v_eqDCH)/10. 
+variable skin equal 0.42850481718808197673/10. 
+neighbor $(v_skin) bin 
+neighbor 0.042850481718808203224 bin 
+neigh_modify delay 0 
+variable Bvol equal vol
+compute rad all property/atom radius
+variable sva atom 4./3.*PI*c_rad*c_rad*c_rad
+compute solidVc all reduce sum v_sva
+variable solidV equal c_solidVc
+variable packf equal v_solidV/vol
+thermo_style custom step atoms c_solidVc v_solidV v_packf
+run 0
+WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
+Generated 0 of 1 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 5.475 | 5.476 | 5.476 Mbytes
+   Step        Atoms      c_solidVc       v_solidV       v_packf    
+         0        9400   523.31343      523.31343      0.065414179  
+Loop time of 1.8785e-06 on 2 procs for 0 steps with 9400 atoms
+
+159.7% CPU use with 2 MPI tasks x no OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 1.878e-06  |            |       |100.00
+
+Nlocal:           4700 ave        4916 max        4484 min
+Histogram: 1 0 0 0 0 0 0 0 0 1
+Nghost:            637 ave         853 max         421 min
+Histogram: 1 0 0 0 0 0 0 0 0 1
+Neighs:          26388 ave       28436 max       24340 min
+Histogram: 1 0 0 0 0 0 0 0 0 1
+
+Total # of neighbors = 52776
+Ave neighs/atom = 5.6144681
+Neighbor list builds = 0
+Dangerous builds = 0
+thermo_style custom step atoms c_solidVc v_solidV v_packf
+variable Bvol delete
+uncompute rad
+variable sva delete
+uncompute solidVc
+variable solidV delete
+variable packf delete
+thermo_style custom step atoms
+variable xl equal xlo 
+variable xr equal xhi 
+variable yl equal ylo 
+variable yr equal yhi 
+variable zl equal zlo 
+variable zr equal zhi 
+variable nx equal 1.5*ceil((xhi-xlo)/$(v_eqDCH)) 
+variable nx equal 1.5*ceil((xhi-xlo)/0.42850481718808197673) 
+variable ny equal 1.5*ceil((yhi-ylo)/$(v_eqDCH)) 
+variable ny equal 1.5*ceil((yhi-ylo)/0.42850481718808197673) 
+variable nz equal 1.5*ceil((zhi-zlo)/$(v_eqDCH)) 
+variable nz equal 1.5*ceil((zhi-zlo)/0.42850481718808197673) 
+variable Lx equal (xhi-xlo)/$(v_nx) 
+variable Lx equal (xhi-xlo)/70.5 
+variable Ly equal (yhi-ylo)/$(v_ny) 
+variable Ly equal (yhi-ylo)/70.5 
+variable Lz equal (zhi-zlo)/$(v_nz) 
+variable Lz equal (zhi-zlo)/70.5 
+variable scale equal v_Lx 
+variable aa2 equal v_Ly/v_Lx 
+variable aa3 equal v_Lz/v_Lx 
+variable Qdmax equal v_eqDCH/200 
+variable N equal atoms 
+variable U equal epair 
+variable P equal press 
+variable tyCH atom "type == 1" 
+group g_CH dynamic all var tyCH every 1 
+dynamic group g_CH defined
+variable NCH equal count(g_CH) 
+compute PEall all pe/atom 
+thermo_style custom step atoms vol epair press v_NCH 
+thermo 1000 
+print "STARTING KRUN" 
+STARTING KRUN
+timestep 0
+run 0
+WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
+Generated 0 of 1 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 5.6 | 5.601 | 5.601 Mbytes
+   Step        Atoms        Volume         E_pair         Press          v_NCH     
+         0        9400   8000           0.11910282    -1.1307615      9400         
+Loop time of 2.3345e-06 on 2 procs for 0 steps with 9400 atoms
+
+149.9% CPU use with 2 MPI tasks x no OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 2.335e-06  |            |       |100.00
+
+Nlocal:           4700 ave        4916 max        4484 min
+Histogram: 1 0 0 0 0 0 0 0 0 1
+Nghost:            637 ave         853 max         421 min
+Histogram: 1 0 0 0 0 0 0 0 0 1
+Neighs:          26388 ave       28436 max       24340 min
+Histogram: 1 0 0 0 0 0 0 0 0 1
+
+Total # of neighbors = 52776
+Ave neighs/atom = 5.6144681
+Neighbor list builds = 0
+Dangerous builds = 0
+run 0
+WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
+Generated 0 of 1 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 5.6 | 5.601 | 5.601 Mbytes
+   Step        Atoms        Volume         E_pair         Press          v_NCH     
+         0        9400   8000           0.11910282    -1.1307615      9400         
+Loop time of 1.3775e-06 on 2 procs for 0 steps with 9400 atoms
+
+181.5% CPU use with 2 MPI tasks x no OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 1.377e-06  |            |       |100.00
+
+Nlocal:           4700 ave        4916 max        4484 min
+Histogram: 1 0 0 0 0 0 0 0 0 1
+Nghost:            637 ave         853 max         421 min
+Histogram: 1 0 0 0 0 0 0 0 0 1
+Neighs:          26388 ave       28436 max       24340 min
+Histogram: 1 0 0 0 0 0 0 0 0 1
+
+Total # of neighbors = 52776
+Ave neighs/atom = 5.6144681
+Neighbor list builds = 0
+Dangerous builds = 0
+run 0
+WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
+Generated 0 of 1 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 5.6 | 5.601 | 5.601 Mbytes
+   Step        Atoms        Volume         E_pair         Press          v_NCH     
+         0        9400   8000           0.11910282    -1.1307615      9400         
+Loop time of 1.177e-06 on 2 procs for 0 steps with 9400 atoms
+
+169.9% CPU use with 2 MPI tasks x no OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 1.177e-06  |            |       |100.00
+
+Nlocal:           4700 ave        4916 max        4484 min
+Histogram: 1 0 0 0 0 0 0 0 0 1
+Nghost:            637 ave         853 max         421 min
+Histogram: 1 0 0 0 0 0 0 0 0 1
+Neighs:          26388 ave       28436 max       24340 min
+Histogram: 1 0 0 0 0 0 0 0 0 1
+
+Total # of neighbors = 52776
+Ave neighs/atom = 5.6144681
+Neighbor list builds = 0
+Dangerous builds = 0
+run 0
+WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
+Generated 0 of 1 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 5.6 | 5.601 | 5.601 Mbytes
+   Step        Atoms        Volume         E_pair         Press          v_NCH     
+         0        9400   8000           0.11910282    -1.1307615      9400         
+Loop time of 1.3425e-06 on 2 procs for 0 steps with 9400 atoms
+
+149.0% CPU use with 2 MPI tasks x no OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 1.343e-06  |            |       |100.00
+
+Nlocal:           4700 ave        4916 max        4484 min
+Histogram: 1 0 0 0 0 0 0 0 0 1
+Nghost:            637 ave         853 max         421 min
+Histogram: 1 0 0 0 0 0 0 0 0 1
+Neighs:          26388 ave       28436 max       24340 min
+Histogram: 1 0 0 0 0 0 0 0 0 1
+
+Total # of neighbors = 52776
+Ave neighs/atom = 5.6144681
+Neighbor list builds = 0
+Dangerous builds = 0
+dump D1 all custom 1 dump.all.Antonello id type x y z radius c_PEall
+dump_modify D1 every 1 first yes
+run 0
+WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
+Generated 0 of 1 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 7.237 | 7.238 | 7.239 Mbytes
+   Step        Atoms        Volume         E_pair         Press          v_NCH     
+         0        9400   8000           0.11910282    -1.1307615      9400         
+Loop time of 1.2725e-06 on 2 procs for 0 steps with 9400 atoms
+
+235.8% CPU use with 2 MPI tasks x no OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 1.273e-06  |            |       |100.00
+
+Nlocal:           4700 ave        4916 max        4484 min
+Histogram: 1 0 0 0 0 0 0 0 0 1
+Nghost:            637 ave         853 max         421 min
+Histogram: 1 0 0 0 0 0 0 0 0 1
+Neighs:          26388 ave       28436 max       24340 min
+Histogram: 1 0 0 0 0 0 0 0 0 1
+
+Total # of neighbors = 52776
+Ave neighs/atom = 5.6144681
+Neighbor list builds = 0
+Dangerous builds = 0
+undump D1
+group ptodel type 2
+0 atoms in group ptodel
+delete_atoms group ptodel compress no
+Deleted 0 atoms, new total = 9400
+group ptodel delete
+ 	region RegNuc sphere 10 10 10 4.5 side out units box
+lattice  custom $(v_scale) a1 1.0 0.0 0.0 a2 0.0 $(v_aa2) 0.0 a3 0.0 0.0 $(v_aa3) basis 0.5 0.5 0.5
+lattice  custom 0.28368794326241097981 a1 1.0 0.0 0.0 a2 0.0 $(v_aa2) 0.0 a3 0.0 0.0 $(v_aa3) basis 0.5 0.5 0.5
+lattice  custom 0.28368794326241097981 a1 1.0 0.0 0.0 a2 0.0 1 0.0 a3 0.0 0.0 $(v_aa3) basis 0.5 0.5 0.5
+lattice  custom 0.28368794326241097981 a1 1.0 0.0 0.0 a2 0.0 1 0.0 a3 0.0 0.0 1 basis 0.5 0.5 0.5
+Lattice spacing in x,y,z = 0.28368794 0.28368794 0.28368794
+create_atoms 2 region RegNuc
+Created 326275 atoms
+  using lattice units in orthogonal box = (0 0 0) to (20 20 20)
+  create_atoms CPU = 0.044 seconds
+set type 2 diameter 0.473746
+Setting atom values ...
+  326275 settings made for diameter
+region RegNuc delete
+group gtemp type 2
+326275 atoms in group gtemp
+variable tempNgroup equal count(gtemp)
+run 0
+WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
+Generated 0 of 1 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 66.95 | 67.12 | 67.29 Mbytes
+   Step        Atoms        Volume         E_pair         Press          v_NCH     
+         0      335675   8000           2.1978568e+08  50374.258      9400         
+Loop time of 2.9105e-06 on 2 procs for 0 steps with 335675 atoms
+
+257.7% CPU use with 2 MPI tasks x no OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 2.91e-06   |            |       |100.00
+
+Nlocal:         167838 ave      168257 max      167418 min
+Histogram: 1 0 0 0 0 0 0 0 0 1
+Nghost:        32730.5 ave       35616 max       29845 min
+Histogram: 1 0 0 0 0 0 0 0 0 1
+Neighs:    2.15093e+06 ave 2.16272e+06 max 2.13915e+06 min
+Histogram: 1 0 0 0 0 0 0 0 0 1
+
+Total # of neighbors = 4301865
+Ave neighs/atom = 12.815566
+Neighbor list builds = 0
+Dangerous builds = 0
+group gtemp delete
+variable tempNgroup delete
+variable tempDV  equal v_Lx*v_Ly*v_Lz/1.207949625
+run 0
+WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
+Generated 0 of 1 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 66.95 | 67.12 | 67.29 Mbytes
+   Step        Atoms        Volume         E_pair         Press          v_NCH     
+         0      335675   8000           2.1978568e+08  50374.258      9400         
+Loop time of 1.9635e-06 on 2 procs for 0 steps with 335675 atoms
+
+254.6% CPU use with 2 MPI tasks x no OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 1.963e-06  |            |       |100.00
+
+Nlocal:         167838 ave      168257 max      167418 min
+Histogram: 1 0 0 0 0 0 0 0 0 1
+Nghost:        32730.5 ave       35616 max       29845 min
+Histogram: 1 0 0 0 0 0 0 0 0 1
+Neighs:    2.15093e+06 ave 2.16272e+06 max 2.13915e+06 min
+Histogram: 1 0 0 0 0 0 0 0 0 1
+
+Total # of neighbors = 4301865
+Ave neighs/atom = 12.815566
+Neighbor list builds = 0
+Dangerous builds = 0
+variable tempDV delete
+neigh_modify exclude type 2 1
+neigh_modify exclude type 2 2
+group gtempFIX type 1 
+9400 atoms in group gtempFIX
+fix tmpfreeze gtempFIX setforce 0.0 0.0 0.0
+neigh_modify exclude none
+neigh_modify exclude type 2 2
+timestep 0.00045
+min_style quickmaske
+ min_modify dmax $(v_Qdmax)
+ min_modify dmax 0.0021425240859404099877
+minimize 1e-10 0 600 600
+Generated 0 of 1 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 66.95 | 67.12 | 67.29 Mbytes
+   Step        Atoms        Volume         E_pair         Press          v_NCH     
+         0      335675   8000           6709771.9      844.50402      9400         
+       600      335675   8000           2637799.9      410.69299      9400         
+Loop time of 17.2773 on 2 procs for 600 steps with 335675 atoms
+
+97.9% CPU use with 2 MPI tasks x no OpenMP threads
+
+Minimization stats:
+  Stopping criterion = max iterations
+  Energy initial, next-to-last, final = 
+       6709771.9400181   2637803.23440211   2637799.93181407
+  Force two-norm initial, final = 851582.2 749.42415
+  Force max component initial, final = 110947.94 357.72376
+  Final line search alpha, max atom move = 0 0
+  Iterations, force evaluations = 600 600
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 2.341      | 2.4236     | 2.5062     |   5.3 | 14.03
+Neigh   | 6.5806     | 6.6014     | 6.6223     |   0.8 | 38.21
+Comm    | 2.5018     | 2.5294     | 2.5571     |   1.7 | 14.64
+Output  | 0.00090519 | 0.00090584 | 0.00090649 |   0.0 |  0.01
+Modify  | 0.24657    | 0.25089    | 0.2552     |   0.9 |  1.45
+Other   |            | 5.471      |            |       | 31.67
+
+Nlocal:         167838 ave      168363 max      167312 min
+Histogram: 1 0 0 0 0 0 0 0 0 1
+Nghost:        32667.5 ave       35611 max       29724 min
+Histogram: 1 0 0 0 0 0 0 0 0 1
+Neighs:          57612 ave       61089 max       54135 min
+Histogram: 1 0 0 0 0 0 0 0 0 1
+
+Total # of neighbors = 115224
+Ave neighs/atom = 0.34326059
+Neighbor list builds = 52
+Dangerous builds = 0
+timestep 0
+compute tempID all property/atom id
+compute tempRAD all property/atom radius
+group gtemp type 2
+326275 atoms in group gtemp
+variable tempNgroup equal count(gtemp)
+compute tempPE all pe/atom
+compute tempType all property/atom type
+dump tdID all custom 1 dump.tempTRY_Antonello c_tempID c_tempPE type x y z
+compute tempPAT all property/local patom1 patom2 ptype1 ptype2
+compute tempDIST all pair/local dist
+ dump tdLID all local 1 dumpL.tmp index c_tempPAT[1] c_tempPAT[2] c_tempPAT[3] c_tempPAT[4] c_tempDIST
+run 1
+WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
+Generated 0 of 1 mixed pair_coeff terms from geometric mixing rule
+Neighbor list info ...
+  update every 1 steps, delay 0 steps, check yes
+  max neighbors/atom: 2000, page size: 100000
+  master list distance cutoff = 0.55706048
+  ghost atom cutoff = 0.55706048
+  binsize = 0.27853024, bins = 72 72 72
+  3 neighbor lists, perpetual/occasional/extra = 1 2 0
+  (1) pair table, perpetual
+      attributes: half, newton on
+      pair build: half/bin/atomonly/newton
+      stencil: half/bin/3d
+      bin: standard
+  (2) compute property/local, occasional, copy from (1)
+      attributes: half, newton on
+      pair build: copy
+      stencil: none
+      bin: none
+  (3) compute pair/local, occasional, copy from (1)
+      attributes: half, newton on
+      pair build: copy
+      stencil: none
+      bin: none
+Per MPI rank memory allocation (min/avg/max) = 86.7 | 86.91 | 87.11 Mbytes
+   Step        Atoms        Volume         E_pair         Press          v_NCH     
+       600      335675   8000           2637799.9      410.69299      9400         
+       601      335675   8000           2637799.9      410.69299      9400         
+Loop time of 0.473262 on 2 procs for 1 steps with 335675 atoms
+
+97.6% CPU use with 2 MPI tasks x no OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0.0046693  | 0.0047711  | 0.0048728  |   0.1 |  1.01
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0.0019978  | 0.002066   | 0.0021343  |   0.2 |  0.44
+Output  | 0.46028    | 0.46028    | 0.46028    |   0.0 | 97.26
+Modify  | 0.0036727  | 0.0036879  | 0.0037031  |   0.0 |  0.78
+Other   |            | 0.002458   |            |       |  0.52
+
+Nlocal:         167838 ave      168363 max      167312 min
+Histogram: 1 0 0 0 0 0 0 0 0 1
+Nghost:        32667.5 ave       35611 max       29724 min
+Histogram: 1 0 0 0 0 0 0 0 0 1
+Neighs:          57610 ave       61089 max       54131 min
+Histogram: 1 0 0 0 0 0 0 0 0 1
+
+Total # of neighbors = 115220
+Ave neighs/atom = 0.34324868
+Neighbor list builds = 0
+Dangerous builds = 0

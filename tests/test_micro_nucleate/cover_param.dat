@@ -1,0 +1,11 @@
+# format of generic row in table is: type_A, type_B, e0, ef, gamma_interf
+# 	e0 = threshold such that rij < e0 (Di+Dj)/2 entails 100% of contact area between particles
+#	ef = threshold such that rij > ef (Di+Dj)/2 entails 0% of contact area between particles
+# Typically, for soft interactions with equilibrium distance r0, one can pick e0 such that threshold corresponds to r0, and ef to match interaction cutoff. Instead, for hard interactions (e.g. contact), e0 would typically be < 1 (i.e. at some overlap) and ef = 1 (i.e. no contact as soon as there is no diameter overlap)
+
+# IMPORTANT!!!: the diagonal terms of gamma_interf are actually solid-solution interfacial energy for the type (because the solid-solid interfacial energy would certainly be zero for solids of the same type)
+
+1 1 1 1.1 68.4
+1 2 1 1.1 0
+2 2 1 1.1 68.4
+

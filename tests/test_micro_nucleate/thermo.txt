@@ -1,0 +1,2 @@
+Step	Time	conc_Ca+2	conc_H4SiO4	conc_H2O	conc_OH-	conc_CO3-2	conc_H+	lmp_v_N	lmp_v_U	lmp_v_P	lmp_v_NCH
+0	0.000000e+00	2.000000e-02	1.000000e-05	6.152031e+01	3.000000e-02	1.132000e-05	-8.977360e-03	9.400000e+03	1.191028e-01	-1.130762e+00	9.400000e+03
