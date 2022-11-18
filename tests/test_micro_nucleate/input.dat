@@ -6,8 +6,8 @@
 
 # command structure: subcomm Nsubcomms name1 Nproc1 lmp_yes/no seed name2 Nproc2 lammps_yes/no seed .... etc
 # NB: the first subcomm should always be lmp_yes, otherwise thermos cannot be produced
-  subcomm 2 Antonello 2 lmp_yes 123 subB 2 lmp_yes 456
-# subcomm 1 Antonello 2 lmp_yes 123
+#  subcomm 2 Antonello 2 lmp_yes 123 subB 2 lmp_yes 456
+subcomm 1 Antonello 2 lmp_yes 123
 
 
 
@@ -30,7 +30,7 @@ lammps all  	units nano
 lammps all 	atom_style sphere
 lammps all  	atom_modify map yes   # NEEDED FOR NUCLEATE FIXES!!
 lammps all 	boundary p p p
-lammps all  	region simbox block 0 20 0 20 0 20 units box
+lammps all  	region simbox block 0 10 0 10 0 10 units box
 lammps all  	create_box  2 simbox    #make space for enough types when creating box
 
 
@@ -44,7 +44,7 @@ lammps  all 	variable eqDCH equal $(v_DCH)*(0.74^(1./3.))
 # create a large sphere of CH
 lammps all	variable scale equal sqrt(2)*v_eqDCH
 lammps all	lattice fcc $(v_scale)  
-lammps all	region nuc1 sphere 10 10 10 5 units box
+lammps all	region nuc1 sphere 5 5 5 2.5 units box
 lammps all 	create_atoms 1 region nuc1
 lammps all 	group nuc1 region nuc1
 
@@ -79,8 +79,8 @@ hpl  0.000662607004   # Plank, in nm2 ag / ns
 
 #beta=1.0
 
-sol_start uniform 5 Ca+2 0.02 H4SiO4 0.00001 OH- 0.03 CO3-2 1.132E-5 H+ -0.00897736 solvent H2O Temp 298 DH_A 0.51 DH_B 3.29 voidV 0 dV iso 0 dVvoidV 0  unitC 1e-24
-setconc 4 Ca+2 0.05 OH- 0.02 CO3-2 1.132E-5 H4SiO4 0.00001 1 counter H+ box
+sol_start uniform 5 Ca+2 0.2 H4SiO4 0.0001 OH- 0.3 CO3-2 1.132E-4 H+ -0.0897736 solvent H2O Temp 298 DH_A 0.51 DH_B 3.29 voidV 0 dV iso 0 dVvoidV 0  unitC 1e-24
+setconc 4 Ca+2 0.05 OH- 0.2 CO3-2 1.132E-4 H4SiO4 0.0001 1 counter H+ box
 
 #beta=0
 
@@ -128,7 +128,8 @@ lammps  all	variable 	yr equal yhi
 lammps  all	variable 	zl equal zlo
 lammps  all	variable 	zr equal zhi
 # keeping these less than zlo and zhi to avoid lost atoms
-store 	region RegNuc sphere 10 10 10 4.5 side out units box
+#store 	region RegNuc sphere 5 5 5 2 side out units box
+store 	region RegNuc block INF INF INF INF INF INF
 
 lammps  all	variable nx equal 1.5*ceil((xhi-xlo)/$(v_eqDCH))
 lammps  all	variable ny equal 1.5*ceil((yhi-ylo)/$(v_eqDCH))

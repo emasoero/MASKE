@@ -998,8 +998,11 @@ void Fix_nucleate::submaster_comp_cover(int pos)
         output->toplog(msg);
         msg="";   ss.str("");   ss.clear();
         // pring ids and positions in unsorted atom arrays
-        output->toplog("npos id1 id2 type1 type2 upos1 upos2");
+        output->toplog("npos id1 id2 type1 type2 upos1 upos2 Dsub");
     }
+    
+    //printf(screen,"DEBUG 1: PROC %d try type is %d",me,fix->fKMCptypeTRY[pos]);
+    //sleep (1);
     
     
     // for all the rows in the assembled arrays in the submaster...
@@ -1010,6 +1013,7 @@ void Fix_nucleate::submaster_comp_cover(int pos)
         int t2 = SAR[i][3];
         bool flag_t1 = (t1 == fix->fKMCptypeTRY[pos]);
         bool flag_t2 = (t2 == fix->fKMCptypeTRY[pos]);
+
         int up1,up2;   // positions of particles 1 and 2 in pair in unsorted vectors (ID and radii)
         up1 = -1;
         up2 = -1;
@@ -1052,6 +1056,7 @@ void Fix_nucleate::submaster_comp_cover(int pos)
             ss << SAR[i][3];   msg += ss.str()+" ";  ss.str("");   ss.clear();
             ss << up1;   msg += ss.str()+" ";  ss.str("");   ss.clear();
             ss << up2;   msg += ss.str()+" ";  ss.str("");   ss.clear();
+            ss << Dsub[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
             output->toplog(msg);
         }
         
@@ -1065,6 +1070,8 @@ void Fix_nucleate::submaster_comp_cover(int pos)
             Rij = 2. * Runs[up1] * Runs[up2]/( Runs[up1] + Runs[up2]);
             Aij = M_PI * Rij * Rij;
             
+            if (i<100)    fprintf(screen,"DEBUG 1 - proc %d: pair %d, up1 %d up2 %d, Dsub %e, Rij %e, Aij %e \n",me,i,up1,up2,Dsub[i],Rij,Aij);
+            
             // weigh the contact cross section by the distance
             double Dij; // arithmetic average of diameters in contact
             Dij = Runs[up1] + Runs[up2];
@@ -1074,6 +1081,8 @@ void Fix_nucleate::submaster_comp_cover(int pos)
             if (Dsub[i] > efij * Dij)        Aij = 0.;
             else if (Dsub[i] > e0ij * Dij)   Aij *= (efij - Dsub[i]/Dij) / (efij- e0ij);
 
+            if (i<100)    fprintf(screen,"DEBUG 2 - proc %d: pair %d, Dsub %e, Rij %e, Aij %e up1 %d up2 %d\n",me,i,Dsub[i],Rij,Aij,up1,up2);
+            
             // if first atom is of correct type for this fix, add contact area to the contact fraction arrays (still areas here; will be converted to area fractions later on below)
             if (flag_t1)  {
                 CFuns[up1] += Aij;
