@@ -403,7 +403,6 @@ void Inputmsk::execline(std::string read_string)
                     lss>>read_string>>conci;
                     solution->addmol(read_string,conci);
                 }
-                
                 bool comment_found = false;
                 while (lss && !comment_found){
                     lss >> read_string;
