@@ -132,7 +132,7 @@ void Fix_delete::sample(int pos)
             lammpsIO->lammpsdo(tolmp);
             tolmp = "compute tempDIST all pair/local dist";
             lammpsIO->lammpsdo(tolmp);
-            tolmp = " dump tdLID all local 1 dumpL.tmp index c_tempPAT[1] c_tempPAT[2] c_tempPAT[3] c_tempPAT[4] c_tempDIST";
+            tolmp = " dump tdLID all local 1 dump.tempL_"+universe->SCnames[universe->color]+" index c_tempPAT[1] c_tempPAT[2] c_tempPAT[3] c_tempPAT[4] c_tempDIST";
             lammpsIO->lammpsdo(tolmp);
         }
     }
@@ -863,13 +863,56 @@ void Fix_delete::submaster_comp_cover(int pos)
             // coverage is given by contact cross section weighted by a distance-dependent factor; the latter is user-provided through two thresholds, e0 below which contact is 100%, ef above which contact is 0%. Linear interpolation in between
             
             double Aij;    // cross section of inter-particle contact
+            double Ri,Rj;   // radii of interaction particles in current pair
             double Rij;     // harmonic average of radii of particles in contact
-            Rij = 2. * Runs[up1] * Runs[up2]/( Runs[up1] + Runs[up2]);
+            double *aRij;   // array containing Ri and Rj read from LAMMPS
+            double *aIDij;
+            
+            if (!flag_t1 || !flag_t2){
+                // extract radius from LAMMPS
+                std::string tolmp;
+                std::ostringstream sso; sso << id1;
+                tolmp = "group gtempRij id "+sso.str()+" ";
+                sso.str("");   sso.clear();   sso << id2;
+                tolmp += sso.str();
+                lammpsIO->lammpsdo(tolmp);
+                tolmp = "compute tempIDij gtempRij property/atom id"; // temp compute to get id of atoms in group
+                lammpsIO->lammpsdo(tolmp);
+                tolmp = "compute tempRij gtempRij property/atom radius"; // temp compute to get atom radii
+                lammpsIO->lammpsdo(tolmp);
+                tolmp = "dump tdRID gtempRij custom 1 dump.tempR_"+universe->SCnames[universe->color]+" c_gtempIDij c_tempRij type x y z";    //temp dump to update variables and computes
+                lammpsIO->lammpsdo(tolmp);
+                lammpsIO->lammpsdo("run 1");     // a run1 in lammps to dump the temp and so prepare variables and computes
+                aIDij = ((double *) lammps_extract_compute(lammpsIO->lmp,(char *) "tempIDij",1,1));
+                aRij = ((double *) lammps_extract_compute(lammpsIO->lmp,(char *) "tempRij",1,1));
+                
+                tolmp = "undump tdRID";     // removing temporary dump
+                lammpsIO->lammpsdo(tolmp);
+                
+                tolmp = "uncompute tempIDij";
+                lammpsIO->lammpsdo(tolmp);
+                tolmp = "uncompute tempRij";
+                lammpsIO->lammpsdo(tolmp);
+            }
+            
+            if (flag_t1)Ri = Runs[up1];
+            else{
+                if (id1 == aIDij[0]) Ri = aRij[0];
+                else Ri = aRij[1];
+            }
+            
+            if (flag_t2) Rj = Runs[up1];
+            else{
+                if (id2 == aIDij[0]) Rj = aRij[0];
+                else Rj = aRij[1];
+            }
+            
+            Rij = 2. * Ri * Rj/( Ri + Rj);
             Aij = M_PI * Rij * Rij;
             
             // weigh the contact cross section by the distance
             double Dij; // arithmetic average of diameters in contact
-            Dij = Runs[up1] + Runs[up2];
+            Dij = Ri + Rj;
             double efij = chem->ef[t1-1][t2-1];
             double e0ij = chem->e0[t1-1][t2-1];
             
