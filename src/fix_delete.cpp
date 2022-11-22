@@ -232,7 +232,8 @@ void Fix_delete::sample(int pos)
             }
         }
         
-        /*for (int i=0; i<natoms; i++){
+        /*output->toplog("\nALL IDs FROM LAMMPS \npos aiD atype aR aE");
+        for (int i=0; i<natoms; i++){
             ss << i;        msg = ss.str()+" ";   ss.str("");   ss.clear();
             ss << aID[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
             ss << atype[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
@@ -311,20 +312,7 @@ void Fix_delete::sample(int pos)
             i++;
         }
     }
-    
-    /*for (int i =0; i<natoms; i++) {
-        if (aID[i]>0 && (int)aID[i]==aaID[i]){
-            tID.push_back((int)aID[i]);
-            tR.push_back(aR[i]);
-            tE.push_back(aE[i]);
-            naP++;
-        }
-    }*/
-    
-    
-    
 
-    
     tIDarr = new int[naP];     // copying local ID vector to array in order to communicate it to submaster later on
     for (int i =0; i<naP; i++) tIDarr[i] = tID[i];
 
@@ -346,6 +334,57 @@ void Fix_delete::sample(int pos)
             msg="";
         }
     }
+    
+    
+    
+    // for micro mechanism, create another array with IDs adn radii of ALL real particles, to be used to compute coverage fractions
+    if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+        if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+            
+            tIDar.clear();    tRar.clear();
+            
+            nR = 0;  //number of real particles in current processor
+
+            for (int i=0 ; i<nlocal; i++) {  //NB: local atoms may also be trial types when nucleation fixes are used
+                bool flag_real = false;
+                for (int j=0; j<msk->Rtypes.size(); j++) {
+                    if ((int)atype[i]==msk->Rtypes[j]) flag_real = true;
+                }
+                if (flag_real) {
+                    tIDar.push_back((int)aID[i]);
+                    tRar.push_back(aR[i]);
+                    nR++;
+                }
+            }
+            
+            IDar = new int[nR];
+            Rar = new double[nR];
+            
+            for (int i =0; i<nR; i++){
+                IDar[i] = tIDar[i];
+                Rar[i] = tRar[i];
+            }
+            
+            
+            // printing to log file for debugging
+            if (msk->wplog) {
+                std::string msg = "\nNumber of real atoms in this processor (for coverage function in fix_delete.cpp): ";
+                std::ostringstream ss;    ss << nR;   msg = msg+ss.str();
+                output->toplog(msg);
+                msg="";   ss.str("");   ss.clear();
+                output->toplog("\npos IDar Rar");
+                for (int i=0; i<nR; i++){
+                    ss << i;        msg = ss.str()+" ";   ss.str("");   ss.clear();
+                    ss << IDar[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                    ss << Rar[i];    msg += ss.str()+" ";  ss.str("");   ss.clear();
+                    output->toplog(msg);
+                    msg="";
+                }
+            }
+        }
+    }
+    
+    
     // END OF RECORDING LAMMPS VALUES INTO VECTORS
     // -----------------------------------------------------------------------------
     // -----------------------------------------------------------------------------
@@ -450,6 +489,14 @@ void Fix_delete::sample(int pos)
             delete [] CFuns;
             delete [] GMuns;
             delete [] fGMuns;
+            
+            delete [] IDar;
+            delete [] Rar;
+            delete [] nIDar_each;
+            delete [] IDarpos;
+            delete [] IDaruns;
+            delete [] Raruns;
+
         }
     }
 
@@ -466,6 +513,13 @@ void Fix_delete::ids_to_submaster(int pos)
     nID_each = new int[nploc];
     nID_each[key] = naP;   //each processor in subcomm records its number of atoms (naP) at location = key of its nID_each
     
+    if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+        if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+            nIDar_each = new int[nploc];
+            nIDar_each[key] = nR;
+        }
+    }
+    
     if (key>0) {
         int dest = 0;
         MPI_Send(&nID_each[key], 1, MPI_INT, dest, 1, (universe->subcomm));
@@ -476,7 +530,20 @@ void Fix_delete::ids_to_submaster(int pos)
         }
     }
     
-    //fprintf(screen,"\n\n  PROC %d , SUBCOM %d , fix %s, tempo %f\n I have %d local ids   \n",me,universe->color,fix->fKMCname[pos].c_str(),msk->tempo,nID_each[key]);
+    if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+        if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+            if (key>0) {
+                int dest = 0;
+                MPI_Send(&nIDar_each[key], 1, MPI_INT, dest, 1, (universe->subcomm));
+            }
+            if (key==0 && nploc>1) {
+                for (int source=1; source<nploc; source++) {
+                    MPI_Recv(&nIDar_each[source], 1, MPI_INT, source, 1, (universe->subcomm), &status);
+                }
+            }
+        }
+    }
+    
     
     // check that tot number of IDs from all processors equals number of atoms in group
     if (key == 0) {
@@ -495,25 +562,29 @@ void Fix_delete::ids_to_submaster(int pos)
     
     // pass local ID arrays to submaster
     IDpos = new int[nploc];  // position of local tID array in submaster's unsorted list of IDs
+    IDarpos = new int[nploc];
+    
     if (key==0) {
-        //fprintf(screen,"\n\n  PROC %d , SUBCOM %d , fix %s, tempo %f\n Here is the nID_each that I know of:  \n",me,universe->color,fix->fKMCname[pos].c_str(),msk->tempo);
         IDpos[0]=0;
         for (int i=1; i<nploc; i++) {
             //fprintf(screen,"i =  %d  --> nID_each = %d \n",i,nID_each[i]);
             IDpos[i] =IDpos[i-1]+nID_each[i-1];
         }
+        if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+            if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+                IDarpos[0]=0;
+                for (int i=1; i<nploc; i++) {
+                    IDarpos[i] =IDarpos[i-1]+nIDar_each[i-1];
+                }
+            }
+        }
     }
+    
     
     IDuns = new int[Ng];    // array storing the IDs of delete events in current fix (hence local, in the sense that it is both local of the subcomm but also local to current fix_delete)
     if (key>0) {
         int dest = 0;
         MPI_Send(&tIDarr[0], naP, MPI_INT, dest, 1, (universe->subcomm));
-        
-        if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
-            if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
-                MPI_Send(&tR[0], naP, MPI_DOUBLE, dest, 2, (universe->subcomm));
-            }
-        }
     }
     if (key==0) {
         for (int i=0; i<nID_each[0]; i++) {
@@ -523,18 +594,6 @@ void Fix_delete::ids_to_submaster(int pos)
             MPI_Recv(&IDuns[IDpos[source]], nID_each[source], MPI_INT, source, 1, (universe->subcomm), &status);
         }
         
-        if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
-            if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
-                Runs = new double[Ng];
-                
-                for (int i=0; i<nID_each[0]; i++) {
-                    Runs[i] = tR[i];
-                }
-                for (int source=1; source<nploc; source++) {
-                    MPI_Recv(&Runs[IDpos[source]], nID_each[source], MPI_DOUBLE, source, 2, (universe->subcomm), &status);
-                }
-            }
-        }
         
         // print assembled IDuns on submaster
         if (msk->wplog) {
@@ -542,27 +601,59 @@ void Fix_delete::ids_to_submaster(int pos)
             std::ostringstream ss;    ss << Ng;   msg = msg+ss.str();
             output->toplog(msg);
             msg="";   ss.str("");   ss.clear();
-            if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
-                if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
-                    output->toplog("\npos IDuns Runs");
-                }
-            }
-            else output->toplog("\npos IDuns");
-            
+            output->toplog("\npos IDuns");
             for (int i=0; i<Ng; i++){
                 ss << i;        msg = ss.str()+" ";   ss.str("");   ss.clear();
                 ss << IDuns[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
-                if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
-                    if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
-                        ss << Runs[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
-                    }
-                }
                 output->toplog(msg);
                 msg="";
             }
         }
-         
-        
+    }
+    
+    if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+        if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+            
+            if (key>0) {
+                int dest = 0;
+                MPI_Send(&IDar[0], nR, MPI_INT, dest, 1, (universe->subcomm));
+                MPI_Send(&Rar[0], nR, MPI_DOUBLE, dest, 1, (universe->subcomm));
+            }
+            if (key==0) {
+                
+                int totRp = 0;  // total number of real particles across all procs in this fix
+                for (int i=0; i<nploc; i++) totRp += nIDar_each[i];
+                
+                IDaruns = new int[totRp];    // array storing the IDs of rael particles in current fix (hence local, in the sense that it is both local of the subcomm but also local to current fix_delete)
+                Raruns = new double[totRp];    // array storing the IDs of rael particles in current fix (hence local, in the sense that it is both local of the subcomm but also local to current fix_delete)
+                
+                for (int i=0; i<nIDar_each[0]; i++) {
+                    IDaruns[i] = IDar[i];
+                    Raruns[i] = Rar[i];
+                }
+                for (int source=1; source<nploc; source++) {
+                    MPI_Recv(&IDaruns[IDarpos[source]], nIDar_each[source], MPI_INT, source, 1, (universe->subcomm), &status);
+                    MPI_Recv(&Raruns[IDarpos[source]], nIDar_each[source], MPI_DOUBLE, source, 1, (universe->subcomm), &status);
+                }
+                
+                
+                // print assembled ID and Radii arrays of all real particles on submaster
+                if (msk->wplog) {
+                    std::string msg = "\nNumber of real atoms in this fix: ";
+                    std::ostringstream ss;    ss << totRp;   msg = msg+ss.str();
+                    output->toplog(msg);
+                    msg="";   ss.str("");   ss.clear();
+                    output->toplog("\npos IDaruns Raruns");
+                    for (int i=0; i<totRp; i++){
+                        ss << i;        msg = ss.str()+" ";   ss.str("");   ss.clear();
+                        ss << IDaruns[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                        ss << Raruns[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                        output->toplog(msg);
+                        msg="";
+                    }
+                }
+            }
+        }
     }
 }
 

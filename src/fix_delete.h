@@ -85,6 +85,17 @@ namespace MASKE_NS {
         int nlocR; // number of rows from LAMMPS property/local (neighbour list)
         int *nlocR_each;     // array storing numcber of local array rows in each processor: used by submaster for assembly and back (only used for "micro" style)
         double lim_CF; //limiting coverage fraction associated with micro mechanism
+        
+        // Block of variables below ar for coveraage fraction calculations in micro mechanism
+        //********
+        int *IDar;   // IDs of all real particles
+        double *Rar;   // Radii of all real particles
+        std::vector<int> tIDar;   // temporary vector with ID of all real particles in current proc
+        std::vector<double> tRar;// temporary vector with Radii of all real particles in current proc
+        int nR;      // number of real atoms in current fix in current processor (for coveraage fraction calculations in micro mechanism)
+        int *nIDar_each;     // array storing number of real particle IDs in each processor
+        //********
+
 
         
         //----------------------------------------
@@ -103,8 +114,16 @@ namespace MASKE_NS {
         int *SARpos;  // "Submaster ARray position" vector, storing starting positions of local arrays (from neighbour list) in submaster's ARuns and Duns
         double **SAR;  //Submaster ARray, bloc-wise with each block being the locLMP of a processor
         double *Dsub;    // vector on the submaster gathering all interaction distances from lammps pair/local
-    
+        
+        // Block of variables below ar for coveraage fraction calculations in micro mechanism
+        //********
+        int *IDarpos;  // array storing starting positions of local IDar arrays in submaster's IDaruns
+        int *IDaruns;     // unsorted IDs of all real particles. This is bloc-wise, with each block being the IDar of a processor
+        double *Raruns;     // unsorted Radii of all real particles. This is bloc-wise, with each block being the IDar of a processor
 
+
+        //********
+        
 
 
         //----------------------------------------
