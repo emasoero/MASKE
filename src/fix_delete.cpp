@@ -473,7 +473,6 @@ void Fix_delete::sample(int pos)
     
     if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
         if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
-            delete [] Runs;
             
             if (!(SAR == nullptr)){
                 free(SAR[0]);
@@ -621,7 +620,7 @@ void Fix_delete::ids_to_submaster(int pos)
             }
             if (key==0) {
                 
-                int totRp = 0;  // total number of real particles across all procs in this fix
+                totRp = 0;  // total number of real particles across all procs in this fix
                 for (int i=0; i<nploc; i++) totRp += nIDar_each[i];
                 
                 IDaruns = new int[totRp];    // array storing the IDs of rael particles in current fix (hence local, in the sense that it is both local of the subcomm but also local to current fix_delete)
@@ -760,6 +759,7 @@ void Fix_delete::submaster_sort_IDs(int pos)
         IDsrt.push_back(IDuns[0]);
         rates.push_back(0.);
     }
+    
     //StoU.push_back(0);  // just create map vectors to be used in submaster_sort_Ids function
     //UtoS.push_back(0);
     // for all subsequent IDs
@@ -791,6 +791,76 @@ void Fix_delete::submaster_sort_IDs(int pos)
         }
         rates.push_back(0.);  // here is where the rates container is initialised, every time a new IDsrt is added
     }
+    
+    
+    // sorting IDs and corresponding radii for all real particles if a micro mechanism is used
+    // the first ID is just added to the vector
+    
+    if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+        if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+            
+            // IDs and radii of all real particles are only used to compute coverage fractions. No need to remember them from one fix delete to the next one (unlike IDsrt corresponding to rates above)
+            IDarsrt.clear();
+            Rarsrt.clear();
+            
+            // write down first ID and R
+            if (totRp>0) {
+                IDarsrt.push_back(IDaruns[0]);
+                Rarsrt.push_back(Raruns[0]);
+            }
+            
+            // for all subsequent IDs
+            for (int j=1; j<totRp; j++) {
+                // if ID is the largest, put it at the end
+                if (IDaruns[j]>IDarsrt[IDarsrt.size()-1]) {
+                    IDarsrt.push_back(IDaruns[j]);
+                    Rarsrt.push_back(Raruns[j]);
+                }
+                else {
+                    //otherwise look for a position betwwen a smaller and large one
+                    if (IDaruns[j]<IDarsrt[0]) posit = 0;
+                    else {
+                        //binary search
+                        int pre = 0;
+                        int post=IDarsrt.size()-1;
+                        while (pre < post) {
+                            posit = (int)((pre+post)/2.);
+                            if (IDarsrt[posit] < IDaruns[j]) pre=posit+1;
+                            else post=posit;
+                        }
+                        posit=pre;
+                    }
+                    // shift IDarsrt and Rarsrt
+                    IDarsrt.push_back(IDarsrt[IDarsrt.size()-1]);   //shif the last element one up
+                    Rarsrt.push_back(Rarsrt[Rarsrt.size()-1]);
+                    for (int k=IDarsrt.size()-1; k>posit; k--) {
+                        IDarsrt[k] = IDarsrt[k-1];  // shift all other elements until posit
+                        Rarsrt[k] = Rarsrt[k-1];
+                    }
+                    IDarsrt[posit]=IDaruns[j]; // record aID in posit
+                    Rarsrt[posit]=Raruns[j];
+                }
+            }
+        }
+    }
+    
+    if (msk->wplog) {
+        std::string msg;
+        std::ostringstream ss;
+        ss << "Total number of real particles is: " << totRp << "\n";
+        msg = ss.str(); ss.str("");   ss.clear();
+        output->toplog(msg);
+        msg = "pos IDarsrt Rarsrt";
+        output->toplog(msg);
+        for (int i=0; i<totRp; i++) {
+            ss << i<<" "<<IDarsrt[i] <<" "<<Rarsrt[i]<<"";
+            msg = ss.str(); ss.str("");   ss.clear();
+            output->toplog(msg);
+        }
+    }
+    
+    
+    
 }
 
 
@@ -956,46 +1026,48 @@ void Fix_delete::submaster_comp_cover(int pos)
             double Aij;    // cross section of inter-particle contact
             double Ri,Rj;   // radii of interaction particles in current pair
             double Rij;     // harmonic average of radii of particles in contact
-            double *aRij;   // array containing Ri and Rj read from LAMMPS
-            double *aIDij;
+            int rp1,rp2;    // position of interacting particles in the "all real" sorted vectors
             
-            if (!flag_t1 || !flag_t2){
-                // extract radius from LAMMPS
-                std::string tolmp;
-                std::ostringstream sso; sso << id1;
-                tolmp = "group gtempRij id "+sso.str()+" ";
-                sso.str("");   sso.clear();   sso << id2;
-                tolmp += sso.str();
-                lammpsIO->lammpsdo(tolmp);
-                tolmp = "compute tempIDij gtempRij property/atom id"; // temp compute to get id of atoms in group
-                lammpsIO->lammpsdo(tolmp);
-                tolmp = "compute tempRij gtempRij property/atom radius"; // temp compute to get atom radii
-                lammpsIO->lammpsdo(tolmp);
-                tolmp = "dump tdRID gtempRij custom 1 dump.tempR_"+universe->SCnames[universe->color]+" c_gtempIDij c_tempRij type x y z";    //temp dump to update variables and computes
-                lammpsIO->lammpsdo(tolmp);
-                lammpsIO->lammpsdo("run 1");     // a run1 in lammps to dump the temp and so prepare variables and computes
-                aIDij = ((double *) lammps_extract_compute(lammpsIO->lmp,(char *) "tempIDij",1,1));
-                aRij = ((double *) lammps_extract_compute(lammpsIO->lmp,(char *) "tempRij",1,1));
-                
-                tolmp = "undump tdRID";     // removing temporary dump
-                lammpsIO->lammpsdo(tolmp);
-                
-                tolmp = "uncompute tempIDij";
-                lammpsIO->lammpsdo(tolmp);
-                tolmp = "uncompute tempRij";
-                lammpsIO->lammpsdo(tolmp);
-            }
+            // find first particle position in sorted IDar vector
+            int pre = 0;
+            int post = IDarsrt.size()-1;
+            int posit;
+            while (pre < post) {
+                posit = (int)((pre+post)/2.);
+                if (IDarsrt[posit] < id1) pre=posit+1;
+                    else post=posit;
+                }
+            posit=pre;
+            rp1 = posit;
             
-            if (flag_t1)Ri = Runs[up1];
-            else{
-                if (id1 == aIDij[0]) Ri = aRij[0];
-                else Ri = aRij[1];
-            }
+            //fprintf(screen,"DEBUG 0: rp1 = %d\n",rp1);
             
-            if (flag_t2) Rj = Runs[up1];
-            else{
-                if (id2 == aIDij[0]) Rj = aRij[0];
-                else Rj = aRij[1];
+            
+            
+            // find second particle position in sorted IDar vector
+            pre = 0;
+            post = IDarsrt.size()-1;
+            while (pre < post) {
+                posit = (int)((pre+post)/2.);
+                if (IDarsrt[posit] < id2) pre=posit+1;
+                    else post=posit;
+                }
+            posit=pre;
+            rp2 = posit;
+            
+
+            
+            Ri = Rarsrt[rp1];
+            Rj = Rarsrt[rp2];
+            
+
+            
+            if (msk->wplog) {
+                std::string msg;
+                std::ostringstream ss;
+                ss << "rp1 = " << rp1 << "; rp2 = "<< rp2 << "; Ri = " << Ri << "; Rj = " << Rj;
+                msg = ss.str();  ss.str("");   ss.clear();
+                output->toplog(msg);
             }
             
             Rij = 2. * Ri * Rj/( Ri + Rj);
@@ -1012,7 +1084,7 @@ void Fix_delete::submaster_comp_cover(int pos)
 
             // if first atom is of correct type for this fix, add contact area to the contact fraction arrays (still areas here; will be converted to area fractions later on below)
             if (flag_t1)  {
-                CFuns[up1] += Aij;
+                CFuns[up1] += Aij/(M_PI*4.*Ri*Ri);
                 if (Aij > 0.){
                     double tempGM = 0.;
                     if (t1 != t2) tempGM = - chem->gij[t1-1][t1-1] - chem->gij[t1-1][t2-1] + chem->gij[t2-1][t2-1];
@@ -1025,7 +1097,7 @@ void Fix_delete::submaster_comp_cover(int pos)
             }
             
             if (flag_t2){
-                CFuns[up2] += Aij;
+                CFuns[up2] += Aij/(M_PI*4.*Rj*Rj);;
                 if (Aij > 0.){
                     double tempGM = 0.;
                     if (t1 != t2) tempGM = - chem->gij[t2-1][t2-1] - chem->gij[t2-1][t1-1] + chem->gij[t1-1][t1-1];
@@ -1041,8 +1113,6 @@ void Fix_delete::submaster_comp_cover(int pos)
     }
     double nbulk = 12.;   // number of particles in the bulk for a monodisperse system of particls with type selected for dissolution. In future implementations, this could be passed as an input when calling the fix_delete (becasue it applies to all particles to be considered for deletion here)
     for (int i=0; i<Ng; i++){
-        // convert coverage areas to coverage fractions
-        CFuns[i] /= 4.*M_PI*Runs[i]*Runs[i];    // here we divide contact area by particle surface area
         CFuns[i] *= 4./nbulk;    // this is a correction such that a speherical particle in contact with 12 equally sized neighbours in an FCC lattice ends up having coverage fraction = 1   (If we did not divide by 3, such a bulk particle would have a coverage fraction of 300%)
     }
     

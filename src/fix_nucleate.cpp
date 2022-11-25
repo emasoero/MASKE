@@ -510,6 +510,57 @@ void Fix_nucleate::sample(int pos)
             msg="";
         }
     }
+    
+    
+    
+    if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+        if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+            
+            tIDar.clear();    tRar.clear();
+            
+            nR = 0;  //number of real particles in current processor
+
+            for (int i=0 ; i<nlocal; i++) {  //NB: local atoms may also be trial types when nucleation fixes are used
+                bool flag_real = false;
+                for (int j=0; j<msk->Rtypes.size(); j++) {
+                    if ((int)atype[i]==msk->Rtypes[j]) flag_real = true;
+                }
+                if (flag_real) {
+                    tIDar.push_back((int)aID[i]);
+                    tRar.push_back(aR[i]);
+                    nR++;
+                }
+            }
+            
+            IDar = new int[nR];
+            Rar = new double[nR];
+            
+            for (int i =0; i<nR; i++){
+                IDar[i] = tIDar[i];
+                Rar[i] = tRar[i];
+            }
+            
+            
+            // printing to log file for debugging
+            if (msk->wplog) {
+                std::string msg = "\nNumber of real atoms in this processor (for coverage function in fix_nucleate.cpp): ";
+                std::ostringstream ss;    ss << nR;   msg = msg+ss.str();
+                output->toplog(msg);
+                msg="";   ss.str("");   ss.clear();
+                output->toplog("\npos IDar Rar");
+                for (int i=0; i<nR; i++){
+                    ss << i;        msg = ss.str()+" ";   ss.str("");   ss.clear();
+                    ss << IDar[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                    ss << Rar[i];    msg += ss.str()+" ";  ss.str("");   ss.clear();
+                    output->toplog(msg);
+                    msg="";
+                }
+            }
+        }
+    }
+    
+    
+    
     // END OF RECORDING LAMMPS VALUES INTO VECTORS
     // -----------------------------------------------------------------------------
     // -----------------------------------------------------------------------------
@@ -644,6 +695,13 @@ void Fix_nucleate::sample(int pos)
             delete [] CFuns;
             delete [] GMuns;
             delete [] fGMuns;
+            
+            delete [] IDar;
+            delete [] Rar;
+            delete [] nIDar_each;
+            delete [] IDarpos;
+            delete [] IDaruns;
+            delete [] Raruns;
         }
     }
 
@@ -662,6 +720,13 @@ void Fix_nucleate::ids_to_submaster(int pos)
     nID_each = new int[nploc];
     nID_each[key] = naP;   //each processor in subcomm records its number of atoms (naP) at location = key of its nID_each
     
+    if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+        if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+            nIDar_each = new int[nploc];
+            nIDar_each[key] = nR;
+        }
+    }
+    
     if (key>0) {
         int dest = 0;
         MPI_Send(&nID_each[key], 1, MPI_INT, dest, 1, (universe->subcomm));
@@ -672,6 +737,19 @@ void Fix_nucleate::ids_to_submaster(int pos)
         }
     }
     
+    if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+        if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+            if (key>0) {
+                int dest = 0;
+                MPI_Send(&nIDar_each[key], 1, MPI_INT, dest, 1, (universe->subcomm));
+            }
+            if (key==0 && nploc>1) {
+                for (int source=1; source<nploc; source++) {
+                    MPI_Recv(&nIDar_each[source], 1, MPI_INT, source, 1, (universe->subcomm), &status);
+                }
+            }
+        }
+    }
     //fprintf(screen,"\n\n  PROC %d , SUBCOM %d , fix %s, tempo %f\n I have %d local ids   \n",me,universe->color,fix->fKMCname[pos].c_str(),msk->tempo,nID_each[key]);
     
     // check that tot number of IDs from all processors equals number of atoms in group
@@ -698,18 +776,20 @@ void Fix_nucleate::ids_to_submaster(int pos)
             //fprintf(screen,"i =  %d  --> nID_each = %d \n",i,nID_each[i]);
             IDpos[i] =IDpos[i-1]+nID_each[i-1];
         }
+        if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+            if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+                IDarpos[0]=0;
+                for (int i=1; i<nploc; i++) {
+                    IDarpos[i] =IDarpos[i-1]+nIDar_each[i-1];
+                }
+            }
+        }
         
     }
     IDuns = new int[Ng];    // array storing the IDs of delete events in current fix (hence local, in the sense that it is both local of the subcomm but also local to current fix_delete)
     if (key>0) {
         int dest = 0;
         MPI_Send(&tIDarr[0], naP, MPI_INT, dest, 1, (universe->subcomm));
-        
-        if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
-            if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
-                MPI_Send(&tR[0], naP, MPI_DOUBLE, dest, 2, (universe->subcomm));
-            }
-        }
     }
     if (key==0) {
         for (int i=0; i<nID_each[0]; i++) {
@@ -719,45 +799,66 @@ void Fix_nucleate::ids_to_submaster(int pos)
             MPI_Recv(&IDuns[IDpos[source]], nID_each[source], MPI_INT, source, 1, (universe->subcomm), &status);
         }
         
-        if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
-            if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
-                Runs = new double[Ng];
-                
-                for (int i=0; i<nID_each[0]; i++) {
-                    Runs[i] = tR[i];
-                }
-                for (int source=1; source<nploc; source++) {
-                    MPI_Recv(&Runs[IDpos[source]], nID_each[source], MPI_DOUBLE, source, 2, (universe->subcomm), &status);
-                }
-            }
-        }
-        
         // print assembled IDuns on submaster
         if (msk->wplog) {
             std::string msg = "\nNumber of atoms in this fix: ";
             std::ostringstream ss;    ss << Ng;   msg = msg+ss.str();
             output->toplog(msg);
             msg="";   ss.str("");   ss.clear();
-            if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
-                if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
-                    output->toplog("\npos IDuns Runs");
-                }
-            }
-            else output->toplog("\npos IDuns");
+            output->toplog("\npos IDuns");
             
             for (int i=0; i<Ng; i++){
                 ss << i;        msg = ss.str()+" ";   ss.str("");   ss.clear();
                 ss << IDuns[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
-                if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
-                    if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
-                        ss << Runs[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
-                    }
-                }
                 output->toplog(msg);
                 msg="";
             }
         }
-         
+    }
+    
+    if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+        if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+            
+            if (key>0) {
+                int dest = 0;
+                MPI_Send(&IDar[0], nR, MPI_INT, dest, 1, (universe->subcomm));
+                MPI_Send(&Rar[0], nR, MPI_DOUBLE, dest, 1, (universe->subcomm));
+            }
+            if (key==0) {
+                
+                totRp = 0;  // total number of real particles across all procs in this fix
+                for (int i=0; i<nploc; i++) totRp += nIDar_each[i];
+                
+                IDaruns = new int[totRp];    // array storing the IDs of rael particles in current fix (hence local, in the sense that it is both local of the subcomm but also local to current fix_delete)
+                Raruns = new double[totRp];    // array storing the IDs of rael particles in current fix (hence local, in the sense that it is both local of the subcomm but also local to current fix_delete)
+                
+                for (int i=0; i<nIDar_each[0]; i++) {
+                    IDaruns[i] = IDar[i];
+                    Raruns[i] = Rar[i];
+                }
+                for (int source=1; source<nploc; source++) {
+                    MPI_Recv(&IDaruns[IDarpos[source]], nIDar_each[source], MPI_INT, source, 1, (universe->subcomm), &status);
+                    MPI_Recv(&Raruns[IDarpos[source]], nIDar_each[source], MPI_DOUBLE, source, 1, (universe->subcomm), &status);
+                }
+                
+                
+                // print assembled ID and Radii arrays of all real particles on submaster
+                if (msk->wplog) {
+                    std::string msg = "\nNumber of real atoms in this fix: ";
+                    std::ostringstream ss;    ss << totRp;   msg = msg+ss.str();
+                    output->toplog(msg);
+                    msg="";   ss.str("");   ss.clear();
+                    output->toplog("\npos IDaruns Raruns");
+                    for (int i=0; i<totRp; i++){
+                        ss << i;        msg = ss.str()+" ";   ss.str("");   ss.clear();
+                        ss << IDaruns[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                        ss << Raruns[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                        output->toplog(msg);
+                        msg="";
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -895,6 +996,70 @@ void Fix_nucleate::submaster_sort_IDs(int pos)
             IDsrt[posit]=IDuns[j]; // record aID in posit
         }
         rates.push_back(0.);  // here is where the rates container is initialised, every time a new IDsrt is added
+    }
+    
+    
+    if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+        if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+            
+            // IDs and radii of all real particles are only used to compute coverage fractions. No need to remember them from one fix delete to the next one (unlike IDsrt corresponding to rates above)
+            IDarsrt.clear();
+            Rarsrt.clear();
+            
+            // write down first ID and R
+            if (totRp>0) {
+                IDarsrt.push_back(IDaruns[0]);
+                Rarsrt.push_back(Raruns[0]);
+            }
+            
+            // for all subsequent IDs
+            for (int j=1; j<totRp; j++) {
+                // if ID is the largest, put it at the end
+                if (IDaruns[j]>IDarsrt[IDarsrt.size()-1]) {
+                    IDarsrt.push_back(IDaruns[j]);
+                    Rarsrt.push_back(Raruns[j]);
+                }
+                else {
+                    //otherwise look for a position betwwen a smaller and large one
+                    if (IDaruns[j]<IDarsrt[0]) posit = 0;
+                    else {
+                        //binary search
+                        int pre = 0;
+                        int post=IDarsrt.size()-1;
+                        while (pre < post) {
+                            posit = (int)((pre+post)/2.);
+                            if (IDarsrt[posit] < IDaruns[j]) pre=posit+1;
+                            else post=posit;
+                        }
+                        posit=pre;
+                    }
+                    // shift IDarsrt and Rarsrt
+                    IDarsrt.push_back(IDarsrt[IDarsrt.size()-1]);   //shif the last element one up
+                    Rarsrt.push_back(Rarsrt[Rarsrt.size()-1]);
+                    for (int k=IDarsrt.size()-1; k>posit; k--) {
+                        IDarsrt[k] = IDarsrt[k-1];  // shift all other elements until posit
+                        Rarsrt[k] = Rarsrt[k-1];
+                    }
+                    IDarsrt[posit]=IDaruns[j]; // record aID in posit
+                    Rarsrt[posit]=Raruns[j];
+                }
+            }
+        }
+    }
+    
+    if (msk->wplog) {
+        std::string msg;
+        std::ostringstream ss;
+        ss << "Total number of real particles is: " << totRp << "\n";
+        msg = ss.str(); ss.str("");   ss.clear();
+        output->toplog(msg);
+        msg = "pos IDarsrt Rarsrt";
+        output->toplog(msg);
+        for (int i=0; i<totRp; i++) {
+            ss << i<<" "<<IDarsrt[i] <<" "<<Rarsrt[i]<<"";
+            msg = ss.str(); ss.str("");   ss.clear();
+            output->toplog(msg);
+        }
     }
 }
 
@@ -1067,10 +1232,47 @@ void Fix_nucleate::submaster_comp_cover(int pos)
             
             double Aij;    // cross section of inter-particle contact
             double Rij;     // harmonic average of radii of particles in contact
-            Rij = 2. * Runs[up1] * Runs[up2]/( Runs[up1] + Runs[up2]);
+            double Ri,Rj;   // radii of interaction particles in current pair
+            int rp1,rp2;    // position of interacting particles in the "all real" sorted vectors (if not of fix-sampled trial type, for which radius is assigned by fix itself)
+            
+            // find first particle position in sorted IDar vector
+            if (flag_t1) Ri = fix->fKMCpdiam[pos]/2.;
+            else{
+                int pre = 0;
+                int post = IDarsrt.size()-1;
+                int posit;
+                while (pre < post) {
+                    posit = (int)((pre+post)/2.);
+                    if (IDarsrt[posit] < id1) pre=posit+1;
+                        else post=posit;
+                    }
+                posit=pre;
+                rp1 = posit;
+                Ri = Rarsrt[rp1];
+            }
+            
+            
+            if (flag_t2) Rj = fix->fKMCpdiam[pos]/2.;
+            else{
+                // find second particle position in sorted IDar vector
+                int pre = 0;
+                int post = IDarsrt.size()-1;
+                int posit;
+                while (pre < post) {
+                    posit = (int)((pre+post)/2.);
+                    if (IDarsrt[posit] < id2) pre=posit+1;
+                        else post=posit;
+                    }
+                posit=pre;
+                rp2 = posit;
+                Rj = Rarsrt[rp2];
+            }
+            
+            
+            Rij = 2. * Ri * Rj/( Ri + Rj);
             Aij = M_PI * Rij * Rij;
             
-            if (i<100)    fprintf(screen,"DEBUG 1 - proc %d: pair %d, up1 %d up2 %d, Dsub %e, Rij %e, Aij %e \n",me,i,up1,up2,Dsub[i],Rij,Aij);
+     
             
             // weigh the contact cross section by the distance
             double Dij; // arithmetic average of diameters in contact
@@ -1081,11 +1283,11 @@ void Fix_nucleate::submaster_comp_cover(int pos)
             if (Dsub[i] > efij * Dij)        Aij = 0.;
             else if (Dsub[i] > e0ij * Dij)   Aij *= (efij - Dsub[i]/Dij) / (efij- e0ij);
 
-            if (i<100)    fprintf(screen,"DEBUG 2 - proc %d: pair %d, Dsub %e, Rij %e, Aij %e up1 %d up2 %d\n",me,i,Dsub[i],Rij,Aij,up1,up2);
+ 
             
             // if first atom is of correct type for this fix, add contact area to the contact fraction arrays (still areas here; will be converted to area fractions later on below)
             if (flag_t1)  {
-                CFuns[up1] += Aij;
+                CFuns[up1] += Aij / (4. * M_PI * Ri * Ri);
                 if (Aij > 0.){
                     double tempGM = 0.;
                     if (t1 != t2) tempGM =  chem->gij[t1-1][t1-1] + chem->gij[t1-1][t2-1] - chem->gij[t2-1][t2-1];
@@ -1098,7 +1300,7 @@ void Fix_nucleate::submaster_comp_cover(int pos)
             }
             
             if (flag_t2){
-                CFuns[up2] += Aij;
+                CFuns[up2] += Aij / (4. * M_PI * Rj * Rj);
                 if (Aij > 0.){
                     double tempGM = 0.;
                     if (t1 != t2) tempGM =  chem->gij[t2-1][t2-1] + chem->gij[t2-1][t1-1] - chem->gij[t1-1][t1-1];
@@ -1115,7 +1317,6 @@ void Fix_nucleate::submaster_comp_cover(int pos)
     double nbulk = 12.;   // number of particles in the bulk for a monodisperse system of particls with type selected for dissolution. In future implementations, this could be passed as an input when calling the fix_delete (becasue it applies to all particles to be considered for deletion here)
     for (int i=0; i<Ng; i++){
         // convert coverage areas to coverage fractions
-        CFuns[i] /= 4.*M_PI*Runs[i]*Runs[i];    // here we divide contact area by particle surface area
         CFuns[i] *= 4./nbulk;    // this is a correction such that a speherical particle in contact with 12 equally sized neighbours in an FCC lattice ends up having coverage fraction = 1   (If we did not divide by 3, such a bulk particle would have a coverage fraction of 300%)
     }
     

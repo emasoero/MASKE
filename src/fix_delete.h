@@ -63,6 +63,7 @@ namespace MASKE_NS {
         
         int natoms; // number of all atoms in lammps (certainly >= Ng)
         int nlocal; // number of atoms in current processor
+
         
         //----------------------------------------
         // quantities here are processor specific
@@ -84,7 +85,6 @@ namespace MASKE_NS {
         double *aDIST;   // vector to extract content of compute pair/local from LAMMPS, used in "micro" style to obtain distances between interacting pairs of atoms from neighbour list
         int nlocR; // number of rows from LAMMPS property/local (neighbour list)
         int *nlocR_each;     // array storing numcber of local array rows in each processor: used by submaster for assembly and back (only used for "micro" style)
-        double lim_CF; //limiting coverage fraction associated with micro mechanism
         
         // Block of variables below ar for coveraage fraction calculations in micro mechanism
         //********
@@ -103,7 +103,6 @@ namespace MASKE_NS {
         int Ng;     // number of atoms in group, viz particles involved and managed by the submaster for the current fix
         int nploc;  // number of processor in subcom
         int *IDuns;     // unsorted IDs of all Ng particles in fix. This is bloc-wise, with each block being the tIDarr of a processor
-        double *Runs;    // unsorted radii of all Ng particles in fix
         double *CFuns;    // coverage fraction area of Ng particles in the fix
         double *GMuns;    // maximum interfacial enrgy change of Ng particles in the fix
         bool *fGMuns;    // is this the first interfacial enrgy change computed for each of the Ng particles in the fix?
@@ -120,8 +119,9 @@ namespace MASKE_NS {
         int *IDarpos;  // array storing starting positions of local IDar arrays in submaster's IDaruns
         int *IDaruns;     // unsorted IDs of all real particles. This is bloc-wise, with each block being the IDar of a processor
         double *Raruns;     // unsorted Radii of all real particles. This is bloc-wise, with each block being the IDar of a processor
-
-
+        int totRp;  // total number of real particles in all processors in LAMMPS
+        std::vector<int> IDarsrt;     // sorted IDs of all real particles, only in submaster
+        std::vector<double> Rarsrt;     // sorted Radii of all real particles, only in submaster
         //********
         
 
