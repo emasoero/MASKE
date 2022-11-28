@@ -1103,7 +1103,7 @@ void Fix_delete::submaster_comp_cover(int pos)
                     if (t1 != t2) tempGM = - chem->gij[t2-1][t2-1] - chem->gij[t2-1][t1-1] + chem->gij[t1-1][t1-1];
                     if (fGMuns[up2]) {
                         GMuns[up2] = tempGM;
-                        fGMuns[up1] = false;
+                        fGMuns[up2] = false;
                     }
                     else if (tempGM > GMuns[up2]) GMuns[up2] = tempGM;
                 }

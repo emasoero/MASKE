@@ -124,7 +124,6 @@ namespace MASKE_NS {
         int Ng;     // number of atoms in group, viz particles involved and managed by the submaster for the current fix
         int nploc;  // number of processor in subcom
         int *IDuns;     // unsorted IDs of all Ng particles in fix. This is bloc-wise, with each block being the tIDarr of a processor
-        double *Runs;    // unsorted radii of all Ng particles in fix
         double *CFuns;    // coverage fraction area of Ng particles in the fix
         double *GMuns;    // maximum interfacial enrgy change of Ng particles in the fix
         bool *fGMuns;    // is this the first interfacial enrgy change computed for each of the Ng particles in the fix?

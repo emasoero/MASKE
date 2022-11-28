@@ -678,7 +678,6 @@ void Fix_nucleate::sample(int pos)
     
     if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
         if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
-            delete [] Runs;
             
             if (!(SAR == nullptr)){
                 free(SAR[0]);
@@ -769,6 +768,8 @@ void Fix_nucleate::ids_to_submaster(int pos)
     
     // pass local ID arrays to submaster
     IDpos = new int[nploc];  // position of local tID array in submaster's unsorted list of IDs
+    IDarpos = new int[nploc];  // position of local real particle array in submaster's unsorted list of all real IDs
+
     if (key==0) {
         //fprintf(screen,"\n\n  PROC %d , SUBCOM %d , fix %s, tempo %f\n Here is the nID_each that I know of:  \n",me,universe->color,fix->fKMCname[pos].c_str(),msk->tempo);
         IDpos[0]=0;
@@ -787,10 +788,13 @@ void Fix_nucleate::ids_to_submaster(int pos)
         
     }
     IDuns = new int[Ng];    // array storing the IDs of delete events in current fix (hence local, in the sense that it is both local of the subcomm but also local to current fix_delete)
+
+    
     if (key>0) {
         int dest = 0;
         MPI_Send(&tIDarr[0], naP, MPI_INT, dest, 1, (universe->subcomm));
     }
+
     if (key==0) {
         for (int i=0; i<nID_each[0]; i++) {
             IDuns[i] = tIDarr[i];
@@ -1172,6 +1176,11 @@ void Fix_nucleate::submaster_comp_cover(int pos)
     
     // for all the rows in the assembled arrays in the submaster...
     for (int i=0; i<SARpos[nploc-1]+nlocR_each[nploc-1]; i++){
+        
+        //sleep(1);
+        //std::cout << "\n DEBUG 1 " << "proc " << me << std::endl;
+        //sleep(1);
+        
         int id1 = SAR[i][0];
         int id2 = SAR[i][1];
         int t1 = SAR[i][2];
@@ -1225,7 +1234,8 @@ void Fix_nucleate::submaster_comp_cover(int pos)
             output->toplog(msg);
         }
         
-       
+        
+      
         if (flag_t1 || flag_t2){
             // compute coverage area, used later to compute number of layers to dissolve in micro particle
             // coverage is given by contact cross section weighted by a distance-dependent factor; the latter is user-provided through two thresholds, e0 below which contact is 100%, ef above which contact is 0%. Linear interpolation in between
@@ -1234,6 +1244,10 @@ void Fix_nucleate::submaster_comp_cover(int pos)
             double Rij;     // harmonic average of radii of particles in contact
             double Ri,Rj;   // radii of interaction particles in current pair
             int rp1,rp2;    // position of interacting particles in the "all real" sorted vectors (if not of fix-sampled trial type, for which radius is assigned by fix itself)
+            
+            //sleep(1);
+            //std::cout << "\n DEBUG 2 " << "proc " << me << std::endl;
+            //sleep(1);
             
             // find first particle position in sorted IDar vector
             if (flag_t1) Ri = fix->fKMCpdiam[pos]/2.;
@@ -1250,7 +1264,10 @@ void Fix_nucleate::submaster_comp_cover(int pos)
                 rp1 = posit;
                 Ri = Rarsrt[rp1];
             }
-            
+          
+            //sleep(1);
+           // std::cout << "\n DEBUG 3 " << "proc " << me << std::endl;
+            //sleep(1);
             
             if (flag_t2) Rj = fix->fKMCpdiam[pos]/2.;
             else{
@@ -1272,19 +1289,23 @@ void Fix_nucleate::submaster_comp_cover(int pos)
             Rij = 2. * Ri * Rj/( Ri + Rj);
             Aij = M_PI * Rij * Rij;
             
-     
+            //sleep(1);
+            //std::cout << "\n DEBUG 4 " << "proc " << me << std::endl;
+            //sleep(1);
             
             // weigh the contact cross section by the distance
             double Dij; // arithmetic average of diameters in contact
-            Dij = Runs[up1] + Runs[up2];
+            Dij = Ri + Rj;
             double efij = chem->ef[t1-1][t2-1];
             double e0ij = chem->e0[t1-1][t2-1];
             
             if (Dsub[i] > efij * Dij)        Aij = 0.;
             else if (Dsub[i] > e0ij * Dij)   Aij *= (efij - Dsub[i]/Dij) / (efij- e0ij);
 
- 
-            
+           // sleep(1);
+           // std::cout << "\n DEBUG 5 " << "proc " << me << std::endl;
+           // sleep(1);
+           
             // if first atom is of correct type for this fix, add contact area to the contact fraction arrays (still areas here; will be converted to area fractions later on below)
             if (flag_t1)  {
                 CFuns[up1] += Aij / (4. * M_PI * Ri * Ri);
@@ -1299,6 +1320,10 @@ void Fix_nucleate::submaster_comp_cover(int pos)
                 }
             }
             
+           // sleep(1);
+            //std::cout << "\n DEBUG 6 " << "proc " << me << std::endl;
+            //sleep(1);
+            
             if (flag_t2){
                 CFuns[up2] += Aij / (4. * M_PI * Rj * Rj);
                 if (Aij > 0.){
@@ -1306,11 +1331,13 @@ void Fix_nucleate::submaster_comp_cover(int pos)
                     if (t1 != t2) tempGM =  chem->gij[t2-1][t2-1] + chem->gij[t2-1][t1-1] - chem->gij[t1-1][t1-1];
                     if (fGMuns[up2]) {
                         GMuns[up2] = tempGM;
-                        fGMuns[up1] = false;
+                        fGMuns[up2] = false;
                     }
                     else if (tempGM > GMuns[up2]) GMuns[up2] = tempGM;
                 }
             }
+            
+            //std::cout << "\n DEBUG 7 " << "proc " << me << std::endl;
         }
         
     }
