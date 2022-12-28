@@ -25,9 +25,13 @@ Fix_nucleate::Fix_nucleate(MASKE *maske) : Pointers(maske)
     EVpDIAM = -1.;
     EVpTYPE = -1;
 
-    nmax = 0;
-    nlocal0 = 0;
-    x0 = NULL;
+    //nmax = 0;
+    //nlocal0 = 0;
+    //x0 = NULL;
+    
+    id0 = new int[1];   // dummy memory allocation; will be deleted every time this array is populated anew
+    typ0 = new int[1];   // dummy memory allocation; will be deleted every time this array is populated anew
+    xyz0 = new double[1];   // dummy memory allocation; will be deleted every time this array is populated anew
 }
 
 
@@ -36,8 +40,12 @@ Fix_nucleate::Fix_nucleate(MASKE *maske) : Pointers(maske)
 // Class destructor
 Fix_nucleate::~Fix_nucleate()
 {
-  lammpsIO->lmp->memory->destroy(x0);
+    //lammpsIO->lmp->memory->destroy(x0);
+    delete [] id0;
+    delete [] typ0;
+    delete [] xyz0;
 }
+
 
 
 
@@ -145,7 +153,46 @@ void Fix_nucleate::init(int pos)
     typ.str("");
     typ.clear();
 
+    
+    // Record ID, type and x,y,z of all particles (target being only the trial, but faster to take all and filter out the trial later)
+    if (pos == fix->fKMClast_nuc){  // if this is the last fix nucleate in this subcomm, then all trials have been created already
+        
+        
+        // lammps extract all particles IDs, types and, via atom variables, x,y,z positions. Either use a collective lammps extraction, if you manage to get it to work, or do it per processor and then MPI_allgatherv to create a total array in all procs in this subcomm. Later, the reset trial pos function will go through these entire arrays and, if the ith atom is trial, it will use the id and x,y,z info to set position using LAMMPS interface.
+        
+        natoms0 = static_cast<int> (lammpsIO->lmp->atom->natoms); // total number of atoms in lammps (real and trial)
+        
+        delete [] id0;
+        delete [] typ0;
+        delete [] xyz0;
+        id0 = new int[natoms0];
+        typ0 = new int[natoms0];
+        xyz0 = new double[natoms0*3];
+        
+        lammps_gather_atoms_concat(lammpsIO->lmp,(char *) "id",0,1,id0);
+        lammps_gather_atoms_concat(lammpsIO->lmp,(char *) "type",0,1,typ0);
+        lammps_gather_atoms_concat(lammpsIO->lmp,(char *) "x",1,3,xyz0);
+
+        if (msk->wplog) {
+            std::string msg = "\nAll particles data from latest fix_nucleate.init() in this subcomm";
+            output->toplog(msg);
+            std::ostringstream ss;
+            ss <<"nTotal number of particles (real + all trial): "<<natoms0;
+            msg = ss.str();     ss.str("");     ss.clear();
+            output->toplog(msg);
+            msg = "pos id type x y z";
+            output->toplog(msg);
+            for (int i=0; i<natoms0; i++){
+                ss << i<<" "<< id0[i] <<" "<<typ0[i]<<" "<<xyz0[3*i]<<" "<<xyz0[3*i+1]<<" "<<xyz0[3*i+2];
+                msg = ss.str();     ss.str("");     ss.clear();
+                output->toplog(msg);
+            }
+        }
+    }
+    
+    
     // record vectors with initial x,y,z positions of all particles but not yet the initial box size. This info will be used at each call of sample later on to apply affine deformations and adjust volume per trial particle until init is invoked again
+    /*
     if (nmax < lammpsIO->lmp->atom->nmax) {
       tag0 = lammpsIO->lmp->memory->grow(tag0,lammpsIO->lmp->atom->nmax,"fix_nucleate:tag0");
       type0 = lammpsIO->lmp->memory->grow(type0,lammpsIO->lmp->atom->nmax,"fix_nucleate:type0");
@@ -156,24 +203,38 @@ void Fix_nucleate::init(int pos)
     memcpy(tag0,lammpsIO->lmp->atom->tag,nlocal0*sizeof(LAMMPS_NS::tagint));
     memcpy(type0,lammpsIO->lmp->atom->type,nlocal0*sizeof(int));
     memcpy(x0[0],lammpsIO->lmp->atom->x[0],nlocal0*3*sizeof(double));
+     */
 }
 
 // ---------------------------------------------------------------
 // Reset trial atoms initial positions. This assumes that there was no nucleation or dissolution happening between call to init() and reset_trial_pos(), hence we can still use atom->nlocal as the number of atoms for the stored positions.
 void Fix_nucleate::reset_trial_pos(int pos)
 {
-  for (int i = 0; i < nlocal0; i++) {
-    if (type0[i] == fix->fKMCptypeTRY[pos]) {
-      int index = lammpsIO->lmp->atom->map(tag0[i]);
-      if (index >= 0) {
-	lammpsIO->lmp->atom->x[index][0] = x0[i][0];
-	lammpsIO->lmp->atom->x[index][1] = x0[i][1];
-	lammpsIO->lmp->atom->x[index][2] = x0[i][2];
-      } else {
-	fprintf(screen, "[WARNING] Can't find atom %d in Fix_nucleate::reset_trial_pos on rank %d",tag0[i],universe->me);
-      }
+    std::ostringstream ss;
+    for (int i=0; i<natoms0; i++){
+        if (typ0[i] == fix->fKMCptypeTRY[pos]) {
+            ss <<"set atom "<<id0[i]<<" x "<<xyz0[3*i]<<" y "<<xyz0[3*i+1]<<" z "<<xyz0[3*i+2];
+            lammpsIO->lammpsdo(ss.str());
+            ss.str("");     ss.clear();
+        }
     }
-  }
+    
+    /*
+    int nwarn = 0;
+    for (int i = 0; i < nlocal0; i++) {
+        if (type0[i] == fix->fKMCptypeTRY[pos]) {
+          int index = lammpsIO->lmp->atom->map(tag0[i]);
+          if (index >= 0) {
+            lammpsIO->lmp->atom->x[index][0] = x0[i][0];
+            lammpsIO->lmp->atom->x[index][1] = x0[i][1];
+            lammpsIO->lmp->atom->x[index][2] = x0[i][2];
+          } else if(nwarn==0){
+              fprintf(screen, "[WARNING] Can't find atom %d in Fix_nucleate::reset_trial_pos on rank %d",tag0[i],universe->me);
+              nwarn++;
+          }
+        }
+    }
+     */
 }
 
 // ---------------------------------------------------------------

@@ -3,7 +3,8 @@
 #include "randm.h"
 #include "fix_delete.h"
 #include "fix_nucleate.h"
-#include "fix_Cfoo.h"
+#include "fix_CmstoreLMP.h"
+#include "fix_EmstoreLMP.h"
 #include "universe.h"
 #include "lammpsIO.h"
 #include "output.h"
@@ -74,9 +75,6 @@ Krun::~Krun()
 void Krun::proceed(double deltat)
 {
     
-    // screen output to debug
-     int sleeptime = me;    // KMR - defines an integer to give as input to sleep() function just used for debigging
-
     // some initial variables and quantities
     double start_time = msk->tempo;   // the time at which this krun loop started
     double end_time = start_time + deltat;   //time past/reached which this loop stops
@@ -84,17 +82,15 @@ void Krun::proceed(double deltat)
     if (me==MASTER) u = randm->pick01();
     
     
-    
     if (resetQkTint){
         QkTint = 0.;
         resetQkTint = false; // by default, the next krun will inherit leftover cumulated rate from current run, unless something is defined in between runs which requires QKTint to be reset
     }
-    bool write_first_thermo = true;
-    bool write_first_dumps = true;
 
     // Setting time step to 0 (not a good thing, but to prevent that internal calls of "run 1" for LAMMPS in this code cause LAMMPS time to increase
     lammpsIO->lammpsdo("timestep 0");
 
+    
     // Initialise any continuous fix that requires this before starting the krun loop
     for (int i=0; i<fix->Ctype.size(); i++) {
 #ifdef MASKE_WITH_NUFEB
@@ -104,31 +100,30 @@ void Krun::proceed(double deltat)
 #endif
     }
     
+    
+    
     //**********************************
     // FROM NOW ON, MASKE'S TIME WILL ADVANCE
     while (msk->tempo < end_time){
         
-        if (write_first_thermo) {
-            output->writethermo();
-            write_first_thermo = false;
-        }
         
-        if (write_first_dumps) {
-            for (int i = 0; i<output->dumpID.size();i++){
-	        output->writedump(i);
-                output->dump_first[i]=false;  // from now on, not the first time the dump is written anymore
-            }
-            write_first_dumps = false;
+        msk->step = msk->step+1;
+        
+        // writing first thermo and dumps
+        output->writethermo();
+        for (int i = 0; i<output->dumpID.size();i++){
+            output->writedump(i);
+            output->dump_first[i]=false;  // from now on, output->writedump will append to existing dumps
         }
         
         
-        if (me==MASTER) fprintf(screen,"\n MASKE tempo is %e \n  start_time was %f \n End time is %f",msk->tempo,start_time,end_time);
+        if (me==MASTER) fprintf(screen,"\n\n\n================================================================ \nKrun step %d \nMASKE's current tempo is %e \nThis Krun started at tempo = %e and will end at tenpo = %e\n\n",msk->step,msk->tempo,start_time,end_time);
         
         // screen output to debug
         //sleep(me);
-        fprintf(screen,"\n\n Proc %d, SUBCOM %d entering step at tempo %e \n",me,universe->color,msk->tempo);
+        //fprintf(screen,"\n\n Proc %d, SUBCOM %d entering step at tempo %e \n",me,universe->color,msk->tempo);
         MPI_Barrier(MPI_COMM_WORLD);
-        if (me==MASTER) fprintf(screen,"\n\n Let's start the tempo %e iteration \n",msk->tempo );
+        //if (me==MASTER) fprintf(screen,"\n\n Let's start the tempo %e iteration \n",msk->tempo );
        // sleep(1);
     
         
@@ -141,7 +136,7 @@ void Krun::proceed(double deltat)
             
             // screen output to debug
             //sleep(me);
-            fprintf(screen,"\n\n Proc %d, SUBCOM %d tempo %e, resetting vectors \n",me,universe->color,msk->tempo);
+            fprintf(screen,"Proc %d, SUBCOM %d: resetting vectors\n",me,universe->color);
             MPI_Barrier(MPI_COMM_WORLD);
             //sleep(1);
             
@@ -181,6 +176,7 @@ void Krun::proceed(double deltat)
         
         
         
+        
         //-----------------------------------------
         // SAMPLE RF-KMC EVENTS AND COMPUTE THEIR FUTURE OCCURRENCE TIME (FOT)
         bool rfKMCcrit = true;  //just a placeholder for now. In the future the criteria will be in a vector in fix.cpp, associated to the ith process
@@ -212,8 +208,8 @@ void Krun::proceed(double deltat)
         
         if (universe->key==0) {
             Qkall[me] = Qk;  //each submaster records its Qk into its local Qkall, now ready to be passed to the global Qkall on MASTER
-            fprintf(screen,"\n\n Vector of cumulative delete + nucleate rates from processor %d is: \n",me);
-            for (int i=0; i<universe->nprocs; i++) fprintf(screen," %e ",Qkall[i]);
+            fprintf(screen,"\nCumulative delete + nucleate KMC rates (Qkall) on all processors according to submaster of sucomm %d (only this submaster's value be nonzero now):\n",universe->color);
+            for (int i=0; i<universe->nprocs; i++) fprintf(screen," key %d = %e ,",i,Qkall[i]);
         }
 
         if (me>0){
@@ -224,9 +220,9 @@ void Krun::proceed(double deltat)
             for (int source=1; source<universe->nprocs; source++) {
                 MPI_Recv(&Qkall[source], 1, MPI_DOUBLE, source, 1, MPI_COMM_WORLD, &status);
             }
-            fprintf(screen,"\n\n Vector of cumulative delete + nucleate rates from all subcomms is: \n");
+            fprintf(screen,"\n\nGathered on MASTER - Cumulative delete + nucleate KMC rates (Qkall) from all procs is (only submasters should be nonzero): \n");
             for (int i=0; i<universe->nprocs; i++) {
-                fprintf(screen," %e ",Qkall[i]);
+                fprintf(screen," Proc %d = %e ,",i,Qkall[i]);
             }
         }
         MPI_Barrier(MPI_COMM_WORLD);
@@ -248,15 +244,55 @@ void Krun::proceed(double deltat)
             // here the rate x Dt is split between already cumulated one (QkTint) and future one, Qktot x DtKMC (the latter being the time from now until the next event, not the time from previous to next event: some of the time from the previous event has already been accumulated in QkTint)
             // So the generating equation is QkTint + DtKMC x Qktot = log(1/u), which is solved for DtKMC
             DtKMC = ( log(1./u) - QkTint ) / Qktot;
-            fprintf(screen,"\n\n DtKMc at tempo %e is: %e\n",msk->tempo,DtKMC);
+            fprintf(screen,"\n\n DtKMC = %e\n",DtKMC);
         }
-        
+        //-----------------------------------------
         
         
             
-        // Compute waiting time for all continuus processes
         
-        int *nCpSC;   // array storing the number of continuum processes in each procesor (i.e. in subcomm to which processor pertains)
+        
+        
+        //-----------------------------------------
+        //-----------------------------------------
+        // EACH PROCESSOR COMPUTES WAITING TIME OF CONTINUOUS PROCESSES IN ITS SUBCOMM
+      
+        double *DtC; // array storing the Dts of all continuum processes in the current subcom. The array starts always with a -1, to avoid communication problems for subcomm with 0 cont processes defined for them (-1 if proc is slave, >=0 for submasters)
+        DtC = new double [fix->Ctype.size()+1];  // the +1 is to accommodate the initial -1 dummy entry
+        for (int i=0; i<fix->Ctype.size()+1; i++) DtC[i]=-1;
+        
+        bool Ccrit = true;  //just a placeholder for now. In the future the criteria will be in a vector in fix.cpp, associated to the ith process
+        if (Ccrit) {
+            // each processor scans through the list of their Cont processes
+            for (int i=0; i<fix->Ctype.size(); i++) {
+                if (strcmp(fix->Ctype[i].c_str(),"mstoreLMP")==0) {
+                    double temp_Dt = fix_cmsLMP->getDT(i);     //  Each proc in subcom knows about Dt, but we will only work with the value in the submaster.
+                    if (universe->key==0) {
+                        DtC[i+1] = fix->Cleval[i] + temp_Dt - msk->tempo; // +1 because I want DtCall[0]=-1.
+                    }
+                }
+#ifdef MASKE_WITH_NUFEB
+                if (strcmp(fix->Ctype[i].c_str(),"nufeb")==0) {
+                  double temp_Dt = fix_nufeb->getDT(i);
+                  if (universe->key==0) {
+                    DtC[i+1] = fix->Cleval[i] + temp_Dt - msk->tempo;
+                  }
+                }
+#endif
+            }
+        }
+        //-----------------------------------------
+        
+        
+        
+        
+        
+        
+        //-----------------------------------------
+        //-----------------------------------------
+        // MASTER GATHERS DTC FROM ALL SUBCOMMUNICATORS IN A DEDICATED DTCall ARRAY
+        
+        int *nCpSC;   // number of continuum processes in each processor (i.e. in subcomm to which processor pertains)
         nCpSC = new int [universe->nprocs];
         for (int i=0; i<universe->nprocs; i++) nCpSC[i] = 0;
         nCpSC[me] = fix->Ctype.size();
@@ -266,31 +302,6 @@ void Krun::proceed(double deltat)
         for (int i=0; i<universe->nprocs; i++) pcol[i] = -1;
         pcol[me] = universe->color;
         
-        
-        double *DtC; // array storing the Dts of all continuum processes in the current subcom. The array starts always with a -1, to avoid communication problems for subcomm with 0 cont processes defined for them (-1 if proc is slave, >=0 for submasters)
-        DtC = new double [fix->Ctype.size()+1];  // the +1 is to accommodate the initial -1 dummy entry
-        for (int i=0; i<fix->Ctype.size()+1; i++) DtC[i]=-1;
-        
-        bool Ccrit = true;  //just a placeholder for now. In the future the criteria will be in a vector in fix.cpp, associated to the ith process
-        if (Ccrit) {
-            // each processor scans through the list of their Cont processes
-            for (int i=0; i<fix->Ctype.size(); i++) {
-                if (strcmp(fix->Ctype[i].c_str(),"foo")==0) {
-                    double temp_Dt = fix_cfoo->getDT(i);     // +1 because I want DtCall[0]=-1. If static DT just read it from vector in fix.cpp. If dynamic DT, it may need to be computed somhow, hence I defined a placeholder function.  Each proc in subcom knows about Dt, but we will only work with the value in the submaster..
-                    if (universe->key==0) {
-                        DtC[i+1] = fix->Cleval[i] + temp_Dt - msk->tempo;
-                    }
-                }
-#ifdef MASKE_WITH_NUFEB
-		if (strcmp(fix->Ctype[i].c_str(),"nufeb")==0) {
-		  double temp_Dt = fix_nufeb->getDT(i);
-		  if (universe->key==0) {
-		    DtC[i+1] = fix->Cleval[i] + temp_Dt - msk->tempo;
-		  }
-		}
-#endif
-            }
-        }
         
         // Master gatehrs number of Cont processes for each processor
         if (me > 0) {
@@ -304,7 +315,7 @@ void Krun::proceed(double deltat)
                 MPI_Recv(&nCpSC[source], 1, MPI_INT, source, 1, MPI_COMM_WORLD, &status);
                 MPI_Recv(&pcol[source], 1, MPI_INT, source, 2, MPI_COMM_WORLD, &status);
             }
-            fprintf(screen,"\n\n Number of continuous proceeses gathered by master \n Proc_No   Subcom   nCprocs\n");
+            fprintf(screen,"\nNumber of continuous processes gathered by master \n Proc_No   Subcom   nCprocs\n");
             for (int i=0; i<universe->nprocs; i++) {
                 fprintf(screen,"%d %s %d\n",i,universe->SCnames[pcol[i]].c_str(),nCpSC[i]);
             }
@@ -312,10 +323,11 @@ void Krun::proceed(double deltat)
         MPI_Barrier(MPI_COMM_WORLD);
         
         // Master gatehrs Dt arrays for each Cont processes from each processor.   The size of each array is 1+nCpSC[me]
-        double * DtCall;   // array in master assemblying the processor-specific DtC arrays
+        double *DtCall;   // array in master assemblying the processor-specific DtC arrays
         int *CplocID;   // array in master containing local id of each cont process in DtCall in its own subcom
         int *pcolAll;   // array in master with color (subcomm id) of process in each entry in DtCall
         int Dtsize = 1;
+        
         if (me==MASTER) {
             Dtsize = 0;
             for (int i=0; i<universe->nprocs; i++) Dtsize += 1 +nCpSC[i];
@@ -351,11 +363,11 @@ void Krun::proceed(double deltat)
                 MPI_Recv(&DtCall[ppos], 1+nCpSC[source], MPI_DOUBLE, source, 1, MPI_COMM_WORLD, &status);
             }
             ppos = 0;
-            fprintf(screen,"\n\n Dts of all continuous proceeses gathered by master \n Proc_No   Subcom   DtC   proc_ID_loc\n");
+            fprintf(screen,"\nDts of all continuous processes gathered by master (meaningful entries only for submasters, excluding their first one with -1 placeholder)\n Proc_No   Subcom   DtC   proc_ID_loc\n");
             for (int i=0; i<universe->nprocs; i++) {
                 for (int j=0; j< 1+nCpSC[i]; j++) {
                     CplocID[ppos]=j-1;
-                    fprintf(screen,"%d %s %f %d\n",i,universe->SCnames[pcolAll[ppos]].c_str(),DtCall[ppos],CplocID[ppos]);
+                    fprintf(screen,"%d %s %e %d\n",i,universe->SCnames[pcolAll[ppos]].c_str(),DtCall[ppos],CplocID[ppos]);
                     ppos++;
                 }
             }
@@ -366,40 +378,62 @@ void Krun::proceed(double deltat)
         delete [] nCpSC;
         delete [] pcol;
         
+        //-----------------------------------------
         
         
         
-        // Master selects smallest FOT among all KMC and continuous types above  --> next event type
+        
+        
+        
+        
+        
+        //--------------------------------------------------------
+        //--------------------------------------------------------
+        // MASTER SELECTS SMALLEST FOT AMONG ALL KMC AND CONTINUOUS EVENTS, IDENTIFYING NEXT EVENT TO CARRY OUT
+        //--------------------------------------------------------
         double Dt = 0.;
         int KMCexecute = 0;  // a bool actually, 0 = false, 1 = true
-	int Cexecute = 0;    // flags the execution of a countinous process
+        int Cexecute = 0;    // flags the execution of a countinous process
         int Cpid2exec = -1;  // local ID of continuous process to execute
         int SC2exec = -1;    // ID of subomm supposed to carry out the continuous event
-        int endofrun = 0;    // a bool actually, 0 = false, 1 = true
-	std::string type;
+        bool endofrun = 0;    // a bool actually, 0 = false, 1 = true
+        std::string type_Cpr;
 	
         if (me == MASTER) {
             Dt = DtKMC;
             if (Qktot > 0.) {
-	      KMCexecute = 1;
-	      Cexecute = 0;
-	    }
+                KMCexecute = 1;
+                Cexecute = 0;
+            }
+            else fprintf(screen,"\n[WARNING] Qktot <= 0 in Krun.cpp - not sure what this means. The code will probably crash soon.\n");
             if (Dt < 0.)  Dt = 0.;    // the KMC process is chosen because associated to time < tempo.. acceptable.. but a warning should be generated..
             else {
                 for (int i=0; i<Dtsize; i++) {
                     if (DtCall[i] >= 0. && DtCall[i]<Dt) {
                         Dt = DtCall[i];  //the corresponding subcom color is in position i of pcolAll array
                         KMCexecute = 0;
-			Cexecute = 1;
-                        Cpid2exec = CplocID[i];
-                        SC2exec = pcolAll[i];
-			type = fix->aCtype[Cpid2exec];
+                        Cexecute = 1;
+                        Cpid2exec = CplocID[i];   // local ID of Cproc to execute in its subcomm
+                        SC2exec = pcolAll[i];    // subcomm executing the Cont proc
+                        type_Cpr = fix->aCtype[Cpid2exec];    // Type of cont proc
                     }
                 }
             }
             if (Dt > end_time - msk->tempo){
                 Dt = end_time - msk->tempo;   // This means that loop is over: all continuum processes should be executed in this case and QkTint of KMC events should be updated
                 endofrun = 1;
+                KMCexecute = 0;
+                Cexecute = 0;
+            }
+            
+            if (endofrun==1) {
+                fprintf(screen,"\nAll events overcome Krun ending time. Closing up the Krun.\n");
+            }
+            else if(KMCexecute==1){
+                fprintf(screen,"\nEvent with shortest FOT is of KMC type\n");
+            }
+            else if(Cexecute==1){
+                fprintf(screen,"\nEvent with shortest FOT is Continuous, of type %s, with local process ID %d on subcomm %d\n",type_Cpr.c_str(),Cpid2exec,SC2exec);
             }
         }
         
@@ -408,9 +442,17 @@ void Krun::proceed(double deltat)
             delete [] CplocID;
             delete [] pcolAll;
         }
+        //--------------------------------------------------------
         
         
-        // Master communicates selected dt and type of chosen process to all processors
+        
+        
+        
+        
+        //--------------------------------------------------------
+        //--------------------------------------------------------
+        // MASTED COMUNICATES SELECTED DT AND TYPE OF CHOSEN PROCESS TO ALL PROCESSORS
+        //--------------------------------------------------------
         if (me==MASTER){
             for (int dest=1; dest<universe->nprocs; dest++) {
                 MPI_Send(&Dt, 1, MPI_DOUBLE, dest, 1, MPI_COMM_WORLD);
@@ -419,7 +461,7 @@ void Krun::proceed(double deltat)
                 MPI_Send(&Cpid2exec, 1, MPI_INT, dest, 4, MPI_COMM_WORLD);
                 MPI_Send(&SC2exec, 1, MPI_INT, dest, 5, MPI_COMM_WORLD);
                 MPI_Send(&endofrun, 1, MPI_INT, dest, 6, MPI_COMM_WORLD);
-		MPI_Send(type.c_str(), type.length()+1, MPI_CHAR, dest, 7, MPI_COMM_WORLD);
+                MPI_Send(type_Cpr.c_str(), type_Cpr.length()+1, MPI_CHAR, dest, 7, MPI_COMM_WORLD);
             }
         }
         if (me > 0) {
@@ -430,25 +472,41 @@ void Krun::proceed(double deltat)
             MPI_Recv(&Cpid2exec, 1, MPI_INT, source, 4, MPI_COMM_WORLD, &status);
             MPI_Recv(&SC2exec, 1, MPI_INT, source, 5, MPI_COMM_WORLD, &status);
             MPI_Recv(&endofrun, 1, MPI_INT, source, 6, MPI_COMM_WORLD, &status);
-	    MPI_Status status;
-	    MPI_Probe(source, 7, MPI_COMM_WORLD, &status);
-	    int length;
-	    MPI_Get_count(&status, MPI_CHAR, &length);
-	    char *type_recv = new char[length];
-	    MPI_Recv(type_recv, length, MPI_CHAR, source, 7, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-	    type = std::string(type_recv);
-	    delete [] type_recv;
+            MPI_Status status;
+            MPI_Probe(source, 7, MPI_COMM_WORLD, &status);
+            int length;
+            MPI_Get_count(&status, MPI_CHAR, &length);
+            char *type_recv = new char[length];
+            MPI_Recv(type_recv, length, MPI_CHAR, source, 7, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            type_Cpr = std::string(type_recv);
+            delete [] type_recv;
         }
-        
         MPI_Barrier(MPI_COMM_WORLD);
+        //--------------------------------------------------------
         
-        // all processors update tempo
+        
+        
+        
+        
+        //--------------------------------------------------------
+        //--------------------------------------------------------
+        // ALL PROCESSORS UPDATE TEMPO
+        //--------------------------------------------------------
         msk->tempo = msk->tempo + Dt;
         if (me == MASTER) {
-            fprintf(screen,"\n\n New tempo is %e \n",msk->tempo);
+            fprintf(screen,"\nNew tempo is %e ... now the chosen process will be executed until this new tempo\n",msk->tempo);
         }
+        //--------------------------------------------------------
         
         
+        
+        
+        
+        
+        //--------------------------------------------------------
+        //--------------------------------------------------------
+        // INTEGRATING RATES OF ALL KMC PROCESSES BY THE SELECTED DT
+        //--------------------------------------------------------
         // all rates of KMC processes are integrated by Dt by all processors. Master integrates the grand cumulate QkTint too
         double *QkT, *QkTC;  // position 0 refers to fix_del, position 1 to fix_nucleate.
         int nKMCs = 2;      // number of KMC fix types allowed in the program. For now, delete and nucleate, so 2.
@@ -485,19 +543,23 @@ void Krun::proceed(double deltat)
         
         delete [] QkT;
         
-        
         fMC_justreset = false; // this ensures that at the next time step the rate vectors in each subcomm are read and not compiled again
         
         if (me == MASTER) {
             QkTint += Qktot * Dt;
-            fprintf(screen,"\n\n MASTER's cumulative rate integrated over time is: %f \n",QkTint);
+            fprintf(screen,"\nMASTER's cumulative rate, integrated over time from last KMC event to now, is: %f \n",QkTint);
         }
+        //--------------------------------------------------------
         
         
         
         
         
         
+        //--------------------------------------------------------
+        //--------------------------------------------------------
+        // EXECUTE KMC PROCESS IF SELECTED AS NEXT ONE
+        //--------------------------------------------------------
         // if a KMC process was chosen, master must tell all subcomms who the selected subcomm is and pass to them the cumrate value to check in the cumrate vector
         if (KMCexecute == 1){
             
@@ -593,7 +655,10 @@ void Krun::proceed(double deltat)
                 
                 fprintf(screen,"\n PROC %d has these cumulated rates QkTC: %f %f \n",me,QkTC[0],QkTC[1]);
 
-                fprintf(screen,"\n PROC %d choses event type %d with reduced rate %f \n",me,EVtype,CRCred);
+                std::string EVTstr = "ERROR";
+                if (EVtype==0) EVTstr="DELETE";
+                else if (EVtype==1) EVTstr="NUCLEATE";
+                fprintf(screen,"\n PROC %d choses event type %s with reduced rate %f \n",me,EVTstr.c_str(),CRCred);
 
                 
                 if (EVtype==0) {
@@ -696,16 +761,6 @@ void Krun::proceed(double deltat)
             
             MPI_Barrier(MPI_COMM_WORLD);
             
-            /*
-            if (EVtype==0) {
-                fprintf(screen,"\n PROC %d has particle deletion parameters: EVpID = %d ; fix = %s\n",me,EVpID,fix->afKMCname[EVafixID].c_str());
-            }
-            else if  (EVtype==1){
-                fprintf(screen,"\n PROC %d has particle nucleation parameters: EVpID = %d ; fix = %s ; diam = %f ; XYZ = %f %f %f ; ptype = %d\n",me,EVpID,fix->afKMCname[EVafixID].c_str(),EVpDIAM,EVpXpos,EVpYpos,EVpZpos,EVpTYPE);
-            }
-            */
-            
-            
             
             
             // executing the event - all processors
@@ -740,10 +795,10 @@ void Krun::proceed(double deltat)
                 
                 MPI_Barrier(MPI_COMM_WORLD);
                 
-                // all processors update the solution
+                if (me==MASTER) fprintf(screen,"\nAll processors updating the solution now\n");
                 solution->update(EVafixID,pV,EVtype);
             }
-            else if (EVtype==1){  // if a nucleations...
+            else if (EVtype==1){  // if a nucleation...
                 double pV;   //part vol: to be used to update the solution
                 // processors with active lammps nucleate the selected particle with assigned ID
                 if (lammpsIO->lammps_active) {
@@ -774,11 +829,8 @@ void Krun::proceed(double deltat)
                 
                 MPI_Barrier(MPI_COMM_WORLD);
                 
-                // all processors update the solution
-                fprintf(screen,"\n PROC %d (submaster) Updating the solution \n",me);
+                if (me==MASTER) fprintf(screen,"\nAll processors updating the solution now\n");
                 solution->update(EVafixID,pV,EVtype);
-                fprintf(screen,"\n PROC %d (submaster) solution updated\n",me);
-
             }
             
             // having carried out the discrete event, selcect random number to be used in determining next FOT of discrete events
@@ -789,44 +841,62 @@ void Krun::proceed(double deltat)
             //if (universe->key ==0){}
             reset_event_vec = true;     //this is a harsh way of doing this. In future we should be more surgical and just update rate vectors etc. In this way everything is reset.
             // NB!!: if you do not reset the vectors after one KMC event is realised, you will have problems with IDs because the default option in delete_atoms is "compress yes", which reassigns IDs when a particle is deleted
+            fprintf(screen,"\nKMC process successfully executed. Moving on.\n");
+
         }
         delete [] QkTC;
         if (me==MASTER){
             delete [] QkTCall;
             delete [] QkTCallC;
         }
-	
-	if (Cexecute) {
-	  // reset the position of trial atoms
-	  for (int i=0; i<fix->fKMCtype.size(); i++) {
-	    if (strcmp(fix->fKMCtype[i].c_str(),"nucleate")==0) {
-	      fix_nucl->reset_trial_pos(i);
-	    }
-	  }
+        //--------------------------------------------------------
+        
+        
+        
+        
+        
+        //--------------------------------------------------------
+        //--------------------------------------------------------
+        // EXECUTE CONTINUOUS PROCESS (IF THE CHOSEN ONE)
+        //--------------------------------------------------------
+        if (Cexecute == 1) {
+            
+            if (type_Cpr == "mstoreLMP"){
+                // all processors execute this type of Cont fix
+                fix_cmsLMP->execute(Cpid2exec, SC2exec);
+                // processors in executing subcomm only update leval time of the process
+                if (universe->color == SC2exec) fix->Cleval[Cpid2exec] = msk->tempo;
+            }
 #ifdef MASKE_WITH_NUFEB
-	  if (universe->color == SC2exec) {
-	    if (type == "nufeb") {
-	      fix_nufeb->execute(Cpid2exec, SC2exec);
-	      fix->Cleval[Cpid2exec] = msk->tempo;
-	    }
-	  } else {
-	    if (type == "nufeb") {
-	      // Receive new concentrations from nufeb
-	      for (int i = 0; i < chem->Nmol; i++) {
-		if (chem->mol_nufeb[i] > 0) { // if points to a valid nufeb chemical species
-		  double conc = 0;
-		  MPI_Bcast(&conc, 1, MPI_DOUBLE, universe->subMS[SC2exec], MPI_COMM_WORLD);
-		  chem->mol_cins[i] = conc;
-		}
-	      }
-	    }
-	  }
-	  if (type == "nufeb") {
-	    fix_nufeb->exchange(Cpid2exec, SC2exec);
-	  }
+            else if (type_Cpr == "nufeb") {
+                if (universe->color == SC2exec) {
+                    fix_nufeb->execute(Cpid2exec, SC2exec);
+                    fix->Cleval[Cpid2exec] = msk->tempo;
+                }
+                else {
+                    // Receive new concentrations from nufeb
+                    for (int i = 0; i < chem->Nmol; i++) {
+                        if (chem->mol_nufeb[i] > 0) { // if points to a valid nufeb chemical species
+                            double conc = 0;
+                            MPI_Bcast(&conc, 1, MPI_DOUBLE, universe->subMS[SC2exec], MPI_COMM_WORLD);
+                            chem->mol_cins[i] = conc;
+                        }
+                    }
+                }
+                fix_nufeb->exchange(Cpid2exec, SC2exec);   // bacteria particles exchanged with processors in non-nufeb subcomms
+            }
 #endif
-	}
-
+        }
+        //--------------------------------------------------------
+        
+        
+        
+        
+        
+        //--------------------------------------------------------
+        //--------------------------------------------------------
+        // EXECUTE ALL PROCESSES UNTIL END OF RUN IF KRUN IS BEING COMPLETED (draft implementation)
+        //--------------------------------------------------------
         if (endofrun==1){
             // delete all trial particles associated with nucleation fixes
             for (int i=0; i<fix->fKMCtype.size(); i++){
@@ -840,9 +910,27 @@ void Krun::proceed(double deltat)
             // To be implemeneted because to date there are no continuou processes implemented..
             // Not sure what to do with cumulated KMC rates till here: Loosing them is a pity/error, but keeping them is risky because the user can unfix and do things before the next Krun, leading to inconsistencies..
         }
+        //--------------------------------------------------------
         
-        // number of just completed step
-        msk->step = msk->step+1;
+        
+        
+        
+        
+        //--------------------------------------------------------
+        //--------------------------------------------------------
+        // EXECUTE PROCESSES OF "EVERY" TYPE (draft implementation)
+        //--------------------------------------------------------
+        // NB: so far I am keeping processes as standalone commands too, one day to be subsumed by fixes of type "every".
+        // Also, I will need to add at some point an option to decide whether to run these if this is the last step of the Krun cycle (i.e. if endofrun == 1) or not.
+        
+        // Fixes of type every are not sampled but directly executed. To ensure syncronization it is best for all the procs to scan the full list of these fixes, via the "aE..." vectors in fix.cpp
+        for (int i=0; i<fix->aEname.size(); i++){
+            if (fix->aEtype[i]=="mstoreLMP" && (msk->step % fix->aEevery[i] == 0) ){
+                // all processors execute this type of fix
+                if (me==MASTER) fprintf(screen,"\nRunning fix every multi-store: %s\n",fix->aEname[i].c_str());
+                fix_emsLMP->execute(i);
+            }
+        }
         
         #ifdef MASKE_WITH_SPECIATION
             // call speciation if at appropriate step
@@ -853,50 +941,62 @@ void Krun::proceed(double deltat)
             }
         #endif
         
-        
         // relax if at appropriate step
         for (int i = 0; i<relax->rlxID.size();i++){
             if (msk->step % relax->rlx_every[i] == 0) {
+                if (me==MASTER) fprintf(screen,"\nRunning relax command\n");
                 relax->dorelax(i);
             }
         }
         
         // setconc if at appropriate step
-        
-            if (msk->step % setconc->vevery == 0) {
-
-                setconc->exec();
-
-            }
+        if (setconc->flag_setconc  &&  msk->step % setconc->vevery == 0) {
+            setconc->exec();
+        }
+        //--------------------------------------------------------
         
         
-
-        // If a KMC event was not executed
-        // (must stay here after relax, in case a continuous event was carried out and then the relax changed the box)
+        
+        
+    
+        // ---------------------------------------------------------
+        // ---------------------------------------------------------
+        // RESET INITIAL POSITIONS OF TRIAL ATOMS WITHOUT DELETING THEM, IF A KMC PROCESS WAS NOT CARRIED OUT
+        // ---------------------------------------------------------
+        // must stay here after processes of "continuous" and "every" types are carried out, in case those change the box for example
         if (KMCexecute == 0){
-            // NUKK: Reset positions of trial particles in all fix nucleates to their initial lattice site, plus any distortion occurred to the simulation box since last accepted KMC event
-            // A loop considering all fixes on processor and, if the fix is a nucleate, call a function within fix_nucleate to reset the poision of the trial particles duly
+            // reset the position of trial atoms
+            for (int i=0; i<fix->fKMCtype.size(); i++) {
+                if (strcmp(fix->fKMCtype[i].c_str(),"nucleate")==0) {
+                    fix_nucl->reset_trial_pos(i);
+                }
+            }
         }
         
-        // write thermo output at appropriate step
+        
+        
+        // ---------------------------------------------------------
+        // ---------------------------------------------------------
+        // WRITE THERMO AND DUMP AT APPROPRIATE STEPS
+        // ---------------------------------------------------------
         if (output->th_every>0 && msk->step % output->th_every == 0) {
-	  output->writethermo();
+            if (me==MASTER) fprintf(screen,"\nWriting entry in thermo file\n");
+            output->writethermo();
         }
-        // write dump output at appropriate step
         for (int i = 0; i<output->dumpID.size();i++){
+            if (me==MASTER) fprintf(screen,"\nWriting entry in dump file number %d\n",i);
             if (msk->step % output->dump_every[i] == 0) {
 	        output->writedump(i);
-                output->dump_first[i]=false;  // from not on, not the first time the dump is written anymore
             }
         }
         
         MPI_Barrier(MPI_COMM_WORLD);
         
-        //   ***** END OF LOOP
+        if (me==MASTER) fprintf(screen,"\nKrun step %d completed successfully",msk->step);
 
         }
     
-    fprintf(screen,"\n Proc[%d]: KRUN loop completed succesfully. Moving on.. \n",me);
+    fprintf(screen,"\n\n**********************************************\nProc[%d]: KRUN loop completed succesfully. Moving on..\n********************************************** \n",me);
 
 }
 

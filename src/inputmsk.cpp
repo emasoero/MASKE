@@ -230,7 +230,7 @@ void Inputmsk::file()
     inFile.close();
     
     
-    // Check that all what needed to be foound in the inputcprs file has been found indeed
+    // Check that all what needed to be found in the inputcprs file has been found indeed
     // TO BE POLISHED
     if (!foundSubcomm) {
         std::string msg = "ERROR: No subcommunicator found";
@@ -468,7 +468,7 @@ void Inputmsk::execline(std::string read_string)
             }
             fix->add(read_string3);
             
-            fprintf(screen,"\n inputmsk -- I am processor %d , part of subcomm %s , and I have %d KMC-free fixes and %d Cont fixes defined now \n",me,(universe->SCnames[universe->color]).c_str(),(int)(fix->fKMCtype.size()),(int)(fix->Ctype.size()));
+            fprintf(screen,"\n inputmsk -- I am processor %d , part of subcomm %s , and I have %d KMC-free fixes, %d Cont fixes and %d Every fixes defined now \n",me,(universe->SCnames[universe->color]).c_str(),(int)(fix->fKMCtype.size()),(int)(fix->Ctype.size()),(int)(fix->Etype.size()));
         }
         else if (strcmp(word.c_str(), "store") == 0){
             std::string read_string3;
@@ -539,7 +539,7 @@ void Inputmsk::execline(std::string read_string)
             }
         }
         else if (strcmp(word.c_str(), "setconc") == 0) {
-             
+            setconc->flag_setconc = true;
             int nmol;
             lss >> nmol;
             for (int i=0; i<nmol; i++){

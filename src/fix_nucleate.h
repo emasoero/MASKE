@@ -115,11 +115,18 @@ namespace MASKE_NS {
         
         std::vector<int> UtoS;   //pointing each-proc unsorted IDuns to corresponding sorted IDsrt in global vector containing all rfreeKMC fixes in current subcomm.  Its size is Ng (number of particles in current fix).     Needed to send rates computed by each processor and assembled unsorted by submaster to global sorted-ID rate vector
 
-	int nmax;
+        int natoms0; // number of all atoms in lammps when initial position of trial particles is recorded
+        int *id0;    // id of all LAMMPS atoms (real and trial) in this subcomm, when init() is called (used to later reset the initial positions of trial particles)
+        int *typ0; // initial types
+        double *xyz0; // initial positions
+        
+	/*
+     int nmax;
 	int nlocal0;
 	LAMMPS_NS::tagint *tag0; // initial tags
 	int *type0; // initial types
 	double **x0; // initial positions
+     */
 	 
         //----------------------------------------
         // internal functions follow

@@ -17,7 +17,8 @@
 #include "solution.h"
 #include "fix.h"
 #include "fix_delete.h"
-#include "fix_Cfoo.h"
+#include "fix_CmstoreLMP.h"
+#include "fix_EmstoreLMP.h"
 #include "relax.h"
 #include "setconc.h"
 #include "krun.h"
@@ -44,7 +45,7 @@ MASKE::MASKE(int narg, char **arg)
     screen=stdout;
     wplog = false;
     nulog_flag = false;
-    speclog_flag = true;
+    speclog_flag = false;
     
     MPI_Comm_rank(MPI_COMM_WORLD, &me);
     
@@ -82,7 +83,8 @@ MASKE::MASKE(int narg, char **arg)
     krun = new Krun(this);
     randm = new Randm(this);
     output = new Output(this);
-    fix_cfoo = new Fix_Cfoo(this);
+    fix_cmsLMP = new Fix_CmstoreLMP(this);
+    fix_emsLMP = new Fix_EmstoreLMP(this);
     relax = new Relax(this);
     setconc = new Setconc(this);
 #ifdef MASKE_WITH_SPECIATION
@@ -152,11 +154,17 @@ MASKE::~MASKE()
     MPI_Barrier(MPI_COMM_WORLD);
     delete randm;
     if (me==MASTER) {
-        fprintf(screen,"Deleting Cfoo class\n");
-        fix_cfoo->printall();
+        fprintf(screen,"Deleting CmstoreLMP class\n");
+        fix_cmsLMP->printall();
     }
     MPI_Barrier(MPI_COMM_WORLD);
-    delete fix_cfoo;
+    delete fix_cmsLMP;
+    if (me==MASTER) {
+        fprintf(screen,"Deleting EmstoreLMP class\n");
+        fix_emsLMP->printall();
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    delete fix_emsLMP;
     if (me==MASTER) {
         fprintf(screen,"Deleting relax class\n");
         relax->printall();
