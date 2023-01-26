@@ -146,11 +146,18 @@ namespace MASKE_NS {
         std::vector<double> Rarsrt;     // sorted Radii of all real particles, only in submaster
         //********
 
-	int nmax;
+        int natoms0; // number of all atoms in lammps when initial position of trial particles is recorded
+        int *id0;    // id of all LAMMPS atoms (real and trial) in this subcomm, when init() is called (used to later reset the initial positions of trial particles)
+        int *typ0; // initial types
+        double *xyz0; // initial positions
+        
+	/*
+     int nmax;
 	int nlocal0;
 	LAMMPS_NS::tagint *tag0; // initial tags
 	int *type0; // initial types
 	double **x0; // initial positions
+     */
 	 
         //----------------------------------------
         // internal functions follow

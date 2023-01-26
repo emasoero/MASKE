@@ -35,7 +35,8 @@ namespace MASKE_NS {
         class Randm *randm;
         class Fix_delete *fix_del;
         class Output *output;
-        class Fix_Cfoo *fix_cfoo;
+        class Fix_CmstoreLMP *fix_cmsLMP;
+        class Fix_EmstoreLMP *fix_emsLMP;
         class Relax *relax;
         class Setconc *setconc;
         class Fix_nucleate *fix_nucl;

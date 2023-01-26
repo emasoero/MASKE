@@ -16,6 +16,7 @@ Setconc::Setconc(MASKE *maske) : Pointers(maske)
 {
     MPI_Comm_rank(MPI_COMM_WORLD, &me);
     if (me == MASTER) fprintf(screen,"Generating Setconc class\n");
+    flag_setconc = false;
 }
 
 

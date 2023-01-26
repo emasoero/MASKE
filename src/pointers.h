@@ -39,7 +39,8 @@ public:
     screen(ptr->screen),
     plog(ptr->plog),
     thermo(ptr->thermo),
-    fix_cfoo(ptr->fix_cfoo),
+    fix_cmsLMP(ptr->fix_cmsLMP),
+    fix_emsLMP(ptr->fix_emsLMP),
     relax(ptr->relax),
     setconc(ptr->setconc),
 #ifdef MASKE_WITH_SPECIATION
@@ -61,7 +62,8 @@ protected:
     Solution *&solution;
     Fix *&fix;
     Fix_delete *&fix_del;
-    Fix_Cfoo *&fix_cfoo;
+    Fix_CmstoreLMP *&fix_cmsLMP;
+    Fix_EmstoreLMP *&fix_emsLMP;
 #ifdef MASKE_WITH_NUFEB
     Fix_nufeb *&fix_nufeb;
 #endif

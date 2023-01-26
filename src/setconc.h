@@ -23,6 +23,7 @@ namespace MASKE_NS {
         Setconc(class MASKE *);
         ~Setconc();
         
+        bool flag_setconc;   // true if setconc fix is active
         //std::vector<std::string> setnames;   //names of all user-defined setconc commands
         std::vector<std::string> molnames;   //names of molecule set by each setconc command
         std::vector<double> molconcs;       // concentrations of molecule to be set
