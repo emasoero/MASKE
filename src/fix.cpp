@@ -24,6 +24,8 @@ Fix::Fix(MASKE *maske) : Pointers(maske)
     
     //Ntrans = 0;
     //Ntsc=0;
+    
+    fKMClast_nuc = -1;
 
 }
 
@@ -56,7 +58,7 @@ void Fix::add(std::string instr)
     temp_soutUL = "uniform";
     temp_soutbox = "box";
     double temp_evt=0., temp_leval=0., temp_dt=0.;
-    int temp_mid=-1, temp_rid=-1, temp_lid=-1, temp_minid=-1, temp_sid=-1, temp_steps=-1;
+    int temp_mid=-1, temp_rid=-1, temp_lid=-1, temp_minid=-1, temp_sid=-1, temp_steps=-1, temp_every = 1;
 
     
     std::vector<double> wargs;
@@ -248,6 +250,9 @@ void Fix::add(std::string instr)
             fKMCrank.push_back(-1);  // to be computed in krun
             fKMCfirst.push_back(-1);  // to be computed in krun
             added_local_fix = true;
+            
+            if (strcmp(fKMCtype.back().c_str(),"nucleate")==0) fKMClast_nuc = afKMCname.size()-1;
+
         }
         
         // Each submaster prints their recorded fix, just to check that all is fine
@@ -259,15 +264,16 @@ void Fix::add(std::string instr)
             
             if (strcmp(fKMCtype[siz].c_str(),"delete")==0)
             {
-                fprintf(screen,"\n Added fix: KMC-free %s %s %s %d mech %s everyt %f sol_in_style %s sol_in_unif %s sol_in_box %s sol_out_unif %s sol_out_box %s wei %s \n", fKMCtype[siz].c_str(),fKMCname[siz].c_str(),fKMCscom[siz].c_str(),fKMCptype[siz],(chem->mechnames[fKMCmid[siz]]).c_str(),fKMCeveryt[siz],fKMCsinST[siz].c_str(),fKMCsinUL[siz].c_str(),fKMCsinbox[siz].c_str(),fKMCsoutUL[siz].c_str(),fKMCsoutbox[siz].c_str(),fKMCwei[siz].c_str());
+                fprintf(screen,"\nAdded fix: KMC-free %s %s %s %d mech %s everyt %f sol_in_style %s sol_in_unif %s sol_in_box %s sol_out_unif %s sol_out_box %s wei %s \n", fKMCtype[siz].c_str(),fKMCname[siz].c_str(),fKMCscom[siz].c_str(),fKMCptype[siz],(chem->mechnames[fKMCmid[siz]]).c_str(),fKMCeveryt[siz],fKMCsinST[siz].c_str(),fKMCsinUL[siz].c_str(),fKMCsinbox[siz].c_str(),fKMCsoutUL[siz].c_str(),fKMCsoutbox[siz].c_str(),fKMCwei[siz].c_str());
             }
             else if (strcmp(fKMCtype[siz].c_str(),"nucleate")==0){
-                    fprintf(screen,"\n Added fix: KMC-free %s %s %s %s %s %s %d %d %s %f mech %s everyt %f sol_in_style %s sol_in_unif %s sol_in_box %s sol_out_unif %s sol_out_box %s wei %s \n", fKMCtype[siz].c_str(),fKMCname[siz].c_str(),fKMCscom[siz].c_str(),(store->RegNames[fKMCrid[siz]]).c_str(),(store->LatNames[fKMClid[siz]]).c_str(),(store->MinNames[fKMClid[siz]]).c_str(),fKMCptypeTRY[siz],fKMCptype[siz],fKMCpgeom[siz].c_str(),fKMCpdiam[siz],(chem->mechnames[fKMCmid[siz]]).c_str(),fKMCeveryt[siz],fKMCsinST[siz].c_str(),fKMCsinUL[siz].c_str(),fKMCsinbox[siz].c_str(),fKMCsoutUL[siz].c_str(),fKMCsoutbox[siz].c_str(),fKMCwei[siz].c_str());
+                    fprintf(screen,"\nAdded fix: KMC-free %s %s %s %s %s %s %d %d %s %f mech %s everyt %f sol_in_style %s sol_in_unif %s sol_in_box %s sol_out_unif %s sol_out_box %s wei %s \n", fKMCtype[siz].c_str(),fKMCname[siz].c_str(),fKMCscom[siz].c_str(),(store->RegNames[fKMCrid[siz]]).c_str(),(store->LatNames[fKMClid[siz]]).c_str(),(store->MinNames[fKMClid[siz]]).c_str(),fKMCptypeTRY[siz],fKMCptype[siz],fKMCpgeom[siz].c_str(),fKMCpdiam[siz],(chem->mechnames[fKMCmid[siz]]).c_str(),fKMCeveryt[siz],fKMCsinST[siz].c_str(),fKMCsinUL[siz].c_str(),fKMCsinbox[siz].c_str(),fKMCsoutUL[siz].c_str(),fKMCsoutbox[siz].c_str(),fKMCwei[siz].c_str());
             }
             int nargs = 0;
             if (strcmp(temp_wtype.c_str(),"simple")==0) nargs = 1;
             for(int i=0; i<nargs; i++) fprintf(screen,"%f ", fKMCwarg[siz][i]);
-            fprintf(screen,"\n Local fix position: %d    Global fix position: %d \n",siz,fKMCglobID[siz]);
+            fprintf(screen,"\nLocal fix position: %d    Global fix position: %d \n",siz,fKMCglobID[siz]);
+            if (universe->key==0) fprintf(screen,"\nOn sucomm %d, position in local KMC list of last fix nucleate is: %d   \n",universe->color,fKMClast_nuc);
         }
     }
     
@@ -285,21 +291,21 @@ void Fix::add(std::string instr)
         check_name_unique(temp_name);
         allFixNames.push_back(temp_name);
         ss >> temp_scom;
-	if (temp_type == "nufeb") {
-	  ss >> temp_store;
-	  temp_sid = -1;
-	  for (int i=0; i<store->MulNames.size(); i++) {
-	    if (store->MulNames[i] == temp_store)
-	      temp_sid = i;
-	  }
-	  if (temp_sid < 0) {
-	    error->errsimple("ERROR: couldn't find multiple-line store for nufeb fix");
-	  }
-	} else {
-	  temp_store = "none";
-	}
+        if (temp_type == "nufeb" || temp_type == "mstoreLMP") {
+            ss >> temp_store;
+            temp_sid = -1;
+            for (int i=0; i<store->MulNames.size(); i++) {
+                if (store->MulNames[i] == temp_store)
+                    temp_sid = i;
+            }
+            if (temp_sid < 0) {
+                error->errsimple("ERROR: couldn't find multiple-line store for nufeb or mstoreLMP continuous fix");
+            }
+        } else {
+            temp_store = "none";
+        }
         bool commt_found = false;
-	temp_steps = -1;
+        temp_steps = -1;
         while (!ss.eof() && !commt_found) {
             ss >> keyword;
             if (strcmp(keyword.c_str(),"leval")==0) {
@@ -309,10 +315,10 @@ void Fix::add(std::string instr)
                 ss >> temp_dt;
             }
             else if (strcmp(keyword.c_str(),"steps")==0) {
-                ss >> temp_steps;
+                ss >> temp_steps;   //needed for fix_nufeb
             }
             else if (strcmp(keyword.c_str(),"group")==0) {
-                ss >> temp_group;
+                ss >> temp_group;  //needed for fix_nufeb
             }
             else if (strcmp(keyword.c_str(),"sol_out")==0) {
                 ss >> temp_soutbox;
@@ -321,7 +327,7 @@ void Fix::add(std::string instr)
                 commt_found = true;
             }
             else {
-                std::string msg = "ERROR: invalid keyword in fix "+temp_name+" \n "+temp_wtype+" not recognized \n";
+                std::string msg = "ERROR: invalid keyword in fix "+temp_name+" \n "+keyword+" not recognized \n";
                 error->errsimple(msg);
             }
         }
@@ -340,7 +346,7 @@ void Fix::add(std::string instr)
 
         bool added_local_fix = false;
         //inndividual processors in fix-invoked subcomm adding fix to their local list
-        if (strcmp(temp_scom.c_str(),(universe->SCnames[universe->color]).c_str())==0) {
+        if (strcmp(temp_scom.c_str(),(universe->SCnames[universe->color]).c_str())==0)  {
             Ctype.push_back(temp_type);
             Cname.push_back(temp_name);
             Cscom.push_back(temp_scom);
@@ -360,21 +366,81 @@ void Fix::add(std::string instr)
             int siz;
             siz = (int)Ctype.size()-1;
             
-            fprintf(screen,"\n Added fix: Cont %s %s %s %f", Ctype[siz].c_str(),Cname[siz].c_str(),Cscom[siz].c_str(),Cdt[siz]);
+            fprintf(screen,"\n Added fix: Cont %s %s %s %e", Ctype[siz].c_str(),Cname[siz].c_str(),Cscom[siz].c_str(),Cdt[siz]);
             int nargs = 0;
             fprintf(screen,"\n Local position: %d    Global position: %d",siz,CglobID[siz]);
         }
       
 
     }
-    else if (strcmp(PROCtype.c_str(),"Krelax")==0) {
+    else if (strcmp(PROCtype.c_str(),"Every")==0) {
         ss >> temp_type;
         ss >> temp_name;
         check_name_unique(temp_name);
         allFixNames.push_back(temp_name);
+        ss >> temp_scom;
+        if (temp_type == "mstoreLMP") {
+            ss >> temp_store;
+            temp_sid = -1;
+            for (int i=0; i<store->MulNames.size(); i++) {
+                if (store->MulNames[i] == temp_store)
+                    temp_sid = i;
+            }
+            if (temp_sid < 0) {
+                error->errsimple("ERROR: couldn't find multiple-line store for mstoreLMP Every fix");
+            }
+        } else {
+            temp_store = "none";
+        }
+        bool commt_found = false;
+        temp_every = -1;
+        while (!ss.eof() && !commt_found) {
+            ss >> keyword;
+            if (strcmp(keyword.c_str(),"every")==0) {
+                ss >> temp_every;
+            }
+            else if (keyword[0]=='#'){
+                commt_found = true;
+            }
+            else {
+                std::string msg = "ERROR: invalid keyword in fix "+temp_name+" \n "+keyword+" not recognized \n";
+                error->errsimple(msg);
+            }
+        }
+        
+        // Adding fix to all-Cont-fixes list
+        aEtype.push_back(temp_type);
+        aEname.push_back(temp_name);
+        aEscom.push_back(temp_scom);
+        aEevery.push_back(temp_every);
+        aEstore.push_back(temp_store);
+        aEsid.push_back(temp_sid);
+
+        bool added_local_fix = false;
+        //inndividual processors in fix-invoked subcomm adding fix to their local list
+        if (strcmp(temp_scom.c_str(),(universe->SCnames[universe->color]).c_str())==0 || temp_scom=="all") {
+            Etype.push_back(temp_type);
+            Ename.push_back(temp_name);
+            Escom.push_back(temp_scom);
+            Eevery.push_back(temp_every);
+            Estore.push_back(temp_store);
+            Esid.push_back(temp_sid);
+            EglobID.push_back(aEtype.size()-1);
+            added_local_fix = true;
+        }
+        
+        // Each submaster prints their recorded fix, just to check that all is fine
+        if (universe->key==0 && added_local_fix) {
+            int siz;
+            siz = (int)Etype.size()-1;
+            
+            fprintf(screen,"\n Added fix: Every %s %s %s %s %d", Etype[siz].c_str(),Ename[siz].c_str(),Escom[siz].c_str(),Estore[siz].c_str(),Eevery[siz]);
+            int nargs = 0;
+            fprintf(screen,"\n Local position: %d    Global position: %d",siz,EglobID[siz]);
+        }
     }
     else {
-        std::string msg = "ERROR: Unknown process type. Valid process types are KMC-free, KMC-rej, Krelax, and Cont. Instead found "+ PROCtype+" \n";
+        std::string msg = "ERROR: Unknown process type. Valid process types are KMC-free, KMC-rej, Every, and Cont. Instead found "+ PROCtype+" \n";
         error->errsimple(msg);
     }
         

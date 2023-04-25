@@ -26,6 +26,7 @@ Fix_delete::Fix_delete(MASKE *maske) : Pointers(maske)
     // The inputcprs class is run by all processors in COMM_WORLD. This reads the id of the processor
     MPI_Comm_rank(MPI_COMM_WORLD, &me);
     EVpID = -1;
+    SAR = nullptr;
     //Ntrans = 0;
     //Ntsc=0;
 }
@@ -61,6 +62,8 @@ void Fix_delete::init(int pos)
     lammpsIO->lammpsdo("variable tempNgroup delete");
     // the subsequent two lines will be used in fix_del to know where to start and where to finish scanning events in the assembled vectors of ids, rates, etc..
     fix->fKMCnevents[pos] = Ng;
+    
+    
 }
 
 
@@ -121,8 +124,23 @@ void Fix_delete::sample(int pos)
     
     tolmp = "dump tdID all custom 1 dump.temp_"+universe->SCnames[universe->color]+" c_tempID c_tempRAD c_tempPE type x y z";    //temp dump to update variables and computes
     lammpsIO->lammpsdo(tolmp);
+    
+    
+    if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+        if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+            tolmp = "compute tempPAT all property/local patom1 patom2 ptype1 ptype2";
+            lammpsIO->lammpsdo(tolmp);
+            tolmp = "compute tempDIST all pair/local dist";
+            lammpsIO->lammpsdo(tolmp);
+            tolmp = " dump tdLID all local 1 dump.tempL_"+universe->SCnames[universe->color]+" index c_tempPAT[1] c_tempPAT[2] c_tempPAT[3] c_tempPAT[4] c_tempDIST";
+            lammpsIO->lammpsdo(tolmp);
+        }
+    }
+    
     lammpsIO->lammpsdo("run 1");     // a run1 in lammps to dump the temp and so prepare variables and computes
 
+    
+    
     
     // extracting unsorted group atom ids and energies
     // NB: lammps computes of properties per atom per group store the results in arrays whose size is natoms (number of atoms in the simulations, including those not in the group). Entries associated to atoms not in the group are set to 0, which I spot and get rid of
@@ -161,6 +179,16 @@ void Fix_delete::sample(int pos)
     //int *atype = ((int *) lammps_extract_atom(lammpsIO->lmp,(char *)"type"));
     //atype = new double[natoms];
     atype = ((double *) lammps_extract_compute(lammpsIO->lmp,(char *) "tempType",1,1));
+    
+    if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+        if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+            // PAT is a local compute (style = 2 in lammps library) of array (i.e. matrix) type (type = 2 in lammps library)
+            locLMP = ((double **) lammps_extract_compute(lammpsIO->lmp,(char *) "tempPAT",2,2));
+            // DIST is a local compute (style = 2 in lammps library) of vector type (type = 1 in lammps library)
+            aDIST = ((double *) lammps_extract_compute(lammpsIO->lmp,(char *) "tempDIST",2,1));
+            nlocR = *((int*)lammps_extract_compute(lammpsIO->lmp,(char *) "tempPAT",2,4));
+        }
+    }
     
     
     /*if (me==3){
@@ -204,7 +232,8 @@ void Fix_delete::sample(int pos)
             }
         }
         
-        /*for (int i=0; i<natoms; i++){
+        /*output->toplog("\nALL IDs FROM LAMMPS \npos aiD atype aR aE");
+        for (int i=0; i<natoms; i++){
             ss << i;        msg = ss.str()+" ";   ss.str("");   ss.clear();
             ss << aID[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
             ss << atype[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
@@ -214,6 +243,31 @@ void Fix_delete::sample(int pos)
             output->toplog(msg);
             msg="";
         }*/
+        
+        if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+            if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+                msg = msg+"\nNumber of interacting pairs in current processor: ";
+                ss << nlocR;       msg = msg+ss.str(); ss.str("");   ss.clear();
+                output->toplog(msg);
+                msg="";
+                output->toplog("\npos id1 id2 type1 type2 dist");
+                {
+                    for(int i=0; i<nlocR; i++){
+                        ss << i;        msg = ss.str()+" ";   ss.str("");   ss.clear();
+                        ss << locLMP[i][0];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                        ss << locLMP[i][1];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                        ss << locLMP[i][2];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                        ss << locLMP[i][3];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                        ss << aDIST[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                        output->toplog(msg);
+                        msg="";
+                    }
+                }
+            }
+        }
+       
+        
+        
     }
     
     //fprintf(screen,"\n Proc %d, EDDIG JO0? \n",me);
@@ -222,6 +276,14 @@ void Fix_delete::sample(int pos)
     
     tolmp = "undump tdID";     // removing temporary dump
     lammpsIO->lammpsdo(tolmp);
+    
+    if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+        if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+            tolmp = "undump tdLID";     // removing temporary "local" dump for per-pair interactions
+            lammpsIO->lammpsdo(tolmp);
+        }
+    }
+    
     // END OF READING FROM LAMMPS
     // -----------------------------------------------------------------------------
     // -----------------------------------------------------------------------------
@@ -250,20 +312,7 @@ void Fix_delete::sample(int pos)
             i++;
         }
     }
-    
-    /*for (int i =0; i<natoms; i++) {
-        if (aID[i]>0 && (int)aID[i]==aaID[i]){
-            tID.push_back((int)aID[i]);
-            tR.push_back(aR[i]);
-            tE.push_back(aE[i]);
-            naP++;
-        }
-    }*/
-    
-    
-    
 
-    
     tIDarr = new int[naP];     // copying local ID vector to array in order to communicate it to submaster later on
     for (int i =0; i<naP; i++) tIDarr[i] = tID[i];
 
@@ -285,6 +334,57 @@ void Fix_delete::sample(int pos)
             msg="";
         }
     }
+    
+    
+    
+    // for micro mechanism, create another array with IDs adn radii of ALL real particles, to be used to compute coverage fractions
+    if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+        if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+            
+            tIDar.clear();    tRar.clear();
+            
+            nR = 0;  //number of real particles in current processor
+
+            for (int i=0 ; i<nlocal; i++) {  //NB: local atoms may also be trial types when nucleation fixes are used
+                bool flag_real = false;
+                for (int j=0; j<msk->Rtypes.size(); j++) {
+                    if ((int)atype[i]==msk->Rtypes[j]) flag_real = true;
+                }
+                if (flag_real) {
+                    tIDar.push_back((int)aID[i]);
+                    tRar.push_back(aR[i]);
+                    nR++;
+                }
+            }
+            
+            IDar = new int[nR];
+            Rar = new double[nR];
+            
+            for (int i =0; i<nR; i++){
+                IDar[i] = tIDar[i];
+                Rar[i] = tRar[i];
+            }
+            
+            
+            // printing to log file for debugging
+            if (msk->wplog) {
+                std::string msg = "\nNumber of real atoms in this processor (for coverage function in fix_delete.cpp): ";
+                std::ostringstream ss;    ss << nR;   msg = msg+ss.str();
+                output->toplog(msg);
+                msg="";   ss.str("");   ss.clear();
+                output->toplog("\npos IDar Rar");
+                for (int i=0; i<nR; i++){
+                    ss << i;        msg = ss.str()+" ";   ss.str("");   ss.clear();
+                    ss << IDar[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                    ss << Rar[i];    msg += ss.str()+" ";  ss.str("");   ss.clear();
+                    output->toplog(msg);
+                    msg="";
+                }
+            }
+        }
+    }
+    
+    
     // END OF RECORDING LAMMPS VALUES INTO VECTORS
     // -----------------------------------------------------------------------------
     // -----------------------------------------------------------------------------
@@ -295,12 +395,31 @@ void Fix_delete::sample(int pos)
     // SUBMASTER ASSEMBLES THE UNSORTED ID ARRAYS FROM EACH PROCESSOR IN AN UNSORTED VECTOR
     ids_to_submaster(pos);
     
+    // FOR MICRO-PAIR MECHANISM ONLY Communicate local arrays (from neighbour list) to submaster
+    if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+        if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+            pair_arr_to_submaster(pos);
+        }
+    }
     
     // SUBMASTER SORTS IDs (only if fix was just reset in krun.cpp, otherwise sorted vector already exists)
     if (key==0 && krun->fMC_justreset) submaster_sort_IDs(pos);
     
     // EACH PROCESSOR MAPS THEIR ID TO THE CORRESPONDING POSITION IN THE SUBMASTER IDsrt ARRAY
     if(key==0) submaster_map_ID(pos);
+    
+    // FOR MICRO-PAIR MECHANISM ONLY, SUBMASTER COMPUTES COVERAGE AREAS AND PASSES THEM BACK TO SLAVES
+    if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+        if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+            if(key==0){
+                // submaster computes coverage area fraction of each particle in the fix (stored in unsorted array in submaster)
+                submaster_comp_cover(pos);
+            }
+            // submaster communicates back its areas to each slave processor in chunks of same size as local IDs
+            cover_from_submaster(pos);
+        }
+    }
+    
     
     // EACH PROCESSOR COMPUTES RATES OF EACH EVENT AND CUMULATIVES DEPENDING ON MECHANISM
     rate_each = new double[nID_each[key]];  //array with processor-specific rates. These will be passed to the submaster which will sort them to match ids into the rates vector. Then this array can be forgotten
@@ -309,6 +428,9 @@ void Fix_delete::sample(int pos)
     }
     else if (strcmp((chem->mechstyle[mid]).c_str(),"allser")==0) {
         comp_rates_allser(pos);
+    }
+    else if (strcmp((chem->mechstyle[mid]).c_str(),"micro")==0) {
+        comp_rates_micro(pos);
     }
     //else if (strcmp((chem->mechstyle[mid]).c_str(),"shvab")==0) {
       //  comp_rates_shvab(pos);
@@ -332,19 +454,51 @@ void Fix_delete::sample(int pos)
     lammpsIO->lammpsdo(tolmp);
     
     
+    if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+        if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+            tolmp = "uncompute tempPAT";
+            lammpsIO->lammpsdo(tolmp);
+            tolmp = "uncompute tempDIST";
+            lammpsIO->lammpsdo(tolmp);
+        }
+    }
+    
     delete [] rate_each;
     delete [] tIDarr;
     delete [] IDuns;
     delete [] IDpos;
     delete [] nID_each;
+
+
     
-    /*
-     fprintf(screen,"Proc %d - EDDIG JO\n",me);
-    MPI_Barrier(MPI_COMM_WORLD);
-    sleep(1);
-     */
-    
-    
+    if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+        if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+            
+            if (!(SAR == nullptr)){
+                free(SAR[0]);
+                free(SAR);
+                SAR = nullptr;
+            }
+            delete [] tCF;
+            delete [] tGM;
+            
+            delete [] nlocR_each;
+            delete [] SARpos;
+            delete [] Dsub;
+            delete [] CFuns;
+            delete [] GMuns;
+            delete [] fGMuns;
+            
+            delete [] IDar;
+            delete [] Rar;
+            delete [] nIDar_each;
+            delete [] IDarpos;
+            delete [] IDaruns;
+            delete [] Raruns;
+
+        }
+    }
+
 }
 
 
@@ -358,6 +512,13 @@ void Fix_delete::ids_to_submaster(int pos)
     nID_each = new int[nploc];
     nID_each[key] = naP;   //each processor in subcomm records its number of atoms (naP) at location = key of its nID_each
     
+    if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+        if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+            nIDar_each = new int[nploc];
+            nIDar_each[key] = nR;
+        }
+    }
+    
     if (key>0) {
         int dest = 0;
         MPI_Send(&nID_each[key], 1, MPI_INT, dest, 1, (universe->subcomm));
@@ -368,7 +529,20 @@ void Fix_delete::ids_to_submaster(int pos)
         }
     }
     
-    //fprintf(screen,"\n\n  PROC %d , SUBCOM %d , fix %s, tempo %f\n I have %d local ids   \n",me,universe->color,fix->fKMCname[pos].c_str(),msk->tempo,nID_each[key]);
+    if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+        if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+            if (key>0) {
+                int dest = 0;
+                MPI_Send(&nIDar_each[key], 1, MPI_INT, dest, 1, (universe->subcomm));
+            }
+            if (key==0 && nploc>1) {
+                for (int source=1; source<nploc; source++) {
+                    MPI_Recv(&nIDar_each[source], 1, MPI_INT, source, 1, (universe->subcomm), &status);
+                }
+            }
+        }
+    }
+    
     
     // check that tot number of IDs from all processors equals number of atoms in group
     if (key == 0) {
@@ -387,15 +561,25 @@ void Fix_delete::ids_to_submaster(int pos)
     
     // pass local ID arrays to submaster
     IDpos = new int[nploc];  // position of local tID array in submaster's unsorted list of IDs
+    IDarpos = new int[nploc];
+    
     if (key==0) {
-        //fprintf(screen,"\n\n  PROC %d , SUBCOM %d , fix %s, tempo %f\n Here is the nID_each that I know of:  \n",me,universe->color,fix->fKMCname[pos].c_str(),msk->tempo);
         IDpos[0]=0;
         for (int i=1; i<nploc; i++) {
             //fprintf(screen,"i =  %d  --> nID_each = %d \n",i,nID_each[i]);
             IDpos[i] =IDpos[i-1]+nID_each[i-1];
         }
-        
+        if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+            if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+                IDarpos[0]=0;
+                for (int i=1; i<nploc; i++) {
+                    IDarpos[i] =IDarpos[i-1]+nIDar_each[i-1];
+                }
+            }
+        }
     }
+    
+    
     IDuns = new int[Ng];    // array storing the IDs of delete events in current fix (hence local, in the sense that it is both local of the subcomm but also local to current fix_delete)
     if (key>0) {
         int dest = 0;
@@ -409,7 +593,7 @@ void Fix_delete::ids_to_submaster(int pos)
             MPI_Recv(&IDuns[IDpos[source]], nID_each[source], MPI_INT, source, 1, (universe->subcomm), &status);
         }
         
-        /*
+        
         // print assembled IDuns on submaster
         if (msk->wplog) {
             std::string msg = "\nNumber of atoms in this fix: ";
@@ -424,11 +608,142 @@ void Fix_delete::ids_to_submaster(int pos)
                 msg="";
             }
         }
-         */
-        
+    }
+    
+    if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+        if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+            
+            if (key>0) {
+                int dest = 0;
+                MPI_Send(&IDar[0], nR, MPI_INT, dest, 1, (universe->subcomm));
+                MPI_Send(&Rar[0], nR, MPI_DOUBLE, dest, 1, (universe->subcomm));
+            }
+            if (key==0) {
+                
+                totRp = 0;  // total number of real particles across all procs in this fix
+                for (int i=0; i<nploc; i++) totRp += nIDar_each[i];
+                
+                IDaruns = new int[totRp];    // array storing the IDs of rael particles in current fix (hence local, in the sense that it is both local of the subcomm but also local to current fix_delete)
+                Raruns = new double[totRp];    // array storing the IDs of rael particles in current fix (hence local, in the sense that it is both local of the subcomm but also local to current fix_delete)
+                
+                for (int i=0; i<nIDar_each[0]; i++) {
+                    IDaruns[i] = IDar[i];
+                    Raruns[i] = Rar[i];
+                }
+                for (int source=1; source<nploc; source++) {
+                    MPI_Recv(&IDaruns[IDarpos[source]], nIDar_each[source], MPI_INT, source, 1, (universe->subcomm), &status);
+                    MPI_Recv(&Raruns[IDarpos[source]], nIDar_each[source], MPI_DOUBLE, source, 1, (universe->subcomm), &status);
+                }
+                
+                
+                // print assembled ID and Radii arrays of all real particles on submaster
+                if (msk->wplog) {
+                    std::string msg = "\nNumber of real atoms in this fix: ";
+                    std::ostringstream ss;    ss << totRp;   msg = msg+ss.str();
+                    output->toplog(msg);
+                    msg="";   ss.str("");   ss.clear();
+                    output->toplog("\npos IDaruns Raruns");
+                    for (int i=0; i<totRp; i++){
+                        ss << i;        msg = ss.str()+" ";   ss.str("");   ss.clear();
+                        ss << IDaruns[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                        ss << Raruns[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                        output->toplog(msg);
+                        msg="";
+                    }
+                }
+            }
+        }
     }
 }
 
+
+
+// ---------------------------------------------------------------
+// assembles all pair arrays from each processor into block-wise array in submaster, where each block is the locLMP and aDIST in a processor
+void Fix_delete::pair_arr_to_submaster(int pos)
+{
+    
+   
+    //MPI send size of each local array to submaster. Submaster creates array with enough space and assigns positions to accept local arrays.  All procs then send local arrays to submaster
+    nlocR_each = new int[nploc];
+    nlocR_each[key] = nlocR;
+    
+    if (key>0) {
+        int dest = 0;
+        MPI_Send(&nlocR_each[key], 1, MPI_INT, dest, 1, (universe->subcomm));
+    }
+    if (key==0 && nploc>1) {
+        for (int source=1; source<nploc; source++) {
+            MPI_Recv(&nlocR_each[source], 1, MPI_INT, source, 1, (universe->subcomm), &status);
+        }
+    }
+    
+    
+    // pass local arrays to submaster
+    SARpos = new int[nploc];  // position of local array in submaster's  array
+    if (key==0) {
+        SARpos[0]=0;
+        for (int i=1; i<nploc; i++) {
+            SARpos[i] =SARpos[i-1]+nlocR_each[i-1];
+        }
+    
+        // allocating array storing the local arrays for the interactions in current fix
+        int allrows = SARpos[nploc-1]+nlocR_each[nploc-1];
+        int nbytes = ((int) sizeof(double)) * 4 * allrows;
+        double *data = (double *) malloc(nbytes);
+        nbytes = ((int) sizeof(double *)) * allrows;
+        SAR = (double **) malloc(nbytes);
+        
+        int n = 0;
+        for (int i = 0; i < allrows ; i++) {
+            SAR[i] = &data[n];
+            n += 4;
+        }
+        Dsub = new double[allrows];
+    }
+    
+    
+    if (key>0) {
+        int dest = 0;
+        MPI_Send(&locLMP[0][0], 4.*nlocR , MPI_DOUBLE, dest, 3, (universe->subcomm));
+        MPI_Send(&aDIST[0], nlocR , MPI_DOUBLE, dest, 4, (universe->subcomm));
+    }
+    if (key==0) {
+        for (int j=0; j<nlocR; j++){
+            for (int i=0; i<4; i++) {
+                SAR[j][i] = locLMP[j][i];
+            }
+            Dsub[j] = aDIST[j];
+        }
+        for (int source=1; source<nploc; source++) {
+            MPI_Recv(&SAR[SARpos[source]][0], 4.*nlocR_each[source], MPI_DOUBLE, source, 3, (universe->subcomm), &status);
+            MPI_Recv(&Dsub[SARpos[source]], nlocR_each[source], MPI_DOUBLE, source, 4, (universe->subcomm), &status);
+        }
+        
+        // print assembled SAR on submaster
+        if (msk->wplog) {
+            std::string msg = "\nNumber of local pairs: ";
+            std::ostringstream ss;    ss << SARpos[nploc-1]+nlocR_each[nploc-1];   msg = msg+ss.str();
+            output->toplog(msg);
+            msg="";   ss.str("");   ss.clear();
+            output->toplog("\npos lmp_pos id1 id2 type1 type2 dist");
+            //sleep(1);
+            for (int i=0; i<SARpos[nploc-1]+nlocR_each[nploc-1]; i++){
+                //sleep(1);
+                ss << i;        msg = ss.str()+" ";   ss.str("");   ss.clear();
+                ss << SAR[i][0];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                ss << SAR[i][1];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                ss << SAR[i][2];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                ss << SAR[i][3];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                ss << Dsub[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                output->toplog(msg);
+                msg="";
+            }
+        }
+    }
+    
+
+}
 
 
 
@@ -444,6 +759,7 @@ void Fix_delete::submaster_sort_IDs(int pos)
         IDsrt.push_back(IDuns[0]);
         rates.push_back(0.);
     }
+    
     //StoU.push_back(0);  // just create map vectors to be used in submaster_sort_Ids function
     //UtoS.push_back(0);
     // for all subsequent IDs
@@ -475,6 +791,76 @@ void Fix_delete::submaster_sort_IDs(int pos)
         }
         rates.push_back(0.);  // here is where the rates container is initialised, every time a new IDsrt is added
     }
+    
+    
+    // sorting IDs and corresponding radii for all real particles if a micro mechanism is used
+    // the first ID is just added to the vector
+    
+    if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+        if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+            
+            // IDs and radii of all real particles are only used to compute coverage fractions. No need to remember them from one fix delete to the next one (unlike IDsrt corresponding to rates above)
+            IDarsrt.clear();
+            Rarsrt.clear();
+            
+            // write down first ID and R
+            if (totRp>0) {
+                IDarsrt.push_back(IDaruns[0]);
+                Rarsrt.push_back(Raruns[0]);
+            }
+            
+            // for all subsequent IDs
+            for (int j=1; j<totRp; j++) {
+                // if ID is the largest, put it at the end
+                if (IDaruns[j]>IDarsrt[IDarsrt.size()-1]) {
+                    IDarsrt.push_back(IDaruns[j]);
+                    Rarsrt.push_back(Raruns[j]);
+                }
+                else {
+                    //otherwise look for a position betwwen a smaller and large one
+                    if (IDaruns[j]<IDarsrt[0]) posit = 0;
+                    else {
+                        //binary search
+                        int pre = 0;
+                        int post=IDarsrt.size()-1;
+                        while (pre < post) {
+                            posit = (int)((pre+post)/2.);
+                            if (IDarsrt[posit] < IDaruns[j]) pre=posit+1;
+                            else post=posit;
+                        }
+                        posit=pre;
+                    }
+                    // shift IDarsrt and Rarsrt
+                    IDarsrt.push_back(IDarsrt[IDarsrt.size()-1]);   //shif the last element one up
+                    Rarsrt.push_back(Rarsrt[Rarsrt.size()-1]);
+                    for (int k=IDarsrt.size()-1; k>posit; k--) {
+                        IDarsrt[k] = IDarsrt[k-1];  // shift all other elements until posit
+                        Rarsrt[k] = Rarsrt[k-1];
+                    }
+                    IDarsrt[posit]=IDaruns[j]; // record aID in posit
+                    Rarsrt[posit]=Raruns[j];
+                }
+            }
+        }
+    }
+    
+    if (msk->wplog) {
+        std::string msg;
+        std::ostringstream ss;
+        ss << "Total number of real particles is: " << totRp << "\n";
+        msg = ss.str(); ss.str("");   ss.clear();
+        output->toplog(msg);
+        msg = "pos IDarsrt Rarsrt";
+        output->toplog(msg);
+        for (int i=0; i<totRp; i++) {
+            ss << i<<" "<<IDarsrt[i] <<" "<<Rarsrt[i]<<"";
+            msg = ss.str(); ss.str("");   ss.clear();
+            output->toplog(msg);
+        }
+    }
+    
+    
+    
 }
 
 
@@ -489,6 +875,14 @@ void Fix_delete::submaster_map_ID(int pos)
     // find ID position in existing sorted vector (portion of IDsrt corresponding to current event, knowing first position id from fix-fMKCfirst and number of events Ng)
     int posit;
     UtoS.clear();
+    
+    if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+        if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+            StoU.clear();
+            StoU.resize(Ng);   // set map vector size
+        }
+    }
+    
     for (int j=0; j<Ng; j++) {
         //binary search
         int pre = fix->fKMCfirst[pos];
@@ -500,6 +894,11 @@ void Fix_delete::submaster_map_ID(int pos)
             }
         posit=pre;
         UtoS.push_back(posit);
+        if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+            if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+                StoU[posit-fix->fKMCfirst[pos]] = j;
+            }
+        }
     }
 
     
@@ -517,16 +916,275 @@ void Fix_delete::submaster_map_ID(int pos)
             output->toplog(msg);
             msg="";
         }
-        output->toplog("\nIDsrt");
+        output->toplog("\nWhole sorted ID vector up to current fix \npos IDsrt");
         for (int i=0; i<IDsrt.size(); i++){
             ss << i;        msg = ss.str()+" ";   ss.str("");   ss.clear();
             ss << IDsrt[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
             output->toplog(msg);
             msg="";
         }
+        if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
+            if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
+                output->toplog("\nFix-specific sorted-to-unsorted map\npos IDsrt StoU");
+                for (int i=0; i<Ng; i++){
+                    ss << i;        msg = ss.str()+" ";   ss.str("");   ss.clear();
+                    ss << IDsrt[fix->fKMCfirst[pos]+i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                    ss << StoU[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+                    output->toplog(msg);
+                    msg="";
+                }
+            }
+        }
     }
-   
 }
+
+
+
+
+// ---------------------------------------------------------------
+//  The submaster computes coverage areas of particles in the current fix and communicates them back to the other processors in its subcomm
+void Fix_delete::submaster_comp_cover(int pos)
+{
+    CFuns = new double[Ng];
+    GMuns = new double[Ng];
+    fGMuns = new bool[Ng];
+    
+    for (int i=0; i<Ng; i++) {
+        CFuns[i]=0.;
+        GMuns[i]=0.;
+        fGMuns[i]=true;
+    }
+    
+    if (msk->wplog) {
+        std::string msg = "Number of pairs in neighbor array for "+fix->fKMCname[pos]+" :";
+        std::ostringstream ss;    ss << SARpos[nploc-1]+nlocR_each[nploc-1];   msg = msg+ss.str();
+        output->toplog(msg);
+        msg="";   ss.str("");   ss.clear();
+        // pring ids and positions in unsorted atom arrays
+        output->toplog("npos id1 id2 type1 type2 upos1 upos2");
+    }
+    
+    
+    // for all the rows in the assembled arrays in the submaster...
+    for (int i=0; i<SARpos[nploc-1]+nlocR_each[nploc-1]; i++){
+        int id1 = SAR[i][0];
+        int id2 = SAR[i][1];
+        int t1 = SAR[i][2];
+        int t2 = SAR[i][3];
+        bool flag_t1 = (t1 == fix->fKMCptype[pos]);
+        bool flag_t2 = (t2 == fix->fKMCptype[pos]);
+        int up1,up2;   // positions of particles 1 and 2 in pair in unsorted vectors (ID and radii)
+        up1 = -1;
+        up2 = -1;
+        
+        if (flag_t1){
+            // find first particle position in unsorted IDs vector
+            int pre = fix->fKMCfirst[pos];
+            int post = fix->fKMCfirst[pos]+Ng-1;
+            int posit;
+            while (pre < post) {
+                posit = (int)((pre+post)/2.);
+                if (IDsrt[posit] < id1) pre=posit+1;
+                    else post=posit;
+                }
+            posit=pre;
+            up1 = StoU[posit - fix->fKMCfirst[pos]];
+        }
+        
+        if (flag_t2){
+            // find second particle position in unsorted IDs vector
+            int pre = fix->fKMCfirst[pos];
+            int post = fix->fKMCfirst[pos]+Ng-1;
+            int posit;
+            while (pre < post) {
+                posit = (int)((pre+post)/2.);
+                if (IDsrt[posit] < id2) pre=posit+1;
+                    else post=posit;
+                }
+            posit=pre;
+            up2 = StoU[posit - fix->fKMCfirst[pos]];
+        }
+        
+        if (msk->wplog) {
+            std::string msg;
+            std::ostringstream ss;
+            ss << i;        msg = ss.str()+" ";   ss.str("");   ss.clear();
+            ss << id1;   msg += ss.str()+" ";  ss.str("");   ss.clear();
+            ss << id2;   msg += ss.str()+" ";  ss.str("");   ss.clear();
+            ss << SAR[i][2];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+            ss << SAR[i][3];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+            ss << up1;   msg += ss.str()+" ";  ss.str("");   ss.clear();
+            ss << up2;   msg += ss.str()+" ";  ss.str("");   ss.clear();
+            output->toplog(msg);
+        }
+        
+       
+        if (flag_t1 || flag_t2){
+            // compute coverage area, used later to compute number of layers to dissolve in micro particle
+            // coverage is given by contact cross section weighted by a distance-dependent factor; the latter is user-provided through two thresholds, e0 below which contact is 100%, ef above which contact is 0%. Linear interpolation in between
+            
+            double Aij;    // cross section of inter-particle contact
+            double Ri,Rj;   // radii of interaction particles in current pair
+            double Rij;     // harmonic average of radii of particles in contact
+            int rp1,rp2;    // position of interacting particles in the "all real" sorted vectors
+            
+            // find first particle position in sorted IDar vector
+            int pre = 0;
+            int post = IDarsrt.size()-1;
+            int posit;
+            while (pre < post) {
+                posit = (int)((pre+post)/2.);
+                if (IDarsrt[posit] < id1) pre=posit+1;
+                    else post=posit;
+                }
+            posit=pre;
+            rp1 = posit;
+            
+            //fprintf(screen,"DEBUG 0: rp1 = %d\n",rp1);
+            
+            
+            
+            // find second particle position in sorted IDar vector
+            pre = 0;
+            post = IDarsrt.size()-1;
+            while (pre < post) {
+                posit = (int)((pre+post)/2.);
+                if (IDarsrt[posit] < id2) pre=posit+1;
+                    else post=posit;
+                }
+            posit=pre;
+            rp2 = posit;
+            
+
+            
+            Ri = Rarsrt[rp1];
+            Rj = Rarsrt[rp2];
+            
+
+            
+            if (msk->wplog) {
+                std::string msg;
+                std::ostringstream ss;
+                ss << "rp1 = " << rp1 << "; rp2 = "<< rp2 << "; Ri = " << Ri << "; Rj = " << Rj;
+                msg = ss.str();  ss.str("");   ss.clear();
+                output->toplog(msg);
+            }
+            
+            Rij = 2. * Ri * Rj/( Ri + Rj);
+            Aij = M_PI * Rij * Rij;
+            
+            // weigh the contact cross section by the distance
+            double Dij; // arithmetic average of diameters in contact
+            Dij = Ri + Rj;
+            double efij = chem->ef[t1-1][t2-1];
+            double e0ij = chem->e0[t1-1][t2-1];
+            
+            if (Dsub[i] > efij * Dij)        Aij = 0.;
+            else if (Dsub[i] > e0ij * Dij)   Aij *= (efij - Dsub[i]/Dij) / (efij- e0ij);
+
+            // if first atom is of correct type for this fix, add contact area to the contact fraction arrays (still areas here; will be converted to area fractions later on below)
+            if (flag_t1)  {
+                CFuns[up1] += Aij/(M_PI*4.*Ri*Ri);
+                if (Aij > 0.){
+                    double tempGM = 0.;
+                    if (t1 != t2) tempGM = - chem->gij[t1-1][t1-1] - chem->gij[t1-1][t2-1] + chem->gij[t2-1][t2-1];
+                    if (fGMuns[up1]) {
+                        GMuns[up1] = tempGM;
+                        fGMuns[up1] = false;
+                    }
+                    else if (tempGM > GMuns[up1]) GMuns[up1] = tempGM;
+                }
+            }
+            
+            if (flag_t2){
+                CFuns[up2] += Aij/(M_PI*4.*Rj*Rj);;
+                if (Aij > 0.){
+                    double tempGM = 0.;
+                    if (t1 != t2) tempGM = - chem->gij[t2-1][t2-1] - chem->gij[t2-1][t1-1] + chem->gij[t1-1][t1-1];
+                    if (fGMuns[up2]) {
+                        GMuns[up2] = tempGM;
+                        fGMuns[up2] = false;
+                    }
+                    else if (tempGM > GMuns[up2]) GMuns[up2] = tempGM;
+                }
+            }
+        }
+        
+    }
+    double nbulk = 12.;   // number of particles in the bulk for a monodisperse system of particls with type selected for dissolution. In future implementations, this could be passed as an input when calling the fix_delete (becasue it applies to all particles to be considered for deletion here)
+    for (int i=0; i<Ng; i++){
+        CFuns[i] *= 4./nbulk;    // this is a correction such that a speherical particle in contact with 12 equally sized neighbours in an FCC lattice ends up having coverage fraction = 1   (If we did not divide by 3, such a bulk particle would have a coverage fraction of 300%)
+    }
+    
+    
+    if (msk->wplog) {
+        std::string msg = "\nPer-particle coverage fraction";
+        output->toplog(msg);
+        msg="";
+        // pring ids and covrage fractions of unsorted atoms
+        output->toplog("npos id CFuns GMuns");
+        std::ostringstream ss;
+        for (int i=0; i<Ng; i++){
+            ss << i;        msg = ss.str()+" ";   ss.str("");   ss.clear();
+            ss << IDuns[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+            ss << CFuns[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+            ss << GMuns[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+            output->toplog(msg);
+        }
+        
+    }
+    
+}
+
+
+
+// ---------------------------------------------------------------
+//  each processor in the subcommunicator receives its chunk of unsorted coverage area fractions from the submaster
+void Fix_delete::cover_from_submaster(int pos)
+{
+    
+    if (key==0) {
+        for (int dest=1; dest<nploc; dest++) {
+            MPI_Send(&CFuns[IDpos[dest]], nID_each[dest], MPI_DOUBLE, dest, 1, (universe->subcomm));
+            MPI_Send(&GMuns[IDpos[dest]], nID_each[dest], MPI_DOUBLE, dest, 1, (universe->subcomm));
+        }
+        tCF = new double[nID_each[0]];
+        tGM = new double[nID_each[0]];
+        for (int i=0; i<nID_each[0]; i++){
+            tCF[i] = CFuns[i];
+            tGM[i] = GMuns[i];
+        }
+    }
+    else{
+        tCF = new double[nID_each[key]];
+        tGM = new double[nID_each[key]];
+        int source = 0;
+        MPI_Recv(&tCF[0], nID_each[key], MPI_DOUBLE, source, 1, (universe->subcomm), &status);
+        MPI_Recv(&tGM[0], nID_each[key], MPI_DOUBLE, source, 1, (universe->subcomm), &status);
+    }
+    
+    // Each processor prints its coverage fraction array to its log file
+    if (msk->wplog) {
+        std::string msg = "\nNumber of local coverage area fractions: ";
+        std::ostringstream ss;    ss << nID_each[key];   msg = msg+ss.str();
+        output->toplog(msg);
+        msg="";   ss.str("");   ss.clear();
+        output->toplog("\npos id tCF tGM");
+        //sleep(1);
+        for (int i=0; i<nID_each[key]; i++){
+            //sleep(1);
+            ss << i;        msg = ss.str()+" ";   ss.str("");   ss.clear();
+            ss << tID[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+            ss << tCF[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+            ss << tGM[i];   msg += ss.str()+" ";  ss.str("");   ss.clear();
+            output->toplog(msg);
+            msg="";
+        }
+    }
+    
+}
+
+
 
 
 
@@ -562,17 +1220,17 @@ void Fix_delete::comp_rates_allpar(int pos)
         if (chem->mechchain[mid]) {  //if reaction is a chain
             chID = chem -> mechrcID[mid];
             nrt = (chem->ch_rxID[chID]).size();
-            if (chem -> ch_dV_fgd[chID] < 0) {
+            if (chem -> ch_dVp_fgd[chID] < 0) {
                 // default for allpar mechanism is linear changes in surface and energy with number of molecules in particle volume, i.e. int_lin
-                nrv = round( - Pv / chem -> ch_dV_fgd[chID]);   // minus because a proper dissolution reax should have negative fgd changes in chemDB
-            } else {errflag = true; fgdV=chem -> ch_dV_fgd[chID];}
+                nrv = round( - Pv / chem -> ch_dVp_fgd[chID]);   // minus because a proper dissolution reax should have negative fgd changes in chemDB
+            } else {errflag = true; fgdV=chem -> ch_dVp_fgd[chID];}
         }
         else{ //if instead it is a single reaction
             nrt = 1;
             rxid = chem->mechrcID[mid];
-            if (chem -> rx_dV_fgd[rxid] < 0) {
-                nrv = round( - Pv / chem -> rx_dV_fgd[rxid]);
-            } else {errflag = true; fgdV=chem -> rx_dV_fgd[rxid];}
+            if (chem -> rx_dVp_fgd[rxid] < 0) {
+                nrv = round( - Pv / chem -> rx_dVp_fgd[rxid]);
+            } else {errflag = true; fgdV=chem -> rx_dVp_fgd[rxid];}
         }
         
         
@@ -654,7 +1312,7 @@ void Fix_delete::comp_rates_allpar(int pos)
                 
                //Delta surface and Delta U are assumed to be proportional to the number of reaction/chain units and relative importance of each step in chain
                 double DSi = DSpu;
-                if (chem->mechchain[mid]) DSi *= (chem->ch_rdV_fgd[chID][k]);
+                if (chem->mechchain[mid]) DSi *= (chem->ch_rdVp_fgd[chID][k]);
                 
                 double DUi = 0.;
                 if (strcmp(chem->mechinter[mid].c_str(),"int_no")!=0) {
@@ -737,6 +1395,375 @@ void Fix_delete::comp_rates_allpar(int pos)
     }
     
 }
+
+
+
+
+// ---------------------------------------------------------------
+//  each processor computes its deletion rates
+void Fix_delete::comp_rates_micro(int pos)
+{
+    
+    // for all particles in current processor, compute the dissolution rate
+    for (int i=0; i<nID_each[key]; i++) {
+        
+        if (msk->wplog) {
+            std::string msg = "\n -----------------------------------\nPARTICLE ";
+            std::ostringstream ss;    ss << tID[i];     msg = msg+ss.str()+" ";
+            ss.str("");     ss.clear();   ss << tR[i];  msg = msg+ss.str()+" ";
+            ss.str("");     ss.clear();   ss << tCF[i];  msg = msg+ss.str()+" ";
+            ss.str("");     ss.clear();   ss << tGM[i];  msg = msg+ss.str()+"\n";
+            output->toplog(msg);
+        }
+        
+        double Pv = 4./3. * M_PI * tR[i] * tR[i] * tR[i];  // particle volume  FOR SPHERICAL
+        //double Ps = 4. * M_PI * tR[i] * tR[i];  // particle surface   FOR SPHERICAL - this was used to compute changes in surface area per molecule, but in this micro mechanism, surface energy is not considered (particle dissolution is assumed to be kink-driven)
+        
+        int nrt = 1;    //number of reaction in series in chain
+        double nrv = 1;    // number of unit reactions or unit chains in particle volume
+        
+        int chID = -1;  // chain ID: will be > -1 only if mechanism calls indeed a chain
+        int rxid = -1;  // reaction ID: will be used now but later in loop too
+        
+        bool errflag = false;   // error to spot if wrong volume changes defined for reactions: see below
+        double fgdV = 0;
+        
+        if (chem->mechchain[mid]) {  //if reaction is a chain
+            chID = chem -> mechrcID[mid];
+            nrt = (chem->ch_rxID[chID]).size();
+            if (chem -> ch_dVp_fgd[chID] < 0) {
+                // default for allpar mechanism is linear changes in surface and energy with number of molecules in particle volume, i.e. int_lin
+                nrv = round( - Pv / chem -> ch_dVp_fgd[chID]);   // minus because a proper dissolution reax should have negative fgd changes in chemDB
+            } else {errflag = true; fgdV=chem -> ch_dVp_fgd[chID];}
+        }
+        else{ //if instead it is a single reaction
+            nrt = 1;
+            rxid = chem->mechrcID[mid];
+            if (chem -> rx_dVp_fgd[rxid] < 0) {
+                nrv = round( - Pv / chem -> rx_dVp_fgd[rxid]);
+            } else {errflag = true; fgdV=chem -> rx_dVp_fgd[rxid];}
+        }
+        
+        
+        if (errflag == true) {
+            std::ostringstream wd1,wd2,wd3,wd4;
+            wd1<<me; wd2<<universe->color; wd3<<msk->tempo,wd4<<fgdV;
+            std::string msg = "****************************************************\n***********************************************\n PROC "+wd1.str()+" SUBCOM "+wd2.str()+" tempo "+wd3.str()+" \n ERROR: fix "+fix->fKMCname[pos]+" is of deletion type, which requires negative fgd volume changes, whereas its associated mechanism has fgd volume change = "+wd4.str()+" \n****************************************************\n***********************************************\n";
+            fprintf(screen,"%s",msg.c_str());
+        }
+  
+        
+        
+         // change of  interaction energy per reaction unit (single reaction or chain: to be further subdivided per step in chain later on)
+        //double DSpu;  // negative becasue delation removes energy
+        double DUpu;  // change in energy caused by removing the particle
+        
+        if (strcmp(chem->mechinter[mid].c_str(),"int_1lin")==0)  {
+            //DSpu = -Ps/pow((double)nrv,1./3.);
+            //DUpu = -2.*tE[i]/pow((double)nrv,1./3.);
+        }
+        else if (strcmp(chem->mechinter[mid].c_str(),"int_2lin")==0) {
+            //DSpu = -Ps/pow((double)nrv,68.5/100.);      // power artificailly tuned to get hetero nucleation in cg sim... just to fiddle around: do not use those in a proper simulation
+            //DUpu = -2.*tE[i]/pow((double)nrv,68.5/100.);
+        }
+        else{
+            //DSpu = -Ps/((double)nrv);
+            DUpu = -2.*tE[i]/((double)nrv);
+        }
+        
+
+        // number of layers to dissolve (it will depend on fractional coverage area)
+        double lim_CF= std::stod(chem->mechpar[mid][3]); //limiting coverage fraction
+        //fprintf(screen,"\n The value of limiting coverage fraction is %f\n",lim_CF);
+
+        int nrL = 0;
+        
+        double unit_thick;    // thickness of dissolving unit in radial direction of particle
+        if (chem->mechchain[mid]) {  //if reaction is a chain
+            unit_thick = pow(- chem->ch_dVp_fgd[chID],1./3.);
+        }
+        else{ //if instead it is a single reaction
+            unit_thick = pow(- chem->rx_dVp_fgd[rxid],1./3.);
+        }
+        
+        if (tCF[i] < 0.5) nrL = round(tR[i]/unit_thick);
+        else if (tCF[i] <= lim_CF) nrL = round(2.*tR[i]/unit_thick);
+        
+        bool flag_bulk = false;
+        if (nrL == 0) flag_bulk = true;
+        
+        
+        
+        
+        // number of units to dissolve a full layer (depends on density of kinks per layer)
+        int nrS = 1;
+        if (chem->mechchain[mid])  nrS = round(1./chem->ch_Fk[chID]);
+        else nrS = round(1./chem->rx_Fk[rxid]);
+           
+
+        
+        
+        
+        
+        // compute rates for all reaction units (multi-step if a chain), for all layers, for all surface stpes
+        
+        double ri=0. , DTi = 0., DTtot = 0.;  // rate of each reaction in sequence, associated time increement and total cumulative time increment
+        
+        for (int j=0; j<nrL-1; j++){
+
+            std::string msg;
+            if (msk->wplog) {
+                msg += "PARTICLE ";
+                std::ostringstream ss;    ss << i;   msg = msg+ss.str()+"; Layer ";
+                ss.str("");     ss.clear();   ss << j+1;  msg = msg+ss.str()+" out of ";
+                ss.str("");     ss.clear();   ss << nrL;  msg = msg+ss.str()+"; ";
+            }
+            
+            for (int jj=0; jj<nrS; jj++){
+                
+                if (msk->wplog) {
+                    msg += "On-surface unit number ";
+                    std::ostringstream ss;    ss << jj+1;   msg = msg+ss.str()+" out of ";
+                    ss.str("");     ss.clear();   ss << nrS;  msg = msg+ss.str()+"; ";
+                }
+                
+                // compute rate of reaction sequence
+                for (int k=0; k< nrt; k++) { //all the reaction in series in chain seq.
+                    
+                    if (msk->wplog) { msg += "; rx_step ";    std::ostringstream ss;    ss << k;   msg += ss.str();}
+                    
+                    // find reaction id if it is a chain, or keep previous one if a single reax
+                    if (chem->mechchain[mid]) rxid = chem->ch_rxID[chID][k];
+                    
+                    double DGx = chem -> compDGx(rxid); // reaction specific
+                    double cx = chem -> cx[chem->rx_DGID[rxid]];
+                    double dim = chem -> dim[chem->rx_DGID[rxid]];
+                    double gammax = chem -> compgammax(rxid);
+                    double KT = msk->kB * solution->Temp;
+                    
+                    if (msk->wplog) {
+                        std::ostringstream ss;
+                        msg += "; DG* ";    ss << DGx;   msg += ss.str();    ss.str(""); ss.clear();
+                        msg += "; c* ";    ss << cx;   msg += ss.str();    ss.str(""); ss.clear();
+                        msg += "; gamma* ";    ss << gammax;   msg += ss.str();    ss.str(""); ss.clear();
+                        msg += "; KB ";    ss << (msk->kB);   msg += ss.str();    ss.str(""); ss.clear();
+                        msg += "; T ";    ss << (solution->Temp);   msg += ss.str();    ss.str(""); ss.clear();
+                    }
+                    
+                    double kappa = 1.;       // transmission coefficient
+                    
+                    std::string topass = "reac";
+                    double Qreac = solution->compQ(rxid,topass,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
+                    
+                    double Vt = - (chem -> rx_dVt_fgd[rxid]);  // Tributary volume of fgd deleted by the reaction at the current step in the chain. Minus sign because dV of fdg < 0 for a proper dissolution reaction.
+                    
+                    double DUi = 0.;
+                    if (strcmp(chem->mechinter[mid].c_str(),"int_no")!=0) {
+                        DUi = DUpu;
+                        if (chem->mechchain[mid]) DUi *= (chem->ch_rdV_fgd[chID][k]);
+                        
+                        // Add change in strain energy internal to the molecules
+                        for (int j=0; j<chem->fgd_molID[rxid].size(); j++){
+                            int molid = chem->fgd_molID[rxid][j];
+                            DUi += chem->mol_Us[molid] * chem->mol_vm[molid] * chem->fgd_nmol[rxid][j];
+                        }
+                    }
+                    
+                    double r0 = kappa * KT / msk->hpl / gammax * cx * exp(-DGx / KT);
+                    
+                    if (msk->wplog) {
+                        std::ostringstream ss;
+                        msg += "; r0 ";    ss << r0;   msg += ss.str();    ss.str(""); ss.clear();
+                        msg += "; Qreac ";    ss << Qreac;   msg += ss.str();    ss.str(""); ss.clear();
+                        msg += "; DUi ";    ss << DUi;   msg += ss.str();    ss.str(""); ss.clear();
+                        msg += "; Vti ";    ss << Vt;   msg += ss.str();    ss.str(""); ss.clear();
+                    }
+                    
+                    r0 = r0*pow(Vt,dim/3.);
+                    
+                    double ki = (chem -> ki[rxid]);
+                    
+                    // Forward rate equation
+                    ri = r0 * Qreac * exp((1.-ki)*(- DUi)/KT ) ;
+                    
+                    
+                    // if net rate is requested by user in chemDB, then add rate backward
+                    if (strcmp((chem->mechmode[mid]).c_str(),"net")==0) {
+                        
+                        topass = "prod";
+                        double Qprod = solution->compQ(rxid,topass,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
+                        
+                        ri -= r0 * Qprod / chem->Keq[rxid] * exp(ki * DUi / KT );
+                        
+                        if (msk->wplog) {
+                            std::ostringstream ss;
+                            msg += "; ri ";    ss << ri;   msg += ss.str();    ss.str(""); ss.clear();
+                            msg += "; Qprod ";    ss << Qprod;   msg += ss.str();    ss.str(""); ss.clear();
+                            msg += "; Keq ";    ss << chem->Keq[rxid] ;   msg += ss.str();    ss.str(""); ss.clear();
+                        }
+                        
+                    }
+                    
+                    if (ri < 0.) ri = 0.;
+                    
+                    DTi = 1./ri;
+                    DTtot += DTi;
+                    
+                    if (msk->wplog) {
+                        msg += ", DT ";
+                        std::ostringstream ss;    ss << DTi;   msg += ss.str(); ss.str("");   ss.clear();
+                        msg += ", DTtot ";
+                        ss << DTtot;   msg += ss.str();
+                    }
+                }
+            }
+            if (msk->wplog){
+                msg+="\n";
+                output->toplog(msg);
+            }
+        }
+        
+        
+        
+        // Add to Dtot the contribution from the last layer
+        std::string msg;
+        if (msk->wplog) {
+            msg += "PARTICLE ";
+            std::ostringstream ss;    ss << i;   msg = msg+ss.str()+"; Last layer; ";
+        }
+        
+        for (int jj=0; jj<nrS; jj++){
+            
+            if (msk->wplog) {
+                msg += "On-surface unit number ";
+                std::ostringstream ss;    ss << jj+1;   msg = msg+ss.str()+" out of ";
+                ss.str("");     ss.clear();   ss << nrS;  msg = msg+ss.str()+"; ";
+            }
+            
+            // compute rate of reaction sequence
+            for (int k=0; k< nrt; k++) { //all the reaction in series in chain seq.
+                
+                if (msk->wplog) { msg += "; rx_step ";    std::ostringstream ss;    ss << k;   msg += ss.str();}
+                
+                // find reaction id if it is a chain, or keep previous one if a single reax
+                if (chem->mechchain[mid]) rxid = chem->ch_rxID[chID][k];
+                
+                double DGx = chem -> compDGx(rxid); // reaction specific
+                double cx = chem -> cx[chem->rx_DGID[rxid]];
+                double dim = chem -> dim[chem->rx_DGID[rxid]];
+                double gammax = chem -> compgammax(rxid);
+                double KT = msk->kB * solution->Temp;
+                
+                if (msk->wplog) {
+                    std::ostringstream ss;
+                    msg += "; DG* ";    ss << DGx;   msg += ss.str();    ss.str(""); ss.clear();
+                    msg += "; c* ";    ss << cx;   msg += ss.str();    ss.str(""); ss.clear();
+                    msg += "; gamma* ";    ss << gammax;   msg += ss.str();    ss.str(""); ss.clear();
+                    msg += "; KB ";    ss << (msk->kB);   msg += ss.str();    ss.str(""); ss.clear();
+                    msg += "; T ";    ss << (solution->Temp);   msg += ss.str();    ss.str(""); ss.clear();
+                }
+                
+                double kappa = 1.;       // transmission coefficient
+                
+                std::string topass = "reac";
+                double Qreac = solution->compQ(rxid,topass,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
+                
+                double Vt = - (chem -> rx_dVt_fgd[rxid]);  // Tributary volume of fgd deleted by the reaction at the current step in the chain. Minus sign because dV of fdg < 0 for a proper dissolution reaction.
+                
+                double DUi = 0.;
+                if (strcmp(chem->mechinter[mid].c_str(),"int_no")!=0) {
+                    DUi = DUpu;
+                    if (chem->mechchain[mid]) DUi *= (chem->ch_rdV_fgd[chID][k]);
+                    
+                    // Add change in strain energy internal to the molecules
+                    for (int j=0; j<chem->fgd_molID[rxid].size(); j++){
+                        int molid = chem->fgd_molID[rxid][j];
+                        DUi += chem->mol_Us[molid] * chem->mol_vm[molid] * chem->fgd_nmol[rxid][j];
+                    }
+                }
+                
+                double r0 = kappa * KT / msk->hpl / gammax * cx * exp(-DGx / KT);
+                
+                if (msk->wplog) {
+                    std::ostringstream ss;
+                    msg += "; r0 ";    ss << r0;   msg += ss.str();    ss.str(""); ss.clear();
+                    msg += "; Qreac ";    ss << Qreac;   msg += ss.str();    ss.str(""); ss.clear();
+                    msg += "; DUi ";    ss << DUi;   msg += ss.str();    ss.str(""); ss.clear();
+                    msg += "; Vti ";    ss << Vt;   msg += ss.str();    ss.str(""); ss.clear();
+                }
+                
+                r0 = r0*pow(Vt,dim/3.);
+                
+                double ki = (chem -> ki[rxid]);
+                
+                // Forward rate equation: NB this includes contribution from largest interfacial energy at contact with other phases (from function computing coverage areas)
+                double uk_area;    // area of a unit kink (assuming cubic units)
+                if (chem->mechchain[mid]) {  //if reaction is a chain
+                    uk_area = pow(- chem->ch_dVp_fgd[chID],2./3.) * 3.;
+                }
+                else{ //if instead it is a single reaction
+                    uk_area = pow(- chem->rx_dVp_fgd[rxid],2./3.) * 3.;
+                }
+                
+                ri = r0 * Qreac * exp((1.-ki)*( - DUi - tGM[i] * uk_area )/KT ) ;
+                
+                
+                // if net rate is requested by user in chemDB, then add rate backward
+                if (strcmp((chem->mechmode[mid]).c_str(),"net")==0) {
+                    
+                    topass = "prod";
+                    double Qprod = solution->compQ(rxid,topass,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
+                    ri -= r0 * Qprod / chem->Keq[rxid] * exp(ki * ( DUi + tGM[i] * uk_area)/ KT );
+                    
+                    if (msk->wplog) {
+                        std::ostringstream ss;
+                        msg += "; ri ";    ss << ri;   msg += ss.str();    ss.str(""); ss.clear();
+                        msg += "; Qprod ";    ss << Qprod;   msg += ss.str();    ss.str(""); ss.clear();
+                        msg += "; Keq ";    ss << chem->Keq[rxid] ;   msg += ss.str();    ss.str(""); ss.clear();
+                    }
+                    
+                }
+                
+                if (ri < 0.) ri = 0.;
+                
+                DTi = 1./ri;
+                DTtot += DTi;
+                
+                if (msk->wplog) {
+                    msg += ", DT ";
+                    std::ostringstream ss;    ss << DTi;   msg += ss.str(); ss.str("");   ss.clear();
+                    msg += ", DTtot ";
+                    ss << DTtot;   msg += ss.str();
+                }
+            }
+        }
+        if (msk->wplog){
+            msg+="\n";
+            output->toplog(msg);
+        }
+        
+        
+        
+        
+        if (flag_bulk) rate_each[i] = 0.;
+        else rate_each[i] = 1./DTtot;
+        
+        if (rate_each[i]<0.) rate_each[i] = 0.;    // PROBABLY OBSOLETE ...... if the backward ri's are > forward ri's the overall rate may end up < 0, which means that the current deletion event should not happen, hence its rate should be zero (not negative..)   CHECK THAT THIS DOES NOT GIVE PROBLEMS WHEN SELECTING THE EVENT TO CARRY OUT FROM CUMULATIVE RATE VECTORS, IN PARTICULAR WITH THE BINARY SEARCH ALGORITHM
+    
+        
+        if (msk->wplog) {
+            std::ostringstream ss;
+            std::string msg = "\nPARTICLE ";
+            ss << tID[i];   msg += ss.str();  ss.str("");   ss.clear();
+            msg += " has deletion rate  ";
+            ss << rate_each[i];   msg += ss.str();
+            output->toplog(msg);
+        }
+        
+    }
+    
+}
+
 
 
 

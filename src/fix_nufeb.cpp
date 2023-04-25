@@ -413,7 +413,7 @@ void Fix_nufeb::exchange(int id, int subcomm)
       MPI_Send(&buf[begin], nsend[p], MPI_DOUBLE, r, 0, MPI_COMM_WORLD);
       begin += nsend[p];
     }
-  } else {
+  } else if (lammpsIO->lammps_active) {
     // Receive the number of doubles to be sent
     nrecv.resize(procs.size());
     nrecv.assign(nrecv.size(), 0);

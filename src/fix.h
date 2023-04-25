@@ -63,6 +63,8 @@ namespace MASKE_NS {
         std::vector<std::string> fKMCsinbox;   // input solution taken from box or box+dV
         std::vector<std::string> fKMCsoutUL;   // output solution taken uniform or local
         std::vector<std::string> fKMCsoutbox;   // output solution taken from box or box+dV
+        
+        int fKMClast_nuc;   // ID of last nucleation process in each subcomm, used in fix_nucleate to decide when to record initial positions of all trial particles
 
 
         std::vector<std::string> Ctype; // local-subcom types of continuous processes
@@ -71,11 +73,23 @@ namespace MASKE_NS {
         std::vector<double> Cdt;            // time increment of each cont proc
         std::vector<int> CglobID; //    position of local process in global list of all cont processes
         std::vector<double> Cleval; // vector with time of last exectution of this process
-	std::vector<std::string> Cstore;
-	std::vector<int> Csid;
-	std::vector<int> Csteps;
-	std::vector<std::string> Cgroups;
+        std::vector<std::string> Cstore;
+        std::vector<int> Csid;
+        std::vector<int> Csteps;
+        std::vector<std::string> Cgroups;
         std::vector<std::string> Csoutbox;
+        
+        
+        std::vector<std::string> Etype; // local-subcom types of every-type processes
+        std::vector<std::string> Ename;  // local-subcom names of every-type  processes
+        std::vector<std::string> Escom;   //subcom of each every-type process
+        std::vector<int> EglobID;       // position of local process in global list of all every-type  processes
+        std::vector<std::string> Estore;  // name of multi store employed by this fix
+        std::vector<int> Esid;              // position of multi store employed by this fix
+        std::vector<int> Eevery;            // number of executed steps between subsequent calls of this fix
+        
+        
+        
 
         std::vector<std::string> afKMCtype;   // same as above but gathering all events and used by MASTER only
         std::vector<std::string> afKMCname;
@@ -109,21 +123,27 @@ namespace MASKE_NS {
         std::vector<double> afKMCleval;
         std::vector<int> afKMCnevents;
         std::vector<double> afKMCcumRate;         // vector containing the cumulated rates of all events in each process separately
-        
-        std::vector<std::string> Contype;   // type of continuous processes: can be grow, dissolve, diffuse
-        std::vector<std::string> Relxtype;  // type of particle relaxation: can be minimize, NVT, NPT ..
-        
+                
         
         std::vector<std::string> aCtype;
         std::vector<std::string> aCname;
         std::vector<std::string> aCscom;
         std::vector<double> aCdt;
-	std::vector<double> aCleval;
-	std::vector<std::string> aCstore;
-	std::vector<int> aCsid;
-	std::vector<int> aCsteps;
-	std::vector<std::string> aCgroups;
+        std::vector<double> aCleval;
+        std::vector<std::string> aCstore;
+        std::vector<int> aCsid;         // position of multi store employed by this fix
+        std::vector<int> aCsteps;
+        std::vector<std::string> aCgroups;
         std::vector<std::string> aCsoutbox;
+        
+        
+        std::vector<std::string> aEtype; // all types of every-type processes
+        std::vector<std::string> aEname;  // all names of every-type  processes
+        std::vector<std::string> aEscom;   //subcom of each every-type process
+        std::vector<std::string> aEstore;  // name of multi store employed by this fix
+        std::vector<int> aEsid;              // position of multi store employed by this fix
+        std::vector<int> aEevery;            // number of executed steps between subsequent calls of this fix
+        
         
         void add(std::string);
         void printall();

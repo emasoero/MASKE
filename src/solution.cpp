@@ -460,21 +460,22 @@ void Solution::update(int apos, double pV, int EVtype)
     int rxid = -1;  // reaction ID: will be used now but later in loop too
     int nrxCH = -1; // number of reactions in series forming the chain
     
-    if (strcmp((chem->mechstyle[mid]).c_str(),"allpar")==0 || strcmp((chem->mechstyle[mid]).c_str(),"allser")==0) {
-        // compute number of chains depending on mechanism (allpar and allser should be the same, but shvab may be different due to radial growth idea
+    if (strcmp((chem->mechstyle[mid]).c_str(),"allpar")==0 || strcmp((chem->mechstyle[mid]).c_str(),"allser")==0 || strcmp((chem->mechstyle[mid]).c_str(),"micro")==0) {
+        // compute number of chains depending on mechanism
         if (chem->mechchain[mid]) {  //if reaction is a chain
             chID = chem->mechrcID[mid];
-            nrv =  fabs(pV / chem->ch_dV_fgd[chID]);   //  made positive for either dissolution or nucleation events, i.e. irresepective of dV_fgd being negative or positive
+            nrv =  fabs(pV / chem->ch_dVp_fgd[chID]);   //  made positive for either dissolution or nucleation events, i.e. irresepective of dV_fgd being negative or positive
             nrxCH = (chem->ch_rxID[chID]).size();
         }
         else{ //if instead it is a single reaction
             rxid = chem->mechrcID[mid];
-            nrv = fabs(pV / chem -> rx_dV_fgd[rxid]);
+            nrv = fabs(pV / chem -> rx_dVp_fgd[rxid]);
             nrxCH = 1;
         }
     }
-    else if (strcmp((chem->mechstyle[mid]).c_str(),"other_mechanisms_to_implement_here")==0) {
-        
+    else {
+        std::string msg = "ERROR: solution can be updated only for mechanisms of type allpar, allser, or micro. Instead found " + chem->mechstyle[mid];
+        error->errsimple(msg);
     }
     
 
@@ -496,6 +497,7 @@ void Solution::update(int apos, double pV, int EVtype)
         SolidV += pV;
     }
     PackF = SolidV/BoxV;
+    
     
     
     if (strcmp(fix->afKMCsoutUL[apos].c_str(),"uniform")==0) {
@@ -568,6 +570,7 @@ void Solution::update(int apos, double pV, int EVtype)
     }
 }
 
+//-------------------------------------------
 // For now, only used by fix_nufeb.cpp
 void Solution::updateconc(int apos, const std::vector<double>& dconc)
 {

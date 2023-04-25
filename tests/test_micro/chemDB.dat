@@ -1,5 +1,5 @@
 # MOLECULAR SPECIES
-# molecule usr_def_name fgd_size_rad fgd_size_circ, fgd_rc/r0 bkg_vol bkg_ahyd, bkg_bDH, charge_num, nufeb_sp_id, nufeb_form_id, phr_elem
+# molecule usr_def_name fgd_size_rad fgd_size_circ, fgd_rc/r0 bkg_vol bkg_ahyd, bkg_bDH, charge_num, nufeb_sp_id, nufeb_form_id, phr_elem Emod Gmod Ustrain pors
 # fgd_size are the linear sizes of the molecule when in a lammps particle, rad is in radial direction, circ in circumferential direction (this latter to power 2 gives area of attachment)
 # fgd_rc/r0 is the ratio between interaction cutoff and equilibrium distance, to convert molecular volume to tributary volume
 # bkg_vol is the apparent volume of one molecule when implicit in the background, typically in solution
@@ -8,23 +8,38 @@
 # nufeb_sp_id and nufeb_form_id are the numerical (int) ids of the corresponding species and form in nufeb: discarded if fix nufeb is not used
 # phr_elem is the name (string) of the corresponding solution_master_species in phreeqc. For example, Ca-based ions, such as Ca+2 and Ca(OH)+ ions, have the same master species in phreeqc, called "Ca" (see phreeqc database files)
 
-
 # from phreeqc databases phreeqc.dat and CEMDATA18.1   (water from molar volume)
 molecule Ca+2   0   	0  	1	-0.025129603  	0.486 	0.15   	2  -1 -1 Ca
 molecule OH- 	0   	0   	1	0.001030404   	1.065 	0.064  	-1 -1 -1 H
 molecule CO3-2	0	0	1	0.019702472	0.54	0.064	-2 -1 -1 C
 molecule H2O    0 	0  	1	0.027 		0   	0       0  -1 -1 XXXX?
-molecule	H4SiO4	0	0	1	0.087041335	0	0	0  -1 -1 Si
-molecule H+		0	0	1	0	0.9	0 	+1	-1	-1	H
+molecule	H4SiO4	0	0	1	0.087041335	0	0	0  -1 -1 Si 
+molecule H+		0	0	1	0	0.9	0 	+1	-1	-1	H 
 # NB: for uncharged molecules, debye huckel parameters can be 0 since only the Setschenov equation is used for activities
 
 # solids from molar volume
 # for CH: molar mass is 74.093 g/mol and density is 2.21 g/cm3 --> molecular vol = (0.381837 nm)^3
 # for CaCO3: molar mass is 100.0869 g/mol and density is 2.71 g/cm3 --> molecular vol = (0.3943535 nm)^3
-molecule Ca(OH)2      0.381837  0.381837 	1	0    	0     	0	0	0	0	null
-molecule CaCO3      0.3943535  0.3943535	1.071942986 	0    	0     	0	0	0	0	null
-molecule CSH(II)      0.653534355  0.653534355	1.064791198 	0    	0     	0	0	0	0	null
+molecule Ca(OH)2      0.381837  0.381837 	1	0    	0     	0	0	0	0	null 
+molecule CaCO3      0.3943535  0.3943535	1.071942986 	0    	0     	0	0	0	0	null 
+molecule CSH(II)      0.653534355  0.653534355	1.064791198 	0    	0     	0	0	0	0	null 
+molecule CSH(II)gel      0.653534355  0.653534355	1.064791198 	0    	0     	0	0	0	0	null
 
+# molecule_modify allows adding more parameters to molecules. First argument is type of parameters to be added. Only "solid_par" allowed so far; these are:
+# Em = Young modulus of the solid phase 
+# Gm = Shear modulus of the solid phase
+# Us = Background strain energy density (per unit volume) of the solid phase (e.g. due to dislocations and other defects)
+# Pr = intrinsic internal porosity in the solid phase
+
+molecule_modify Ca(OH)2 Em 38000 Gm 16000 Us 0 Pr 0
+molecule_modify CaCO3 Em 69900 Gm 35000 Us 0 Pr 0
+molecule_modify CSH(II) Em 63600 Gm 21000 Us 0 Pr 0
+molecule_modify CSH(II)gel Em 19588 Gm 6468  Us 0 Pr 0.346
+
+
+#  E moduli from interaction potential tables, 
+# G moduli: CSH from Manzano et al Soft Matter 2013, CaCO3 35 GPa from 33-40 GPa Belkofse 2018 J Mod Sim Mater Sci Eng, CH from experimental values in table 3 of Manzano et al Acta Mater 2009
+# Emod and Gmod of CSH gel from self-consistent assumption (no moduli at 0.5 solid fraction): compare Masoero et al Soft Matter 2014
 
 # OLDER MOLECULES FOLLOW
 
@@ -62,6 +77,9 @@ DGx DG_CaCO3_prec const	39.064	cx 0.6022 dim 2
 DGx DG_CaOHdis const 122.85  cx 0.6022  dim 2
 # From rate constant in Bullard 2007. Conversions from kJ/mol to ag nm2 ns-2 multiplying by 1.66.
 
+DGx DG_CaOHprec const 74.052  cx 0.6022  dim 2
+# From rate constant in Bullard 2007. Conversions from kJ/mol to ag nm2 ns-2 multiplying by 1.66.
+
 #DGx DG_CaOHdis const -0.85988  cx 1e-14 dim 2
 # From DHx and DSx in Johannnsen and Rademacher, Acta Hydrochim. hydrobiol. 27 (1999) (with DGx = DHx - TDSx). DHx is equated to Ea - RT = 27.22 kJ/mol from the ref.  TDSx at 298 K computed from same paper in  27.738 KJ/mol with k in s-1 cm-2, so cx in cm-2 (converted to nm-2 in input above).   Result is DGx = 27.22 - 27.738 = -0.518 kJ/mol. Conversions from kJ/mol to ag nm2 ns-2 multiplying by 1.66.
 
@@ -73,15 +91,6 @@ DGx DG_CSHprec const -44.4  cx 0.6022  dim 2
 #   = DGxdis above + kT ln(Keq_dis) with Keq_dis = 1e-20 as below
 
 
-
-
-
-
-
-
-
-
-
 #  CHEMICAL REACTIONS
 # reax name  style  args keywords
 # style can be simple or chain.
@@ -91,16 +100,18 @@ DGx DG_CSHprec const -44.4  cx 0.6022  dim 2
 reax CH_dis       simple gxSolid DG_CaOHdis 	6.30866e-6   0    bkg Ca+2 +1 OH- +2   fgd Ca(OH)2 -1
 # Keq,diss from phreeqc CEMDATA18.1, combining CaOH2 = Ca + 2H2O - 2H with H2O = OH + H   
 
+reax CH_prec     simple gxSolid DG_CaOHprec 	1.585122673e5   0    bkg Ca+2 -1 OH- -2   fgd Ca(OH)2 +1
+
 reax CaCO3_prec   simple gxSolid DG_CaCO3_prec 	3.02e8   0.5 bkg Ca+2 -1 CO3-2 -1  fgd CaCO3 +1
 # Keq,prec from Keq,diss^-1 with Keq,diss = 3.31157E-09 from phreeqc CEMDATA18.1
 
 reax CaCO3_diss   simple gxSolid DG_CaCO3_diss 	3.31157E-09  0.5 bkg Ca+2 +1 CO3-2 +1  fgd CaCO3 -1
 # Keq,diss = 3.31157E-09 from phreeqc CEMDATA18.1
 
-reax CSHdis    simple gxSolid DG_CSHdis 1e-20 0 bkg Ca+2 +2  H4SiO4 +1  OH- +4  H2O +1   fgd CSH(II) -1 solvent H2O
+reax CSHdis    simple gxSolid DG_CSHdis 1e-20 0 bkg Ca+2 +2  H4SiO4 +1  OH- +4  H2O +1   fgd CSH(II)gel -1 solvent H2O
 
-reax CSHprec    simple gxSolid DG_CSHprec 1e+20 0 bkg Ca+2 -2  H4SiO4 -1  OH- -4  H2O -1   fgd CSH(II) +1  solvent H2O
- 
+reax CSHprec    simple gxSolid DG_CSHprec 1e+20 0 bkg Ca+2 -2  H4SiO4 -1  OH- -4  H2O -1   fgd CSH(II)gel +1  solvent H2O
+
 
 # OLDER REACTIONS
 
@@ -114,13 +125,21 @@ reax CSHprec    simple gxSolid DG_CSHprec 1e+20 0 bkg Ca+2 -2  H4SiO4 -1  OH- -4
 #reax C3S_dis_test simple g_C3Sdis_test DG_gC3Sdis_test 1.41e-18   0.5    bkg Ca +3 H3SiO4 +1 H2O -5 OH +5    fgd C3S -1   solvent H2O
 #reax C3S_prec_test simple g_C3Sdis_test DG_gC3Sprec_test 7.092e+17   0.5    bkg Ca -3 H3SiO4 -1 H2O +5 OH -5    fgd C3S +1   solvent H2O
 
+# reaction_modify allows adding more parameters to reactions. First argument is type of parameters to be added. these are:
+# Fk = fraction of kink sites on surface
+
+reaction_modify CH_dis Fk 0.2
+reaction_modify CSHdis Fk 0.2
+reaction_modify CH_prec Fk 0.2
+reaction_modify CSHprec Fk 0.2
+
 
 
 # Reaction chains -- list of reaction types contains number of reactions per type: this number occurs in parallel
 #reax C3Sdis_ch0 chain  parall C3S_dis 1  C3S_dis 1
-#reax C3Sdis_ch1 chain series C3S_dis 1  C3S_dis 2  CSHI_dis 1
+reax C3Sdis_ch1 chain series CSHdis 1  CSHdis 2  CH_dis 1
 
-
+chain_modify C3Sdis_ch1 Fk 0.2
 
 # Surface energy -- rules to compute surface energy depending on particle and background compositions
 
@@ -148,8 +167,23 @@ sen sen_CSH const 87.6
 # mech   C3Sdel_apnet  allpar net   C3S_dis_Bul  sen_C3S  int_lin
 
 
-#   mech  name typ net/straight reax surface_nrg interact_interpol fkink eps_l Ustrain
-mech   CHdel_micro  micro net   CH_dis  sen_CH  int_no 0.2 -30 0
+#   mech  name type net/straight reax surface_nrg interact_interpol coverage_calc_style param_filename energy_calc
+# 	energy_calc can be "energy" or "stress". If "energy", then the user must adopt interaction potentials with zero energy at equilibrium (deepest well) and the code will directly use the LAMMMPS energy/pair to compute rate contribution from interactions. If "stress", the user can adopt any potential and MASKE will use the LAMMPS stress/atom to work out strain energy from the 6 stresses (with per-molecule E and G defined above and with averaging volume = particle volume).  NB: only "energy" implemented for now.
+# micro style note: surface energy calculator not used now, but must point to an existing "sen" above. We might implement it in the future, e.g. to account for energy barrier when nucleating a new layer (island) within a micro particle
+#Limiting coverage fraction: This is the maximum coverage fraction above which a particle cannot be deleted or the minimum coverage fraction below which a particle cannot be nucleated. The value depends on the scale. For micro-scale, the value could be higher (lim_CF=0.9). But closer to molecular scale it would be lower (lim_CF=0.66). In coarse grained systems this would let you observe phenomenons such as tunneling through the crystal, fragmentation and fractal like morphology. But at molecular scale deletions will be more ordered and will have a greater dependancy on the coverage.
+mech   CHdel_micro  micro net   CH_dis  sen_CH  int_uni pair cover_param.dat energy 0.9
+mech   CSHdel_micro  micro net   CSHdis  sen_CSH  int_uni pair cover_param.dat energy 0.9
+mech   CHnuc_micro  micro net   CH_prec  sen_CH  int_uni pair cover_param.dat energy 0.1
+mech   CSHnuc_micro  micro net   CSHprec  sen_CSH  int_uni pair cover_param.dat energy 0.1
+
+
+
+# mech   CHnuc_micro  micro net   CH_nuc  sen_CH  int_uni pair cover_param.dat energy
+
+
+# int_uni = uniform distribution of intraction energy from LAMMPS for all molecules in cg particle
+# coverage_calc_style is either "pair" or other things to be implemented, thinking of "bond" or "ellipse" or "3body" etc. If "pair", the code reads the pair neighbour list from LAMMPS. If "bond" it should use the bond topology. If "ellipse" or else, we would probably need pseudo-potentials
+# cover_param.dat = a text file whose content depends on the coverage calculator. If "pair" a set of param depending on interacting types (min_dist, max_dist, interf_enrgy: see sample file). If "bond", similar to pair but with differences (e.g. strain-based cutoffs). If "ellipse" or else, maybe parameters for pseudo-potentials... to be thought.
 
 mech   CHdel_apnet  allpar net   CH_dis  sen_CH  int_lin
 mech   CaCO3nuc_apnet  allpar net   CaCO3_prec  sen_CaCO3  int_lin

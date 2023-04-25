@@ -131,7 +131,7 @@ void Output::writethermo(void)
                 std::string tolmp = "run 0";
                 lammpsIO->lammpsdo(tolmp);
                  if (strcmp(vc.c_str(),"v")==0) {
-                     fprintf(screen,"PROC %d varname %s",me,token.c_str());
+                     //fprintf(screen,"PROC %d varname %s",me,token.c_str());
                      varc = *((double *) lammps_extract_variable(lammpsIO->lmp,(char *)token.c_str(),0));
                  }
                  else if (strcmp(vc.c_str(),"c")==0) {
