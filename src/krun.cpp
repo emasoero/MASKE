@@ -796,37 +796,56 @@ void Krun::proceed(double deltat)
             delete [] QkTCallC;
         }
 	
-	if (Cexecute) {
-	  // reset the position of trial atoms
-	  for (int i=0; i<fix->fKMCtype.size(); i++) {
-	    if (strcmp(fix->fKMCtype[i].c_str(),"nucleate")==0) {
-	      fix_nucl->reset_trial_pos(i);
-	    }
-	  }
-#ifdef MASKE_WITH_NUFEB
-	  if (universe->color == SC2exec) {
-	    if (type == "nufeb") {
-	      fix_nufeb->execute(Cpid2exec, SC2exec);
-	      fix->Cleval[Cpid2exec] = msk->tempo;
-	    }
-	  } else {
-	    if (type == "nufeb") {
-	      // Receive new concentrations from nufeb
-	      for (int i = 0; i < chem->Nmol; i++) {
-		if (chem->mol_nufeb[i] > 0) { // if points to a valid nufeb chemical species
-		  double conc = 0;
-		  MPI_Bcast(&conc, 1, MPI_DOUBLE, universe->subMS[SC2exec], MPI_COMM_WORLD);
-		  chem->mol_cins[i] = conc;
-		}
-	      }
-	    }
-	  }
-	  if (type == "nufeb") {
-	    fix_nufeb->exchange(Cpid2exec, SC2exec);
-	  }
-#endif
-	}
+	    if (Cexecute) {
+	        // reset the position of trial atoms
+	        for (int i=0; i<fix->fKMCtype.size(); i++) {
+	            if (strcmp(fix->fKMCtype[i].c_str(),"nucleate")==0) {
+	            fix_nucl->reset_trial_pos(i);
+	            }
+	        }
+            #ifdef MASKE_WITH_NUFEB
+	            if (universe->color == SC2exec) {
+	                if (type == "nufeb") {
+	                fix_nufeb->execute(Cpid2exec, SC2exec);
+	                fix->Cleval[Cpid2exec] = msk->tempo;
+	            
+                    }
+                    
+	            } 
+                
+                else {
+	                if (type == "nufeb") {
+	                // Receive new concentrations from nufeb
+	                    for (int i = 0; i < chem->Nmol; i++) {
+		                    if (chem->mol_nufeb[i] > 0) { // if points to a valid nufeb chemical species
+		                        double conc = 0;
 
+                                MPI_Recv(&chem->mol_cins[i],1, MPI_DOUBLE,universe->subMS[SC2exec],me,MPI_COMM_WORLD,&status);
+                                MPI_Recv(&chem->mol_nins[i],1, MPI_DOUBLE,universe->subMS[SC2exec],me,MPI_COMM_WORLD,&status);
+                                MPI_Recv(&chem->mol_cindV[i],1, MPI_DOUBLE,universe->subMS[SC2exec],me,MPI_COMM_WORLD,&status);
+                                MPI_Recv(&chem->mol_nindV[i],1, MPI_DOUBLE,universe->subMS[SC2exec],me,MPI_COMM_WORLD,&status);
+		                        //MPI_Bcast(&chem->mol_cins[i], 1, MPI_DOUBLE, universe->subMS[SC2exec], MPI_COMM_WORLD);
+		                        //chem->mol_cins[i] = conc;
+
+		                    }
+                            //fprintf(screen,"\n\n DEBUG 5: Proc %d, concentration of nutrient (%d) mapped to molecule (%d) is %e \n",me, chem->mol_nufeb[3], 3, chem->mol_cins[3]);
+	                    }
+                        
+	                }
+                    
+	            }
+
+                //MPI_Barrier(MPI_COMM_WORLD);
+
+                
+	            if (type == "nufeb") {
+	                fix_nufeb->exchange(Cpid2exec, SC2exec);
+	            }
+                
+                
+            #endif
+	    }
+        
         if (endofrun==1){
             // delete all trial particles associated with nucleation fixes
             for (int i=0; i<fix->fKMCtype.size(); i++){
@@ -835,7 +854,9 @@ void Krun::proceed(double deltat)
                 }
             }
             lammpsIO->lammpsdo("run 0");
-       
+            
+
+
             // execute all continuous processes up to now
             // To be implemeneted because to date there are no continuou processes implemented..
             // Not sure what to do with cumulated KMC rates till here: Loosing them is a pity/error, but keeping them is risky because the user can unfix and do things before the next Krun, leading to inconsistencies..
@@ -843,7 +864,9 @@ void Krun::proceed(double deltat)
         
         // number of just completed step
         msk->step = msk->step+1;
-        
+
+
+
         #ifdef MASKE_WITH_SPECIATION
             // call speciation if at appropriate step
             for (int i = 0; i<spec->specID.size();i++){
@@ -852,7 +875,7 @@ void Krun::proceed(double deltat)
                 }
             }
         #endif
-        
+
         
         // relax if at appropriate step
         for (int i = 0; i<relax->rlxID.size();i++){
@@ -860,7 +883,8 @@ void Krun::proceed(double deltat)
                 relax->dorelax(i);
             }
         }
-        
+
+
         // setconc if at appropriate step
         
             if (msk->step % setconc->vevery == 0) {
@@ -868,7 +892,6 @@ void Krun::proceed(double deltat)
                 setconc->exec();
 
             }
-        
         
 
         // If a KMC event was not executed
@@ -879,9 +902,11 @@ void Krun::proceed(double deltat)
         }
         
         // write thermo output at appropriate step
+
         if (output->th_every>0 && msk->step % output->th_every == 0) {
-	  output->writethermo();
+	    output->writethermo();
         }
+
         // write dump output at appropriate step
         for (int i = 0; i<output->dumpID.size();i++){
             if (msk->step % output->dump_every[i] == 0) {

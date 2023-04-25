@@ -1,0 +1,278 @@
+# Running the code on Enrico's Mac Air
+#    /opt/local/bin/mpiexec-mpich-mp -np 1 ./maske input.dat
+
+
+# ===== SET UNIVERSE OF SUB-COMMUNICATORS ========
+
+# command structure: subcomm Nsubcomms name1 Nproc1 lmp_yes/no seed name2 Nproc2 lammps_yes/no seed .... etc
+# NB: the first subcomm should always be lmp_yes, otherwise thermos cannot be produced
+# Antonello manages deletion, Bernini manages nucletion Canova manages NUFEB
+subcomm 2 Antonello 2 lmp_yes 123 Canova 2 lmp_yes 1234
+
+
+
+# ===== READ CHEMISTRY DATA BASE ========
+
+# Load chemistry database file, containing molecule types, reactions, and mechanisms
+chemDB ./chemDB_SI.dat
+
+
+
+# ===== LIST REAL AND TRIAL PARTICLE TYPES TO BE USED IN THE SIM =======
+# 1 will be fixed, 2-3 are mineral for deletion (corresponding to 4-5 trial for nucleation), 6 are the bacteria
+real_types 1 2 3 5 6 7
+trial_types 4
+
+
+# ========= INITIALISE LAMMPS AND LOAD INITIAL CONFIGURATION =========
+
+lammps all  	units si
+lammps all 	atom_style bio
+lammps all  	atom_modify map yes   # NEEDED FOR NUCLEATE FIXES!!
+
+# *************   additional settings needed for NUFEB only 
+#lammps Canova atom_modify     map array sort 100 5.0e-7    
+lammps Canova newton	off
+lammps all comm_modify	vel yes
+# ****************
+
+lammps 	all 	variable Diam equal 1e-6
+lammps	all	variable scale equal sqrt(2)*9.04599E-007
+lammps	all	variable bsize equal 10*$(v_scale)
+
+lammps all  boundary p p f
+lammps all  region boxreg block 0 $(v_bsize) 0 $(v_bsize) 0 $(v_bsize) units box
+lammps all  create_box  7 boxreg
+
+
+lammps 	all 	lattice fcc $(v_scale)
+
+
+lammps	all	variable bmid equal 5*$(v_scale)
+lammps all region r_mid block INF INF INF INF 0 $(v_bmid) units box
+lammps all create_atoms 1 region r_mid
+
+lammps  all	variable bquar equal 2.5*$(v_scale)
+lammps  all	variable bthir equal 3.33*$(v_scale)
+
+lammps all region r_bot block INF INF INF INF 0 $(v_scale) units box
+lammps all region r_midL block INF INF INF $(v_bmid) $(v_scale) $(v_bquar) units box
+lammps all region r_midR block INF INF $(v_bmid) INF $(v_scale) $(v_bquar) units box
+lammps all region r_bacF block INF $(v_bmid) INF INF $(v_bquar) $(v_bthir) units box
+lammps all region r_bacB block $(v_bmid) INF INF INF $(v_bquar) $(v_bthir) units box
+lammps all region r_top block INF INF INF INF $(v_bthir) $(v_bmid) units box
+
+lammps all set region r_midL type 2
+lammps all set region r_midR type 3
+lammps all set region r_bacF type 6
+lammps all delete_atoms region r_bacB compress no
+lammps all delete_atoms region r_top compress no
+
+
+# *************   additional settings needed for NUFEB only 
+
+lammps all set type * diameter $(v_Diam)
+lammps all set type 6 diameter 1.0e-6
+lammps all set type 6 density 290
+lammps all set type 6 mass 1.5184e-16
+
+#===== Potentials, neighbours, and minimiser style
+
+lammps all pair_style table linear 4000
+
+lammps all pair_coeff * * table.potential_SI Spring_CH-CH
+lammps all pair_coeff 1 1 table.potential_SI Spring_CH-CH
+lammps all pair_coeff 1 2 table.potential_SI Spring_CH-CH
+lammps all pair_coeff 1 3 table.potential_SI Spring_CH-CH
+lammps all pair_coeff 1 4 table.potential_SI Spring_CH-CaCO3	
+lammps all pair_coeff 1 5 table.potential_SI Spring_CH-CaCO3	
+lammps all pair_coeff 2 2 table.potential_SI Spring_CH-CH
+lammps all pair_coeff 2 3 table.potential_SI Spring_CH-CH
+lammps all pair_coeff 2 4 table.potential_SI Spring_CH-CaCO3	
+lammps all pair_coeff 2 5 table.potential_SI Spring_CH-CaCO3	
+lammps all pair_coeff 3 3 table.potential_SI Spring_CH-CH
+lammps all pair_coeff 3 4 table.potential_SI Spring_CH-CaCO3	
+lammps all pair_coeff 3 5 table.potential_SI Spring_CH-CaCO3	
+lammps all pair_coeff 4 4 table.potential_SI Spring_CaCO3-CaCO3
+lammps all pair_coeff 4 5 table.potential_SI Spring_CaCO3-CaCO3
+lammps all pair_coeff 5 5 table.potential_SI Spring_CaCO3-CaCO3
+lammps all pair_coeff 1 6 table.potential_SI Spring_Bac-Bac
+lammps all pair_coeff 2 6 table.potential_SI Spring_Bac-Bac
+lammps all pair_coeff 3 6 table.potential_SI Spring_Bac-Bac
+lammps all pair_coeff 4 6 table.potential_SI Spring_Bac-Bac
+lammps all pair_coeff 5 6 table.potential_SI Spring_Bac-Bac
+lammps all pair_coeff 6 6 table.potential_SI Spring_Bac-Bac
+lammps all pair_coeff 1 7 table.potential_SI Spring_Bac-Bac
+lammps all pair_coeff 2 7 table.potential_SI Spring_Bac-Bac
+lammps all pair_coeff 3 7 table.potential_SI Spring_Bac-Bac
+lammps all pair_coeff 4 7 table.potential_SI Spring_Bac-Bac
+lammps all pair_coeff 5 7 table.potential_SI Spring_Bac-Bac
+lammps all pair_coeff 6 7 table.potential_SI Spring_Bac-Bac
+lammps all pair_coeff 7 7 table.potential_SI Spring_Bac-Bac
+
+lammps Antonello pair_write 1 1 4000 r 1.00E-030 9.22594E-007 tableOUT.txt Spring_CH-CH
+
+
+lammps all  neighbor	        5e-7 bin
+lammps all  neigh_modify	delay 0
+lammps all  neigh_modify	exclude type 4 4
+
+lammps all min_style maske
+lammps all min_modify dmax 1e-10
+
+# ======== CONSTANTS IN LAMMPS UNITS
+#kB  0.0138064852       # Boltzmann, in nm2 ag ns-2 K-1
+#hpl  0.000662607004   # Plank, in nm2 ag / ns
+
+# ===== Constants in SI units ===== #
+kB 0.00000000000000000000001380649
+hpl 0.000000000000000000000000000000000662607015
+
+# ===========   FREEZE BOTTOM LAYER
+lammps all group gBot type 1
+lammps all fix freezeBot gBot setforce 0.0 0.0 0.0
+
+#  ===========   SET INITIAL SOLUTION
+
+
+sol_start uniform 7 Ca+2 0.00 OH- 0.03 CO3-2 1.132E-5 H+ 3.002264E-2 CO2 0 H2CO3 0 HCO3- 0 solvent H2O Temp 298 DH_A 0.51 DH_B 3.29e9 voidV 0 dV iso 1e-15 dVvoidV 0  unitC 1000
+
+
+# ======= DISSOLUTION FIX
+
+setconc 1 OH- 0.03 1 counter H+ box  
+
+
+#fix KMC-free delete DelCSH Antonello 2 mech CSHdis_apnet sol_in fixed uniform box sol_out uniform box
+#fix KMC-free delete DelCH Antonello 1 mech CHdel_apnet sol_in fixed uniform box sol_out uniform box
+#fix KMC-free delete DelCO3 Antonello 3 mech CaCO3dis_apnet sol_in fixed uniform box sol_out uniform box
+
+fix KMC-free delete DelCH2 Antonello 2 mech CHdel_apnet sol_in fixed uniform box sol_out uniform box+dV
+fix KMC-free delete DelCH3 Antonello 3 mech CHdel_apnet sol_in fixed uniform box sol_out uniform box+dV
+
+
+# ======= NUCLEATION FIXES - approach based on stored regions, lattices, and minimise
+
+# Stored commands are evaluated each time a KMC event is carried out. They can depend on variables which are evaluated during Krun, when the stored quantity is invoked. Hence the variables must exist in the subcomm that invokes the stored quantity during the relevant Krun
+
+lammps 	all	variable zmid equal zlo+(zhi-zlo)/2
+lammps 	all	variable zmin equal zlo+(zhi-zlo)/10
+store region RegNuc block INF INF INF INF $(v_zmin)  $(v_zmid) units box
+
+lammps	all	variable Lx equal (xhi-xlo)/20 
+lammps	all	variable Ly equal (yhi-ylo)/20
+lammps	all	variable Lz equal (v_zmid-zlo)/10 
+lammps	all	variable scale equal v_Lx
+lammps	all	variable aa2 equal v_Ly/v_Lx
+lammps	all	variable aa3 equal v_Lz/v_Lx
+store 	lattice	latNuc custom $(v_scale) a1 1.0 0.0 0.0 a2 0 $(v_aa2) 0.0 a3 0.0 0.0 $(v_aa3) basis 0.5 0.5 0.5
+store 	DV	latNuc variable DVnuc equal v_Diam*v_Diam*v_Diam
+
+lammps	all	variable Qdmax equal v_Lx/2000
+store minimize minNuc   tstep 0.00045e-9 0 0 2000 2000 min_modify dmax $(v_Qdmax)
+#store minimize minNuc tstep 0.00045  1e-10 0 600 600 min_modify dmax $(v_Qdmax)
+
+fix KMC-free nucleate NucCaCO3 Antonello RegNuc latNuc minNuc 4 5 sphere 1.e-6 wei simple 1 mech CaCO3nuc_apnet sol_in fixed uniform box sol_out uniform box+dV
+
+#fix KMC-free nucleate NucCO3 Antonello RegNuc2 latNuc minNuc 4 3 sphere 0.489278566 wei simple 1 mech CaCO3nuc_apnet sol_in fixed uniform box sol_out uniform box
+
+# =========== NUFEB FIX
+lammps all variable bac67 atom "type == 6 || type == 7"
+lammps all group bacteria dynamic all var bac67 every 1
+#lammps all group bacteria dynamic all type 6 7
+lammps all group het type 6
+lammps all group inert type 7
+
+store multi nufebStore """
+variable EPSdens equal 30
+variable divDia equal 1.25e-6
+variable diffT equal 1e-6
+variable tol equal 1e-7
+variable etaHET equal 0.0
+variable layer equal -1
+
+read_data_bio atom.in add append
+
+fix ki1 het kinetics 1 10 10 10 v_diffT v_layer demflag 0 niter 10000
+fix ki2 het kinetics/thermo yield dynamic
+fix ki3 all kinetics/ph fix ph 9 
+fix ki4 het kinetics/growth/energy v_EPSdens	
+fix g1 het kinetics/diffusion v_tol pp pp nn mol
+fix d1 het divide 1 v_EPSdens v_divDia 31231 demflag 0
+fix p1 het kinetics/pressure 7 inert 6 1e6
+
+compute myNtypes all ntypes
+compute myMass all biomass
+compute myAvgs all avg_con
+compute myPh all avg_ph
+
+thermo_style    custom step cpu atoms c_myNtypes[*]
+dump du0 all bio 1000 biomass ntypes bulk avg_con avg_ph
+"""
+
+fix Cont nufeb FixNufeb Canova nufebStore leval 0 dt 1.0 steps 1 group bacteria sol_out box+dV
+
+
+# ========= DEFINE LAMMPS DUMPS AND THERMOS + VARIABLES ALSO FOR MASKE OUTPUT
+
+lammps all variable N equal atoms
+lammps all variable U equal epair
+lammps all variable P equal press
+ 
+lammps all group g_CH type 2 3 
+lammps all variable tyatom atom "type == 5"
+lammps all group g_CaCO3 dynamic all var tyatom every 1
+
+lammps all variable tyatom1 atom "type == 6"
+lammps all group g_bac dynamic all var tyatom1 every 1
+
+lammps all variable tyatom2 atom "type == 7"
+lammps all group g_inert dynamic all var tyatom2 every 1
+
+lammps all variable NCH equal count(g_CH)
+lammps all variable NCaCO3 equal count(g_CaCO3)
+lammps all variable Nbac equal count(g_bac)
+lammps all variable Ninert equal count(g_inert)
+
+lammps all compute  PEall all pe/atom
+lammps all compute spa all stress/atom NULL
+#lammps all compute  PEl g_left pe/atom
+#lammps all compute  PEr g_right pe/atom
+#lammps all compute  PElt g_left reduce sum c_PEl
+#lammps all compute  PErt g_right reduce sum c_PEr
+
+# the lammps thermo must calculate all the thermo variables and compute you want to output via the MASKE's thermo
+#lammps all thermo_style        custom step atoms vol epair press v_Nleft v_Nright c_PElt c_PErt
+lammps all thermo_style custom step atoms vol epair press v_NCH v_NCaCO3
+#N_1 N_2 PE_1 PE_2
+
+lammps all thermo 1000
+
+thermo 1 thermo.txt conc_Ca+2 conc_H2O conc_OH- conc_CO3-2 conc_H+ conc_CO2 conc_H2CO3 conc_HCO3- lmp_v_N lmp_v_U lmp_v_P lmp_v_NCH lmp_v_NCaCO3 lmp_v_Nbac lmp_v_Ninert
+
+#tempdump all tD1 all custom 1 tempdump1 c_PEall c_PEr
+#tempdump all tD2 all custom 1 tempdump2 c_PEl
+#tempdump all tD3 all custom 1 tempdump3 c_PEr
+
+dump Antonello D1 1 all custom dump.all id type x y z radius c_PEall c_spa[1] c_spa[2] c_spa[3] c_spa[4] c_spa[5] c_spa[6] 
+#dump Bernini D2 1 all custom dump.all id type x y z radius c_PEall
+dump Canova D3 1 all custom dump.all id type x y z radius c_PEall c_spa[1] c_spa[2] c_spa[3] c_spa[4] c_spa[5] c_spa[6]
+#dump Canova D4 1 all vtk dump*.vtu id type radius
+#dump Antonello D2 10 1  custom  dump.left id type x y z radius 
+#PE_1
+#dump Bernini   D3 50  g_right custom  dump.right id type x y z radius c_PEr
+
+# relax every_Nsteps mode args (for minimize, etol ftol maxiter maxeval min_style 
+# min_modify_args;  for nvt, all args admitted by an nvt fix in lammps)
+#example:      relax 10 minimize 0 0 1000 1000 quickmin dmax .01 20 20 20 
+relax R1 1 minimize 0 0 1000 1000 maske dmax 1e-10
+
+#lammps Antonello dump Dt all custom 1 tdump id type x y z radius
+#lammps Antonello dump_modify Dt every 1 first yes
+
+# =============== running the KMC simulation
+lammps all print "STARTING KRUN" 
+Krun 40000000000
+
+lammps Antonello print "\n SUCCESS \n"
+

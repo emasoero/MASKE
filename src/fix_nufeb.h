@@ -39,6 +39,9 @@ namespace MASKE_NS {
     std::vector<double> buf;
 
     LAMMPS_NS::FixKinetics *kinetics;
+
+    int me;     // id of the current processor (rank)
+    MPI_Status status;
   };
 }
 

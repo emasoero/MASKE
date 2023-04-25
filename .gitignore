@@ -1,0 +1,6 @@
+build/
+tests/test_nufeb_new/**/dump*
+tests/test_nufeb_new/**/thermo*
+tests/test_nufeb_new/**/log*
+tests/test_nufeb_new/**/po*
+*.speclog

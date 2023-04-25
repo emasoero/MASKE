@@ -82,6 +82,8 @@ void Setconc::add_conc(std::string mname,double mconc)
  void Setconc::exec(void)
 {   
     // fprintf(screen,"\n DEBUG: Initial SolVol = %e \n",solution->SVol);
+    // fprintf(screen,"\n\n DEBUG setconc1: Proc %d, concentration of nutrient (%d) mapped to molecule (%d) is %e \n",me, chem->mol_nufeb[3], 3, chem->mol_cins[3]);
+    // sleep(1);
     double temp =0;
         for(int i=0;i<chem->Nmol;i++){
         
@@ -100,7 +102,7 @@ void Setconc::add_conc(std::string mname,double mconc)
     for(int i = 0; i < up1; i++){
         A[i] = new double[up1];
     }
-    
+
     double* b;
     b = new double[up1];
 
@@ -111,11 +113,14 @@ void Setconc::add_conc(std::string mname,double mconc)
         }
         A[i][up1-1]=-molconcs[i]*chem->mol_vapp[ctrID]* nAvo * solution->unitC;
     }
+
+
     for(int j=0;j<up1-1;j++) A[up1-1][j]=chem->mol_z[molID[j]];
     A[up1-1][up1-1]=chem->mol_z[ctrID];
 
     double sum_volknown=0;
     double sum_charge=0;
+
 
     for(int i=0;i<chem->Nmol;i++){
         
@@ -133,6 +138,7 @@ void Setconc::add_conc(std::string mname,double mconc)
 
     }
 
+
     // fprintf(screen,"\n DEBUG: KnownVol pre-gauss = %e \n",sum_volknown);
 
     double sum_volunknown=0;
@@ -146,10 +152,7 @@ void Setconc::add_conc(std::string mname,double mconc)
         b[i]=molconcs[i]*sum_volknown * nAvo * solution->unitC;
     }
     b[up1-1]=sum_charge;
-
-    
-
-    
+  
     for (int j = 0; j<up1-1; j++){
         for (int i = j+1; i<up1; i++){
                 double m = A[i][j]/A[j][j];
@@ -158,6 +161,7 @@ void Setconc::add_conc(std::string mname,double mconc)
         }
         
     }
+
 
     double* x; //array of unknown values
     x = new double[up1];
@@ -171,6 +175,7 @@ void Setconc::add_conc(std::string mname,double mconc)
         }
         x[i] = (b[i]- sum)/A[i][i];
     }
+    
 
     //Assign the unknown values to the corresponding number of ion values and concentration values in chemistry 
     for(int i=0; i<up1-1;i++){
@@ -181,10 +186,13 @@ void Setconc::add_conc(std::string mname,double mconc)
     
     //Calculate volume of solution
 
+
     sum_volunknown=0;
     for(int i=0; i<up1-1;i++){
         sum_volunknown+=chem->mol_nins[molID[i]]*chem->mol_vapp[molID[i]];
     }
+
+
     // fprintf(screen,"\n DEBUG: UnknownVol post-gauss = %e \n",sum_volunknown);
     // fprintf(screen,"\n DEBUG: KnownVol post-gauss = %e \n",sum_volknown);
     double sum_volctr;
@@ -273,6 +281,7 @@ void Setconc::add_conc(std::string mname,double mconc)
             chem->mol_cindV[i]=chem->mol_nindV[i]/(solution->SVol * nAvo * solution->unitC);
         }
     }  
+
     for (int i=0; i<up1; i++) {
         delete[] A[i];
     }

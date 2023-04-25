@@ -29,6 +29,7 @@ enum Errors { NO_ERROR, KINETICS_NOT_FOUND, DIFFUSION_FOUND };
 
 Fix_nufeb::Fix_nufeb(MASKE *maske) : Pointers(maske)
 {
+  MPI_Comm_rank(MPI_COMM_WORLD, &me);
   init_flag = 0;
   setup_flag = 0;
   setup_exchange_flag = 0;
@@ -157,7 +158,7 @@ void Fix_nufeb::setup_exchange(int subcomm)
   subhi.resize(3*universe->nprocs);
   // Each process will send 3 doubles, pertaining subdomain's lower or upper bounds.
   // sublo vector will contain, in every process, the gathered lower bounds of the subdomains in MPI rank order:
-  // (rank0_x, rank0_y, rank0_z, rank1_x, rank2_y, rank1_z, ... , rankn_x, rankn_y, rankn_z)
+  // (rank0_x, rank0_y, rank0_z, rank1_x, rank1_y, rank1_z, ... , rankn_x, rankn_y, rankn_z)
   MPI_Allgather(lammpsIO->lmp->domain->sublo, 3, MPI_DOUBLE, sublo.data(), 3, MPI_DOUBLE, MPI_COMM_WORLD);
   MPI_Allgather(lammpsIO->lmp->domain->subhi, 3, MPI_DOUBLE, subhi.data(), 3, MPI_DOUBLE, MPI_COMM_WORLD);
   // nufeb log output
@@ -297,17 +298,31 @@ void Fix_nufeb::execute(int pos, int subcomm, int init)
   lammpsIO->lammpsdo("timestep 0");
   // Compute the difference in concentrations after running NUFEB
   std::vector<double> dconc(chem->Nmol, 0);
+  std::vector<double> temp_buc(chem->Nmol, 0); //a temporary bucket to store the sum of concentrations from other forms
   for (int i = 0; i < chem->Nmol; i++) {
     int nufeb = chem->mol_nufeb[i];
     if (nufeb > 0) { // if points to a valid nufeb chemical species
       double conc = 0;
       if (universe->key == 0) {
-	int form = chem->mol_nufeb_form[i];
-	if (form >= 0) { // secondary-to-secondary coupling
-	  dconc[i] = kinetics->activity[nufeb][form][0] + prev[i] - chem->mol_cins[i];
-	} else { // master-to-master coupling
-	  dconc[i] = kinetics->nus[nufeb][0] + prev[i] - chem->mol_cins[i];
-	}
+	      int form = chem->mol_nufeb_form[i];
+	      if (form >= 0) { // secondary-to-secondary coupling
+	        dconc[i] = kinetics->activity[nufeb][form][0] + prev[i] - chem->mol_cins[i];
+
+          for (int spc=0;spc<5;spc++) fprintf(screen,"Concentration of form (%d) is %f \n",spc,kinetics->activity[nufeb][spc][0]);
+          sleep(1);
+
+          fprintf(screen,"Total concentration of the nutrient (%d) is %f \n",nufeb,kinetics->nus[nufeb][0]);
+          sleep(1);
+    
+          temp_buc[i]=kinetics->nus[nufeb][0]-kinetics->activity[nufeb][form][0];
+          fprintf(screen,"The difference in concentration of the nutrient (%d) and the form (%d) is %f \n",nufeb,form, temp_buc[i]);
+          sleep(1);
+
+
+	      } 
+        else { // master-to-master coupling
+	          dconc[i] = kinetics->nus[nufeb][0] + prev[i] - chem->mol_cins[i];
+	      }
       }
     }
   }
@@ -317,7 +332,30 @@ void Fix_nufeb::execute(int pos, int subcomm, int init)
   for (int i = 0; i < chem->Nmol; i++) {
     int nufeb = chem->mol_nufeb[i];
     if (nufeb > 0) { // if points to a valid nufeb chemical species
-      if (!init) MPI_Bcast(&chem->mol_cins[i], 1, MPI_DOUBLE, universe->subMS[subcomm], MPI_COMM_WORLD);
+      //fprintf(screen,"\n\n DEBUG 1: Proc %d, concentration of nutrient (%d) mapped to molecule (%d) is %e \n",me, nufeb, i, chem->mol_cins[i]);
+      //sleep(1);
+
+      if (!init){
+         if (universe->key == 0){
+            for (int j=0; j<universe->nprocs;j++){
+            if (j!=me) {
+              MPI_Send(&chem->mol_cins[i],1, MPI_DOUBLE,j,j,MPI_COMM_WORLD);
+              MPI_Send(&chem->mol_nins[i],1, MPI_DOUBLE,j,j,MPI_COMM_WORLD);
+              MPI_Send(&chem->mol_cindV[i],1, MPI_DOUBLE,j,j,MPI_COMM_WORLD);
+              MPI_Send(&chem->mol_nindV[i],1, MPI_DOUBLE,j,j,MPI_COMM_WORLD);
+            }
+            }
+          }
+          else {
+            MPI_Recv(&chem->mol_cins[i],1, MPI_DOUBLE,universe->subMS[subcomm],me,MPI_COMM_WORLD,&status);
+            MPI_Recv(&chem->mol_nins[i],1, MPI_DOUBLE,universe->subMS[subcomm],me,MPI_COMM_WORLD,&status);
+            MPI_Recv(&chem->mol_cindV[i],1, MPI_DOUBLE,universe->subMS[subcomm],me,MPI_COMM_WORLD,&status);
+            MPI_Recv(&chem->mol_nindV[i],1, MPI_DOUBLE,universe->subMS[subcomm],me,MPI_COMM_WORLD,&status);
+          }
+      }
+     
+      //if (!init) MPI_Bcast(&chem->mol_cins[i], 1, MPI_DOUBLE, universe->subMS[subcomm], MPI_COMM_WORLD);
+
     }
   }
 }

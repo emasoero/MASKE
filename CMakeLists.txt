@@ -37,6 +37,8 @@ if (WITH_NUFEB)
     ${CMAKE_SOURCE_DIR}/lammps/src/min.h
     ${CMAKE_SOURCE_DIR}/lammps/src/USER-MASKE/min_maske.h
     ${CMAKE_SOURCE_DIR}/lammps/src/USER-MASKE/min_maske.cpp
+    ${CMAKE_SOURCE_DIR}/lammps/src/USER-MASKE/min_quickmaske.h
+    ${CMAKE_SOURCE_DIR}/lammps/src/USER-MASKE/min_quickmaske.cpp
     DESTINATION ${CMAKE_SOURCE_DIR}/NUFEB/lammps/src)
   find_library(LAMMPS_LIBRARIES lammps PATHS ${CMAKE_SOURCE_DIR}/NUFEB/lammps/src NO_DEFAULT_PATH)
   list(APPEND SOURCES src/fix_nufeb.cpp)

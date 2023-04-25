@@ -573,16 +573,19 @@ void Solution::updateconc(int apos, const std::vector<double>& dconc)
 {
   double Vfrac = 1.;
   double dVfrac = 0.;  // to distribute molecules between box and dV. Default values assume afKMCsoutbox[apos] == box
+  double Vol_actual = 0.;
   if (strcmp(fix->aCsoutbox[apos].c_str(),"box+dV")==0){
     Vfrac = SVol/(SVol+dVSVol);
     dVfrac = dVSVol/(SVol+dVSVol);
+    Vol_actual = SVol+dVSVol;
   }
   else if (strcmp(fix->aCsoutbox[apos].c_str(),"box")!=0){
     std::string msg = "ERROR: solution out should be \"box\" or \"box+dV\", instead "+fix->afKMCsoutbox[apos]+" was found for "+fix->afKMCname[apos];
     error->errsimple(msg);
+    Vol_actual = SVol;
   }
   for (int i=0; i<chem->Nmol; i++) {
-    double dn = dconc[i] * SVol * nAvo * unitC; // jump in number of molecules based on jump in concentration
+    double dn = dconc[i] * Vol_actual * nAvo * unitC; // jump in number of molecules based on jump in concentration
     double dnins = dn * Vfrac;
     double dnindV = dn * dVfrac;
     chem->mol_nins[i] += dnins;
@@ -593,6 +596,8 @@ void Solution::updateconc(int apos, const std::vector<double>& dconc)
   for (int i=0; i<chem->Nmol; i++) {
     chem->mol_cins[i] = chem->mol_nins[i]/SVol/nAvo/unitC;
     chem->mol_cindV[i] = chem->mol_nindV[i]/dVSVol/nAvo/unitC;
+
+    fprintf(screen,"Updated concentration of the molecule (%d) is %f \n",i,chem->mol_cins[i]);
   }
   // update voids in box and dV
   voidV = BoxV - SolidV - SVol;

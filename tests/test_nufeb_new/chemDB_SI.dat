@@ -1,0 +1,176 @@
+# MOLECULAR SPECIES
+# molecule usr_def_name fgd_size_rad fgd_size_circ, fgd_rc/r0 bkg_vol bkg_ahyd, bkg_bDH, charge_num, nufeb_sp_id, nufeb_form_id, phr_elem
+# fgd_size are the linear sizes of the molecule when in a lammps particle, rad is in radial direction, circ in circumferential direction (this latter to power 2 gives area of attachment)
+# fgd_rc/r0 is the ratio between interaction cutoff and equilibrium distance, to convert molecular volume to tributary volume
+# bkg_vol is the apparent volume of one molecule when implicit in the background, typically in solution
+# bkg_ahyd and bkg_bDH are the a and b parameters in the Debye Huckel theory (a is linked to the hydrated diameter or distance of closest approach of ions in solution) -> find values in Phreeqc database or give -1 to either to use Davies and Setschenow equations for activity coeffs
+# charge_num  zi  is the charge number. E.g. for Ca2+ it is +2, and for H2SiO4 2- it is -2
+# nufeb_sp_id and nufeb_form_id are the numerical (int) ids of the corresponding species and form in nufeb: discarded if fix nufeb is not used
+# phr_elem is the name (string) of the corresponding solution_master_species in phreeqc. For example, Ca-based ions, such as Ca+2 and Ca(OH)+ ions, have the same master species in phreeqc, called "Ca" (see phreeqc database files)
+
+
+# from phreeqc databases phreeqc.dat and CEMDATA18.1   (water from molar volume)
+molecule Ca+2   	0   	0  	1	-0.025129603E-27  	0.486E-9 	0.15		2  	2 	1 	Ca
+molecule OH- 		0   	0   	1	0.001030404E-27   	1.065E-9 	0.064		-1 	-1 	-1 	H
+molecule CO3-2		0	0	1	0.019702472E-27	0.54E-9	0.064		-2 	5 	3	C
+molecule CO2		0	0	1	0.019702472E-27	0.54E-9	0.064		0 	5 	0	C
+molecule H2CO3		0	0	1	0.019702472E-27	0.54E-9	0.064		0 	5 	1	C
+molecule HCO3-		0	0	1	0.019702472E-27	0.54E-9	0.064		-1 	5 	2	C
+molecule H2O    	0 	0  	1	0.027E-27 		0E-9   	0		0  	-1 	-1 	XXXX?
+molecule H4SiO4	0	0	1	0.087041335E-27	0E-9		0		0  	-1 	-1 	Si
+molecule H+		0	0	1	0E-27			0.9E-9		0 		+1	-1	-1	H
+# NB: for uncharged molecules, debye huckel parameters can be 0 since only the Setschenov equation is used for activities
+
+# solids from molar volume
+# for CH: molar mass is 74.093 g/mol and density is 2.21 g/cm3 --> molecular vol = (0.381837 nm)^3
+# for CaCO3: molar mass is 100.0869 g/mol and density is 2.71 g/cm3 --> molecular vol = (0.3943535 nm)^3
+molecule Ca(OH)2      	0.381837E-9  		0.381837E-9 	1		0    	0     	0	0	0	0	null
+molecule CaCO3      	0.3943535E-9  		0.3943535E-9	1.071942986 	0    	0     	0	0	0	0	null
+molecule CSH(II)      	0.653534355E-9  	0.653534355E-9	1.064791198 	0    	0     	0	0	0	0	null
+
+
+# OLDER MOLECULES FOLLOW
+
+# hydrated diameters from Nightingale, J. Phys. Chem. 1959. Ionic radii from same paper allow estimation of apparent volume as Vhyd - Vion, as per kumaran paper
+#molecule Na	0	0	-123456	0.716	1
+#molecule Ba	0	0	-123456	0.808	2
+#molecule Sr	0	0	-123456	0.824	2
+#molecule Mg	0	0	-123456	0.856	2
+#molecule CO3	0	0	0.1021 	0.788  -2
+#molecule H	0   	0	123456  	0.564  -1
+
+# older values of which I am not sure
+#molecule C3S     0.49378  0.49378 0    0   0
+#molecule CSHI    0.65 0.65 0   0   0
+#molecule CSHII   0.65 0.65 0   0   0
+#molecule H2SiO4  0    0   0.125 0.5   -2
+#molecule H3SiO4  0    0   0.125  0.5  -1
+
+# ACTIVITY COEFFICIENTS OF ACTIVATED COMPLEXES
+gammax gxSolid  const 1 	# dimensionless
+
+
+
+# Standard activation free energy of chem reax -- rules to compute it, as I guess may depend not just on chemical reaction
+# cx is the standard state concentration of the activated complex corresponding to the DGx provided, converted in simulation units of MASKE (here, nm-2)
+# dim is the dimensionality of the rate constant and of cx. if cx is per unit surface, dim = 2. If cx is per unit volume, dim = 3.
+
+
+DGx DG_CaCO3_diss const	119.41525E-21	cx 0.6022e18 dim 2
+# from rate constant in neutral conditions in Palandri and Kharaka: k_{diss} = 10^{-5.81} = 1.54882 umol m-2 s-2. Times 1.66 to convert to ag nm2 ns-2.
+
+DGx DG_CaCO3_prec const	39.064E-21	cx 0.6022e18 dim 2
+# from dissolution DGx, from rate constant in neutral conditions in Palandri and Kharaka: k_{diss} = 10^{-5.81} = 1.54882 umol m-2 s-2. DGxprec = DGxdis from above + kT ln(Keq_dis), all times 1.66 to convert to ag nm2 ns-2. Keq_diss, from corresponding equation below, is 3.31157E-09 from PHREEQC database CEMDATA18.1
+
+DGx DG_CaOHdis const 122.85E-21  cx 0.6022e18  dim 2
+# From rate constant in Bullard 2007. Conversions from kJ/mol to ag nm2 ns-2 multiplying by 1.66.
+
+DGx DG_CaOHprec const 74.052E-21  cx 0.6022e18  dim 2
+# From rate constant in Bullard 2007. Conversions from kJ/mol to ag nm2 ns-2 multiplying by 1.66.
+
+#DGx DG_CaOHdis const -0.85988E-21  cx 1e-14 dim 2
+# From DHx and DSx in Johannnsen and Rademacher, Acta Hydrochim. hydrobiol. 27 (1999) (with DGx = DHx - TDSx). DHx is equated to Ea - RT = 27.22 kJ/mol from the ref.  TDSx at 298 K computed from same paper in  27.738 KJ/mol with k in s-1 cm-2, so cx in cm-2 (converted to nm-2 in input above).   Result is DGx = 27.22 - 27.738 = -0.518 kJ/mol. Conversions from kJ/mol to ag nm2 ns-2 multiplying by 1.66.
+
+
+DGx DG_CSHdis const 145.121E-21  cx 0.6022e18  dim 2
+# From rate constant kdis = 0.003 um/m2/s in Bullard 2015. cx converted from 1 um/m2 to molecules/nm2. Conversions from kJ/mol to ag nm2 ns-2 multiplying by 1.66.
+
+DGx DG_CSHprec const -44.4E-21  cx 0.6022e18  dim 2
+#   = DGxdis above + kT ln(Keq_dis) with Keq_dis = 1e-20 as below
+
+
+
+
+
+
+
+
+
+
+
+#  CHEMICAL REACTIONS
+# reax name  style  args keywords
+# style can be simple or chain.
+# For style simple, the 4 mandatory args are:  activity coeff of activated complex's calculator name (user defined above) ; activation energy of transition state's calculator name (user defined above);  equilibrium constant (user-given here); ki parameters for energy penalty (0 = no penalty, recommended < 1)
+# keywords can be bkg or fgd, followed by list of changes to background and foreground (particles) in terms of number of molecules, induced by the reaction
+
+reax CH_dis       simple gxSolid DG_CaOHdis 	6.30866e-6   0    bkg Ca+2 +1 OH- +2   fgd Ca(OH)2 -1
+# Keq,diss from phreeqc CEMDATA18.1, combining CaOH2 = Ca + 2H2O - 2H with H2O = OH + H   
+
+reax CH_prec       simple gxSolid DG_CaOHprec 	1.585122673e5   0    bkg Ca+2 -1 OH- -2   fgd Ca(OH)2 +1
+# Keq,diss from phreeqc CEMDATA18.1, combining CaOH2 = Ca + 2H2O - 2H with H2O = OH + H   
+
+reax CaCO3_prec   simple gxSolid DG_CaCO3_prec 	3.02e8   0 bkg Ca+2 -1 CO3-2 -1  fgd CaCO3 +1
+# Keq,prec from Keq,diss^-1 with Keq,diss = 3.31157E-09 from phreeqc CEMDATA18.1
+
+reax CaCO3_diss   simple gxSolid DG_CaCO3_diss 	3.31157E-09  0 bkg Ca+2 +1 CO3-2 +1  fgd CaCO3 -1
+# Keq,diss = 3.31157E-09 from phreeqc CEMDATA18.1
+
+reax CSHdis    simple gxSolid DG_CSHdis 1e-17 0 bkg Ca+2 +2  H4SiO4 +1  OH- +4  H2O +1   fgd CSH(II) -1 solvent H2O
+reax CSHprec    simple gxSolid DG_CSHprec 1e+17 0 bkg Ca+2 -2  H4SiO4 -1  OH- -4  H2O -1   fgd CSH(II) +1  solvent H2O
+ 
+
+# OLDER REACTIONS
+
+#reax CH_form    simple gxfoo DGfoo 1.1  0.5     bkg Ca -1 OH -2                     fgd CH +1   # a commment just for testing
+#reax CSHI_form  simple gxfoo DGfoo 1.1  0.5      bkg Ca -1 H2SiO4 -1                 fgd CSHI +1     bkg H2O -1      solvent H2O    # some shuffling and a commment just for testing
+#reax CSHI_dis   simple gxfoo3 DGfoo 1.1 0.5      bkg Ca +1 H2SiO4 +1 H2O +1          fgd CSHI -1   solvent H2O
+#reax CSHII_form simple gxfoo DGfoo 1.1  0.5      bkg Ca -2 H2SiO4 -1 H2O -1          fgd CSHII +1   solvent H2O
+#reax C3S_dis    simple g_C3Sdis DG_gC3Sdis 1.41e-18  0.5      bkg Ca +3 H2SiO4 +1 H2O -1 OH +2    fgd C3S -1  solvent H2O
+#reax CSHII_dis  simple gxfoo DGfoo 1.1  0.3    bkg Ca +2 H2SiO4 +1 H2O +1          fgd CSHII -1   solvent H2O
+#reax C3S_dis_Bul simple g_C3Sdis DG_gC3SdisTEST 1.41e-18   0.5    bkg Ca +3 H3SiO4 +1 H2O -5 OH +5    fgd C3S -1   solvent H2O
+#reax C3S_dis_test simple g_C3Sdis_test DG_gC3Sdis_test 1.41e-18   0.5    bkg Ca +3 H3SiO4 +1 H2O -5 OH +5    fgd C3S -1   solvent H2O
+#reax C3S_prec_test simple g_C3Sdis_test DG_gC3Sprec_test 7.092e+17   0.5    bkg Ca -3 H3SiO4 -1 H2O +5 OH -5    fgd C3S +1   solvent H2O
+
+
+
+# Reaction chains -- list of reaction types contains number of reactions per type: this number occurs in parallel
+#reax C3Sdis_ch0 chain  parall C3S_dis 1  C3S_dis 1
+#reax C3Sdis_ch1 chain series C3S_dis 1  C3S_dis 2  CSHI_dis 1
+
+
+
+# Surface energy -- rules to compute surface energy depending on particle and background compositions
+
+sen sen_CH const 68.40E-3   
+#  from 68.40 dynes/cm = mJ/nm2 = ag nm-2, in distilled water with CaOH2 at 14g/l, from Estrela et al., J Appl Oral Sci 2005
+
+sen sen_CaCO3 const 32E-3  
+#  from 120 mJ/nm2 = ag nm-2, for calcite homogeneously nucleating in water (range values between 83 and 170 give in Fernandez-Martinez Env Sci Tech 2012). Smaller values (ca 36) are given for heterogeneous nucleation on quartz instead
+#  32 mJ/m2 is used as a lower limit of SE from Forbes et. al. (Forbes, T. Z.; Radha, A. V.; Navrotsky, A. Geochim. Cosmochim. Acta 2011, 75, 7893−7905)
+
+sen sen_CSH const 87.6E-3   
+#  87.6 mJ/m2 from Bullard et al 2015, converted to ag ns-2 via factor 1
+
+# sen sen_C3S const 87.6E-3   
+#  87.6 mJ/m2 from Bullard et al 2015, converted to ag ns-2 via factor 1
+
+
+# Mechanisms
+# mech user_def_name reax style args
+# reax can be any of the reaction or chain names defined by the user
+
+# styles can be:
+#   "allpar" -- an all-parallel mechanism, where the unit reaction is the reaction or chain provided as input (which may have serial parts). 4 arguments needed: "straight" or "net" rates, name of reaction (or chain), name of surface energy, algorithm to compute interaction energy
+#mech C3Sdel_allpar allpar straight C3Sdis_ch1 sen_C3S int_lin
+# mech C3Sdel_apnet allpar net C3Sdis_ch0 sen_C3S int_no
+# mech   C3Sdel_apnet  allpar net   C3S_dis_Bul  sen_C3S  int_lin
+
+
+mech   CHdel_apnet  allpar net   CH_dis  sen_CH  int_lin
+mech   CHprec_apnet  allpar net   CH_prec  sen_CH  int_lin
+mech   CaCO3nuc_apnet  allpar  net  CaCO3_prec  sen_CaCO3  int_lin
+mech   CaCO3dis_apnet  allpar net   CaCO3_diss  sen_CaCO3  int_lin
+mech   CSHdis_apnet  allpar straight   CSHdis  sen_CSH int_lin
+mech   CSHprec_apnet  allpar straight   CSHprec  sen_CSH int_lin
+
+
+
+#   "allser" -- an all-series mechanism, where the unit reaction is the reaction or chain provided as input (which may have parallel parts).  4 arguments needed: "straight" or "net" rates, name of reaction (or chain), name of surface energy, algorithm to compute interaction energy (int_no = interactions neglected;   int_lin = linearisation of interaction with number of molecules;   int_1lin and int2lin = artificial linearisations to enforce heterogeneous nucleation in coarse grained allpar: see source code;   int_size = actual size dependence of interactions... may be expensive)
+#mech C3Sdel_aser allser net C3Sdis_ch1 sen_C3S int_no
+
+#   "growth" --  4 arguments needed: "straight" or "net" rates, name of reaction or chain in circumferential direction (repeated readially in series), name of surface energy, algorithm to compute interaction energy
+#mech C3Sdel_growth growth net C3Sdis_ch1 sen_C3S int_size
+
+#   "cnt" --  4 arguments needed: "straight" or "net" rates, name of reaction or chain (just to compute beta), name of surface energy, algorithm to compute interaction energy
+#mech C3Sdel_cnt cnt net C3S_dis sen_C3S int_no
