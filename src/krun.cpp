@@ -101,6 +101,14 @@ void Krun::proceed(double deltat)
     }
     
     
+    // write initial entries in thermo and dump
+    output->writethermo();
+    for (int i = 0; i<output->dumpID.size();i++){
+        output->writedump(i);
+        output->dump_first[i]=false;  // from now on, output->writedump will append to existing dumps
+    }
+    
+    
     
     //**********************************
     // FROM NOW ON, MASKE'S TIME WILL ADVANCE
@@ -108,13 +116,6 @@ void Krun::proceed(double deltat)
         
         
         msk->step = msk->step+1;
-        
-        // writing first thermo and dumps
-        output->writethermo();
-        for (int i = 0; i<output->dumpID.size();i++){
-            output->writedump(i);
-            output->dump_first[i]=false;  // from now on, output->writedump will append to existing dumps
-        }
         
         
         if (me==MASTER) fprintf(screen,"\n\n\n================================================================ \nKrun step %d \nMASKE's current tempo is %e \nThis Krun started at tempo = %e and will end at tenpo = %e\n\n",msk->step,msk->tempo,start_time,end_time);
@@ -499,6 +500,8 @@ void Krun::proceed(double deltat)
         //--------------------------------------------------------
         
         
+        
+        // ENDOFRUN TO BE CHECKED HERE. IF FLAG POSITIVE, THEN SOME STEPS BELOW SHOULD BE SKIPPED, KMC RATES ERASED (EXCEPT IF FLAG TO ENFORCE KMC AT ENDOFRUN), AND CONT PROC ALL BROUGHT TO ENDOFRUN TIME
         
         
         

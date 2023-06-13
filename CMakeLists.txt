@@ -13,7 +13,8 @@ endif()
 set(SOURCES 
   src/chemistry.cpp
   src/error.cpp
-  src/fix_Cfoo.cpp
+  src/fix_CmstoreLMP.cpp
+  src/fix_EmstoreLMP.cpp
   src/fix.cpp
   src/fix_delete.cpp
   src/fix_nucleate.cpp
