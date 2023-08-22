@@ -3,6 +3,8 @@ echo "Whole Build Process"
 
 rootDir=$PWD
 
+cp files_tocopy/* lammps/src/USER-MASKE/
+
 echo "Going to lammps..."
 
 cd $rootDir/lammps

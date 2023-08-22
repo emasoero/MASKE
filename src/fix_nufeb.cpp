@@ -45,13 +45,19 @@ Fix_nufeb::~Fix_nufeb() {}
 void Fix_nufeb::init(int pos)
 {
   int sid = fix->Csid[pos];
+
   for (int i=0; i<store->MulCmd[sid].size(); i++) {
+
+    
     lammpsIO->lammpsdo(store->MulCmd[sid][i]);
   }
   init_flag = 1;
 
+
   lammpsIO->lammpsdo("timestep 0");
+  
   execute(pos, universe->color, 1);
+  
 }
 
 // ---------------------------------------------------------------

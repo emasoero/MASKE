@@ -199,6 +199,7 @@ void Inputmsk::file()
                     std::string name;
                     ss >> name;
                     store->MulNames.push_back(name);
+
                     std::string triple_quote;
                     ss >> triple_quote;
                     if (triple_quote != "\"\"\"")
@@ -218,6 +219,9 @@ void Inputmsk::file()
                             error->errsimple("ERROR: too many lines in multi-line store command");
                     }
                     store->MulCmd.push_back(cmds);
+                    //fprintf(screen,"Multistore %s recorded  proc = %d \n",(store->MulNames.back()).c_str(),me);
+                    //MPI_Barrier(MPI_COMM_WORLD);
+                    //sleep(1);
                 }
                 else
                 execline(read_string);

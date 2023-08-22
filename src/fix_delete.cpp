@@ -148,6 +148,8 @@ void Fix_delete::sample(int pos)
     Ng = (int) tNg;
     lammpsIO->lammpsdo("group gtemp delete");
     lammpsIO->lammpsdo("variable tempNgroup delete");
+
+    
     
     //safety check: if not just_reset and Ng not equal to nevents, error
     if (Ng != fix->fKMCnevents[pos]) {
@@ -173,20 +175,26 @@ void Fix_delete::sample(int pos)
     
     //aR = new double[natoms];     // arrays of radii and energies
     aR = ((double *) lammps_extract_compute(lammpsIO->lmp,(char *) "tempRAD",1,1));
+    
     //aE = new double[natoms];
     aE = ((double *) lammps_extract_compute(lammpsIO->lmp,(char *) "tempPE",1,1));
+    
     //atype = new int[natoms];
     //int *atype = ((int *) lammps_extract_atom(lammpsIO->lmp,(char *)"type"));
     //atype = new double[natoms];
     atype = ((double *) lammps_extract_compute(lammpsIO->lmp,(char *) "tempType",1,1));
     
+    
     if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
         if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
             // PAT is a local compute (style = 2 in lammps library) of array (i.e. matrix) type (type = 2 in lammps library)
             locLMP = ((double **) lammps_extract_compute(lammpsIO->lmp,(char *) "tempPAT",2,2));
+            
             // DIST is a local compute (style = 2 in lammps library) of vector type (type = 1 in lammps library)
             aDIST = ((double *) lammps_extract_compute(lammpsIO->lmp,(char *) "tempDIST",2,1));
-            nlocR = *((int*)lammps_extract_compute(lammpsIO->lmp,(char *) "tempPAT",2,4));
+            
+            nlocR = *((int*)lammps_extract_compute(lammpsIO->lmp,(char *) "tempPAT",2,0));
+            
         }
     }
     

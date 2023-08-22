@@ -119,6 +119,10 @@ void Fix_nucleate::init(int pos)
     // This will be useful later on, to decide where to count if an event in this fix is to be considered
     tolmp = "group gtemp type "+typ.str();
     lammpsIO->lammpsdo(tolmp);
+    std::ostringstream stp;
+    stp << msk->step;
+    tolmp = "displace_atoms gtemp random 1E-8 1E-8 1E-8 "+stp.str()+" units box";
+    lammpsIO->lammpsdo(tolmp);
     tolmp = "variable tempNgroup equal count(gtemp)";
     lammpsIO->lammpsdo(tolmp);
     lammpsIO->lammpsdo("run 0");
@@ -431,7 +435,7 @@ void Fix_nucleate::sample(int pos)
             locLMP = ((double **) lammps_extract_compute(lammpsIO->lmp,(char *) "tempPAT",2,2));
             // DIST is a local compute (style = 2 in lammps library) of vector type (type = 1 in lammps library)
             aDIST = ((double *) lammps_extract_compute(lammpsIO->lmp,(char *) "tempDIST",2,1));
-            nlocR = *((int*)lammps_extract_compute(lammpsIO->lmp,(char *) "tempPAT",2,4));
+            nlocR = *((int*)lammps_extract_compute(lammpsIO->lmp,(char *) "tempPAT",2,0));
         }
     }
 
@@ -2466,7 +2470,7 @@ void Fix_nucleate::execute(int pID, int EVafixID, int EVpTYPE,double EVpDIAM,dou
     tolmp = "variable zrtemp equal zhi-0.1*(zhi-zlo)";
     lammpsIO->lammpsdo(tolmp);
     
-    tolmp = "region tempregg block $(v_xltemp) $(v_xrtemp) $(v_yltemp) $(v_yrtemp) $(v_zltemp) $(v_zrtemp)";
+    tolmp = "region tempregg block $(v_xltemp) $(v_xrtemp) $(v_yltemp) $(v_yrtemp) $(v_zltemp) $(v_zrtemp) units box";
     lammpsIO->lammpsdo(tolmp);
     
     tolmp = "group gtempin empty";

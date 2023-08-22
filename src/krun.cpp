@@ -92,6 +92,7 @@ void Krun::proceed(double deltat)
 
     
     // Initialise any continuous fix that requires this before starting the krun loop
+
     for (int i=0; i<fix->Ctype.size(); i++) {
 #ifdef MASKE_WITH_NUFEB
         if (fix->Ctype[i] == "nufeb") {
@@ -99,7 +100,15 @@ void Krun::proceed(double deltat)
         }
 #endif
     }
+
+    // writing first thermo and dumps
     
+
+        output->writethermo();
+        for (int i = 0; i<output->dumpID.size();i++){
+            output->writedump(i);
+            output->dump_first[i]=false;  // from now on, output->writedump will append to existing dumps
+        }   
     
     
     //**********************************
@@ -109,24 +118,19 @@ void Krun::proceed(double deltat)
         
         msk->step = msk->step+1;
         
-        // writing first thermo and dumps
-        output->writethermo();
-        for (int i = 0; i<output->dumpID.size();i++){
-            output->writedump(i);
-            output->dump_first[i]=false;  // from now on, output->writedump will append to existing dumps
-        }
+      
         
-        
-        if (me==MASTER) fprintf(screen,"\n\n\n================================================================ \nKrun step %d \nMASKE's current tempo is %e \nThis Krun started at tempo = %e and will end at tenpo = %e\n\n",msk->step,msk->tempo,start_time,end_time);
-        
-        // screen output to debug
-        //sleep(me);
-        //fprintf(screen,"\n\n Proc %d, SUBCOM %d entering step at tempo %e \n",me,universe->color,msk->tempo);
-        MPI_Barrier(MPI_COMM_WORLD);
-        //if (me==MASTER) fprintf(screen,"\n\n Let's start the tempo %e iteration \n",msk->tempo );
-       // sleep(1);
     
         
+        if (me==MASTER) fprintf(screen,"\n\n\n================================================================ \nKrun step %d \nMASKE's current tempo is %e \nThis Krun started at tempo = %e and will end at tempo = %e\n\n",msk->step,msk->tempo,start_time,end_time);
+        
+        // screen output to debug
+        sleep(me);
+        fprintf(screen,"\n\n Proc %d, SUBCOM %d entering step at tempo %e \n",me,universe->color,msk->tempo);
+        MPI_Barrier(MPI_COMM_WORLD);
+        //if (me==MASTER) fprintf(screen,"\n\n Let's start the tempo %e iteration \n",msk->tempo );
+        sleep(1);
+    
         
         //-----------------------------------------
         // CLEAR ALL EVENT VECTORS AND ASSIGN SIZES TO NEW ONES
@@ -138,7 +142,9 @@ void Krun::proceed(double deltat)
             //sleep(me);
             fprintf(screen,"Proc %d, SUBCOM %d: resetting vectors\n",me,universe->color);
             MPI_Barrier(MPI_COMM_WORLD);
-            //sleep(1);
+            sleep(1);
+
+
             
             fix_del->clearvecs();
             fix_nucl->clearvecs();   // You can consider moving here the deletion of all existing trial particles for nucleation - now it is done fix by fix in the init function below (which works too)
@@ -184,11 +190,25 @@ void Krun::proceed(double deltat)
         if (rfKMCcrit) {
             // each processor scans through the list of their RF-KMC processes
             for (int i=0; i<fix->fKMCtype.size(); i++) {
-                if (strcmp(fix->fKMCtype[i].c_str(),"delete")==0)           fix_del->sample(i);
-                else if (strcmp(fix->fKMCtype[i].c_str(),"nucleate")==0)    fix_nucl->sample(i);
+                if (strcmp(fix->fKMCtype[i].c_str(),"delete")==0)
+                    {
+                
+                    fix_del->sample(i);
+                    
+                    }           
+                
+                else if (strcmp(fix->fKMCtype[i].c_str(),"nucleate")==0)    
+                {
+                
+                    fix_nucl->sample(i);
+                    
+                }   
+                
             }
         }
+
         
+
         double Qk = 0.;   // cumulative rate
         double Qkdel = 0.;   // cumulative rate from delete events only
         double Qknucl= 0.;   // cumulative rate from nucleation events only
@@ -211,6 +231,10 @@ void Krun::proceed(double deltat)
             fprintf(screen,"\nCumulative delete + nucleate KMC rates (Qkall) on all processors according to submaster of sucomm %d (only this submaster's value be nonzero now):\n",universe->color);
             for (int i=0; i<universe->nprocs; i++) fprintf(screen," key %d = %e ,",i,Qkall[i]);
         }
+
+        //fprintf(screen,"DEBUG 1: Proc %d, SUBCOM %d \n",me,universe->color);
+        //MPI_Barrier(MPI_COMM_WORLD);
+        //sleep(1);
 
         if (me>0){
             int dest = 0;
@@ -849,7 +873,6 @@ void Krun::proceed(double deltat)
             delete [] QkTCall;
             delete [] QkTCallC;
         }
-<<<<<<< HEAD
 	
 	    if (Cexecute) {
 	        // reset the position of trial atoms
@@ -860,7 +883,7 @@ void Krun::proceed(double deltat)
 	        }
             #ifdef MASKE_WITH_NUFEB
 	            if (universe->color == SC2exec) {
-	                if (type == "nufeb") {
+	                if (type_Cpr == "nufeb") {
 	                fix_nufeb->execute(Cpid2exec, SC2exec);
 	                fix->Cleval[Cpid2exec] = msk->tempo;
 	            
@@ -869,7 +892,7 @@ void Krun::proceed(double deltat)
 	            } 
                 
                 else {
-	                if (type == "nufeb") {
+	                if (type_Cpr == "nufeb") {
 	                // Receive new concentrations from nufeb
 	                    for (int i = 0; i < chem->Nmol; i++) {
 		                    if (chem->mol_nufeb[i] > 0) { // if points to a valid nufeb chemical species
@@ -893,7 +916,7 @@ void Krun::proceed(double deltat)
                 //MPI_Barrier(MPI_COMM_WORLD);
 
                 
-	            if (type == "nufeb") {
+	            if (type_Cpr == "nufeb") {
 	                fix_nufeb->exchange(Cpid2exec, SC2exec);
 	            }
                 
@@ -901,56 +924,6 @@ void Krun::proceed(double deltat)
             #endif
 	    }
         
-=======
-        //--------------------------------------------------------
-        
-        
-        
-        
-        
-        //--------------------------------------------------------
-        //--------------------------------------------------------
-        // EXECUTE CONTINUOUS PROCESS (IF THE CHOSEN ONE)
-        //--------------------------------------------------------
-        if (Cexecute == 1) {
-            
-            if (type_Cpr == "mstoreLMP"){
-                // all processors execute this type of Cont fix
-                fix_cmsLMP->execute(Cpid2exec, SC2exec);
-                // processors in executing subcomm only update leval time of the process
-                if (universe->color == SC2exec) fix->Cleval[Cpid2exec] = msk->tempo;
-            }
-#ifdef MASKE_WITH_NUFEB
-            else if (type_Cpr == "nufeb") {
-                if (universe->color == SC2exec) {
-                    fix_nufeb->execute(Cpid2exec, SC2exec);
-                    fix->Cleval[Cpid2exec] = msk->tempo;
-                }
-                else {
-                    // Receive new concentrations from nufeb
-                    for (int i = 0; i < chem->Nmol; i++) {
-                        if (chem->mol_nufeb[i] > 0) { // if points to a valid nufeb chemical species
-                            double conc = 0;
-                            MPI_Bcast(&conc, 1, MPI_DOUBLE, universe->subMS[SC2exec], MPI_COMM_WORLD);
-                            chem->mol_cins[i] = conc;
-                        }
-                    }
-                }
-                fix_nufeb->exchange(Cpid2exec, SC2exec);   // bacteria particles exchanged with processors in non-nufeb subcomms
-            }
-#endif
-        }
-        //--------------------------------------------------------
-        
-        
-        
-        
-        
-        //--------------------------------------------------------
-        //--------------------------------------------------------
-        // EXECUTE ALL PROCESSES UNTIL END OF RUN IF KRUN IS BEING COMPLETED (draft implementation)
-        //--------------------------------------------------------
->>>>>>> dev_#24_micro
         if (endofrun==1){
             // delete all trial particles associated with nucleation fixes
             for (int i=0; i<fix->fKMCtype.size(); i++){
@@ -968,13 +941,6 @@ void Krun::proceed(double deltat)
         }
         //--------------------------------------------------------
         
-<<<<<<< HEAD
-        // number of just completed step
-        msk->step = msk->step+1;
-
-
-
-=======
         
         
         
@@ -995,7 +961,6 @@ void Krun::proceed(double deltat)
             }
         }
         
->>>>>>> dev_#24_micro
         #ifdef MASKE_WITH_SPECIATION
             // call speciation if at appropriate step
             for (int i = 0; i<spec->specID.size();i++){
@@ -1004,10 +969,6 @@ void Krun::proceed(double deltat)
                 }
             }
         #endif
-<<<<<<< HEAD
-
-=======
->>>>>>> dev_#24_micro
         
         // relax if at appropriate step
         for (int i = 0; i<relax->rlxID.size();i++){
@@ -1025,11 +986,6 @@ void Krun::proceed(double deltat)
         //--------------------------------------------------------
         
         
-<<<<<<< HEAD
-
-        // If a KMC event was not executed
-        // (must stay here after relax, in case a continuous event was carried out and then the relax changed the box)
-=======
         
         
     
@@ -1038,7 +994,6 @@ void Krun::proceed(double deltat)
         // RESET INITIAL POSITIONS OF TRIAL ATOMS WITHOUT DELETING THEM, IF A KMC PROCESS WAS NOT CARRIED OUT
         // ---------------------------------------------------------
         // must stay here after processes of "continuous" and "every" types are carried out, in case those change the box for example
->>>>>>> dev_#24_micro
         if (KMCexecute == 0){
             // reset the position of trial atoms
             for (int i=0; i<fix->fKMCtype.size(); i++) {
@@ -1048,15 +1003,6 @@ void Krun::proceed(double deltat)
             }
         }
         
-<<<<<<< HEAD
-        // write thermo output at appropriate step
-
-        if (output->th_every>0 && msk->step % output->th_every == 0) {
-	    output->writethermo();
-        }
-
-        // write dump output at appropriate step
-=======
         
         
         // ---------------------------------------------------------
@@ -1067,7 +1013,6 @@ void Krun::proceed(double deltat)
             if (me==MASTER) fprintf(screen,"\nWriting entry in thermo file\n");
             output->writethermo();
         }
->>>>>>> dev_#24_micro
         for (int i = 0; i<output->dumpID.size();i++){
             if (me==MASTER) fprintf(screen,"\nWriting entry in dump file number %d\n",i);
             if (msk->step % output->dump_every[i] == 0) {
