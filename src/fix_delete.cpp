@@ -27,6 +27,12 @@ Fix_delete::Fix_delete(MASKE *maske) : Pointers(maske)
     MPI_Comm_rank(MPI_COMM_WORLD, &me);
     EVpID = -1;
     SAR = nullptr;
+    Dsub = nullptr;
+    CFuns = nullptr;
+    GMuns = nullptr;
+    fGMuns = nullptr;
+    IDaruns = nullptr;
+    Raruns = nullptr;
     //Ntrans = 0;
     //Ntsc=0;
 }
@@ -83,6 +89,8 @@ void Fix_delete::sample(int pos)
     mid = fix->fKMCmid[pos];    // mechanism ID
     
     // screen output to debug
+    
+    
     int sleeptime = me;
     if (msk->wplog) {
         std::string msg = "\nTEMPO ";
@@ -93,7 +101,7 @@ void Fix_delete::sample(int pos)
     }
     
     
-    
+
     
     
     
@@ -124,6 +132,7 @@ void Fix_delete::sample(int pos)
     
     tolmp = "dump tdID all custom 1 dump.temp_"+universe->SCnames[universe->color]+" c_tempID c_tempRAD c_tempPE type x y z";    //temp dump to update variables and computes
     lammpsIO->lammpsdo(tolmp);
+
     
     
     if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
@@ -159,6 +168,8 @@ void Fix_delete::sample(int pos)
         fprintf(screen,"%s",msg.c_str());
         //error->errsimple(msg);
     }
+
+
     
     natoms = static_cast<int> (lammpsIO->lmp->atom->natoms); // total number of atoms in lammps, all groups all fixes)
     nlocal = static_cast<int> (lammpsIO->lmp->atom->nlocal); // number of atoms in current processore, all types all fixes)
@@ -198,6 +209,7 @@ void Fix_delete::sample(int pos)
         }
     }
     
+
     
     /*if (me==3){
         fprintf(screen,"\n Proc %d: \n",me);
@@ -391,6 +403,8 @@ void Fix_delete::sample(int pos)
             }
         }
     }
+
+    
     
     
     // END OF RECORDING LAMMPS VALUES INTO VECTORS
@@ -412,9 +426,13 @@ void Fix_delete::sample(int pos)
     
     // SUBMASTER SORTS IDs (only if fix was just reset in krun.cpp, otherwise sorted vector already exists)
     if (key==0 && krun->fMC_justreset) submaster_sort_IDs(pos);
+
+    
     
     // EACH PROCESSOR MAPS THEIR ID TO THE CORRESPONDING POSITION IN THE SUBMASTER IDsrt ARRAY
     if(key==0) submaster_map_ID(pos);
+
+    
     
     // FOR MICRO-PAIR MECHANISM ONLY, SUBMASTER COMPUTES COVERAGE AREAS AND PASSES THEM BACK TO SLAVES
     if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
@@ -427,6 +445,7 @@ void Fix_delete::sample(int pos)
             cover_from_submaster(pos);
         }
     }
+
     
     
     // EACH PROCESSOR COMPUTES RATES OF EACH EVENT AND CUMULATIVES DEPENDING ON MECHANISM
@@ -446,11 +465,13 @@ void Fix_delete::sample(int pos)
     else {
         fprintf(screen,"\n\n\n\n  ******************* \n ************************** ERROR : Mechanism style not recognized. \n ******************************* \n ******************** \n\n\n\n\n");
     }
+
+
     
     // PASS RATES TO SUBMASTER
     rates_to_submaster(pos);
     
-    
+
 
     tolmp = "uncompute tempID";
     lammpsIO->lammpsdo(tolmp);
@@ -461,7 +482,7 @@ void Fix_delete::sample(int pos)
     tolmp = "uncompute tempType";
     lammpsIO->lammpsdo(tolmp);
     
-    
+
     if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
         if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
             tolmp = "uncompute tempPAT";
@@ -477,36 +498,86 @@ void Fix_delete::sample(int pos)
     delete [] IDpos;
     delete [] nID_each;
 
-
     
+
+   
     if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
         if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
-            
+    
+    
             if (!(SAR == nullptr)){
                 free(SAR[0]);
                 free(SAR);
+                //delete [] SAR;
                 SAR = nullptr;
             }
+
+    
+    
             delete [] tCF;
             delete [] tGM;
             
+            
             delete [] nlocR_each;
+            
             delete [] SARpos;
-            delete [] Dsub;
-            delete [] CFuns;
-            delete [] GMuns;
-            delete [] fGMuns;
+            
+            if (!(Dsub==nullptr)){
+                delete [] Dsub;
+                Dsub=nullptr;
+            }
+            if (!(CFuns==nullptr)){
+                delete [] CFuns;
+                CFuns=nullptr;
+            }
+            if (!(GMuns==nullptr)){
+                delete [] GMuns;
+                GMuns=nullptr;
+            }
+            if (!(fGMuns==nullptr)){
+                delete [] fGMuns;
+                fGMuns=nullptr;
+            }
+            if (!(IDaruns==nullptr)){
+                delete [] IDaruns;
+                IDaruns=nullptr;
+            }
+            if (!(Raruns==nullptr)){
+                delete [] Raruns;
+                Raruns=nullptr;
+            }
+
+            
+            
+            /*sleep(2);
+            fprintf(screen,"DEBUG 8: Proc %d, SUBCOM %d \n",me,universe->color);
+            //delete [] CFuns;
+            sleep(2);
+            fprintf(screen,"DEBUG 5: Proc %d, SUBCOM %d \n",me,universe->color);
+            //delete [] GMuns;
+            sleep(2);
+            fprintf(screen,"DEBUG 4: Proc %d, SUBCOM %d \n",me,universe->color);
+            //delete [] fGMuns;
+            sleep(2);
+            fprintf(screen,"DEBUG 6: Proc %d, SUBCOM %d \n",me,universe->color);*/
+
+            
             
             delete [] IDar;
+            
             delete [] Rar;
+            
             delete [] nIDar_each;
+            
             delete [] IDarpos;
-            delete [] IDaruns;
-            delete [] Raruns;
+            
+            //delete [] IDaruns;
+            
+            //delete [] Raruns;
 
         }
     }
-
+    
 }
 
 
@@ -699,13 +770,18 @@ void Fix_delete::pair_arr_to_submaster(int pos)
         int allrows = SARpos[nploc-1]+nlocR_each[nploc-1];
         int nbytes = ((int) sizeof(double)) * 4 * allrows;
         double *data = (double *) malloc(nbytes);
+
         nbytes = ((int) sizeof(double *)) * allrows;
         SAR = (double **) malloc(nbytes);
+        //double ** SAR=new double *[nbytes];
+        //std::vector<std::vector<double>> SAR; 
         
         int n = 0;
         for (int i = 0; i < allrows ; i++) {
-            SAR[i] = &data[n];
-            n += 4;
+            //SAR[i] = &data[n];
+            //SAR.push_back(&data[n]);
+            //n += 4;
+            SAR[i]=data + i*4;
         }
         Dsub = new double[allrows];
     }
@@ -720,6 +796,7 @@ void Fix_delete::pair_arr_to_submaster(int pos)
         for (int j=0; j<nlocR; j++){
             for (int i=0; i<4; i++) {
                 SAR[j][i] = locLMP[j][i];
+                //SAR[j].push_back(locLMP[j][i]);
             }
             Dsub[j] = aDIST[j];
         }
@@ -1415,6 +1492,8 @@ void Fix_delete::comp_rates_micro(int pos)
     // for all particles in current processor, compute the dissolution rate
     for (int i=0; i<nID_each[key]; i++) {
         
+        
+        
         if (msk->wplog) {
             std::string msg = "\n -----------------------------------\nPARTICLE ";
             std::ostringstream ss;    ss << tID[i];     msg = msg+ss.str()+" ";
@@ -1423,6 +1502,8 @@ void Fix_delete::comp_rates_micro(int pos)
             ss.str("");     ss.clear();   ss << tGM[i];  msg = msg+ss.str()+"\n";
             output->toplog(msg);
         }
+
+
         
         double Pv = 4./3. * M_PI * tR[i] * tR[i] * tR[i];  // particle volume  FOR SPHERICAL
         //double Ps = 4. * M_PI * tR[i] * tR[i];  // particle surface   FOR SPHERICAL - this was used to compute changes in surface area per molecule, but in this micro mechanism, surface energy is not considered (particle dissolution is assumed to be kink-driven)
@@ -1517,28 +1598,29 @@ void Fix_delete::comp_rates_micro(int pos)
         
         double ri=0. , DTi = 0., DTtot = 0.;  // rate of each reaction in sequence, associated time increement and total cumulative time increment
         
+        
         for (int j=0; j<nrL-1; j++){
 
             std::string msg;
-            if (msk->wplog) {
+            /*if (msk->wplog) {
                 msg += "PARTICLE ";
                 std::ostringstream ss;    ss << i;   msg = msg+ss.str()+"; Layer ";
                 ss.str("");     ss.clear();   ss << j+1;  msg = msg+ss.str()+" out of ";
                 ss.str("");     ss.clear();   ss << nrL;  msg = msg+ss.str()+"; ";
-            }
+            }*/
             
             for (int jj=0; jj<nrS; jj++){
                 
-                if (msk->wplog) {
+                /*if (msk->wplog) {
                     msg += "On-surface unit number ";
                     std::ostringstream ss;    ss << jj+1;   msg = msg+ss.str()+" out of ";
                     ss.str("");     ss.clear();   ss << nrS;  msg = msg+ss.str()+"; ";
-                }
+                }*/
                 
                 // compute rate of reaction sequence
                 for (int k=0; k< nrt; k++) { //all the reaction in series in chain seq.
                     
-                    if (msk->wplog) { msg += "; rx_step ";    std::ostringstream ss;    ss << k;   msg += ss.str();}
+                    //if (msk->wplog) { msg += "; rx_step ";    std::ostringstream ss;    ss << k;   msg += ss.str();}
                     
                     // find reaction id if it is a chain, or keep previous one if a single reax
                     if (chem->mechchain[mid]) rxid = chem->ch_rxID[chID][k];
@@ -1549,14 +1631,14 @@ void Fix_delete::comp_rates_micro(int pos)
                     double gammax = chem -> compgammax(rxid);
                     double KT = msk->kB * solution->Temp;
                     
-                    if (msk->wplog) {
+                    /*if (msk->wplog) {
                         std::ostringstream ss;
                         msg += "; DG* ";    ss << DGx;   msg += ss.str();    ss.str(""); ss.clear();
                         msg += "; c* ";    ss << cx;   msg += ss.str();    ss.str(""); ss.clear();
                         msg += "; gamma* ";    ss << gammax;   msg += ss.str();    ss.str(""); ss.clear();
                         msg += "; KB ";    ss << (msk->kB);   msg += ss.str();    ss.str(""); ss.clear();
                         msg += "; T ";    ss << (solution->Temp);   msg += ss.str();    ss.str(""); ss.clear();
-                    }
+                    }*/
                     
                     double kappa = 1.;       // transmission coefficient
                     
@@ -1579,13 +1661,13 @@ void Fix_delete::comp_rates_micro(int pos)
                     
                     double r0 = kappa * KT / msk->hpl / gammax * cx * exp(-DGx / KT);
                     
-                    if (msk->wplog) {
+                    /*if (msk->wplog) {
                         std::ostringstream ss;
                         msg += "; r0 ";    ss << r0;   msg += ss.str();    ss.str(""); ss.clear();
                         msg += "; Qreac ";    ss << Qreac;   msg += ss.str();    ss.str(""); ss.clear();
                         msg += "; DUi ";    ss << DUi;   msg += ss.str();    ss.str(""); ss.clear();
                         msg += "; Vti ";    ss << Vt;   msg += ss.str();    ss.str(""); ss.clear();
-                    }
+                    }*/
                     
                     r0 = r0*pow(Vt,dim/3.);
                     
@@ -1603,12 +1685,12 @@ void Fix_delete::comp_rates_micro(int pos)
                         
                         ri -= r0 * Qprod / chem->Keq[rxid] * exp(ki * DUi / KT );
                         
-                        if (msk->wplog) {
+                        /*if (msk->wplog) {
                             std::ostringstream ss;
                             msg += "; ri ";    ss << ri;   msg += ss.str();    ss.str(""); ss.clear();
                             msg += "; Qprod ";    ss << Qprod;   msg += ss.str();    ss.str(""); ss.clear();
                             msg += "; Keq ";    ss << chem->Keq[rxid] ;   msg += ss.str();    ss.str(""); ss.clear();
-                        }
+                        }*/
                         
                     }
                     
@@ -1617,18 +1699,18 @@ void Fix_delete::comp_rates_micro(int pos)
                     DTi = 1./ri;
                     DTtot += DTi;
                     
-                    if (msk->wplog) {
+                    /*if (msk->wplog) {
                         msg += ", DT ";
                         std::ostringstream ss;    ss << DTi;   msg += ss.str(); ss.str("");   ss.clear();
                         msg += ", DTtot ";
                         ss << DTtot;   msg += ss.str();
-                    }
+                    }*/
                 }
             }
-            if (msk->wplog){
+            /*if (msk->wplog){
                 msg+="\n";
                 output->toplog(msg);
-            }
+            }*/
         }
         
         

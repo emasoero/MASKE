@@ -214,12 +214,12 @@ double Solution::compQ(int rxid, std::string type, std::string sol_in_style, std
         
         std::string msg;
         msg = "";
-        if (msk->wplog) {
+        /*if (msk->wplog) {
             msg += "rxid ";
             std::ostringstream ss;    ss << rxid;   msg += ss.str(); ss.str("");   ss.clear();
             msg += ", Istr ";
             ss << Istr;   msg += ss.str();
-        }
+        }*/
         
         
         
@@ -248,7 +248,7 @@ double Solution::compQ(int rxid, std::string type, std::string sol_in_style, std
                     // the below is   ( gamma * conc ) ^  stoichio
                     Q *= pow(gam * Vcins[molID] , (double) -chem->bkg_nmol[rxid][i]);
                     
-                    if (msk->wplog) {
+                    /*if (msk->wplog) {
                         msg += ", mol ";
                         std::ostringstream ss;    ss << i;   msg += ss.str(); ss.str("");   ss.clear();
                         msg += ", molID ";
@@ -262,7 +262,7 @@ double Solution::compQ(int rxid, std::string type, std::string sol_in_style, std
                         msg += ", Q_reac ";
                         ss << Q;   msg += ss.str();
                         output->toplog(msg);
-                    }
+                    }*/
                 }
             }
         }
@@ -291,7 +291,7 @@ double Solution::compQ(int rxid, std::string type, std::string sol_in_style, std
                     // the below is   ( gamma * conc ) ^  stoichio
                     Q *= pow(gam * Vcins[molID] , (double) chem->bkg_nmol[rxid][i]);
                     
-                    if (msk->wplog) {
+                    /*if (msk->wplog) {
                         msg += ", mol ";
                         std::ostringstream ss;    ss << i;   msg += ss.str(); ss.str("");   ss.clear();
                         msg += ", molID ";
@@ -305,7 +305,7 @@ double Solution::compQ(int rxid, std::string type, std::string sol_in_style, std
                         msg += ", Q_prod ";
                         ss << Q;   msg += ss.str();
                         output->toplog(msg);
-                    }
+                    }*/
                 }
             }
         }

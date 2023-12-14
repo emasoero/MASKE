@@ -195,6 +195,7 @@ void Krun::proceed(double deltat)
                 
                     fix_del->sample(i);
                     
+                    
                     }           
                 
                 else if (strcmp(fix->fKMCtype[i].c_str(),"nucleate")==0)    

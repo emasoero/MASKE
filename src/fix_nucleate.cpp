@@ -25,6 +25,14 @@ Fix_nucleate::Fix_nucleate(MASKE *maske) : Pointers(maske)
     EVpDIAM = -1.;
     EVpTYPE = -1;
 
+    SAR = nullptr;
+    Dsub = nullptr;
+    CFuns = nullptr;
+    GMuns = nullptr;
+    fGMuns = nullptr;
+    IDaruns = nullptr;
+    Raruns = nullptr;
+
     //nmax = 0;
     //nlocal0 = 0;
     //x0 = NULL;
@@ -755,17 +763,47 @@ void Fix_nucleate::sample(int pos)
             
             delete [] nlocR_each;
             delete [] SARpos;
-            delete [] Dsub;
-            delete [] CFuns;
-            delete [] GMuns;
-            delete [] fGMuns;
+
+            if (!(Dsub==nullptr)){
+                delete [] Dsub;
+                Dsub=nullptr;
+            }
+            if (!(CFuns==nullptr)){
+                delete [] CFuns;
+                CFuns=nullptr;
+            }
+            if (!(GMuns==nullptr)){
+                delete [] GMuns;
+                GMuns=nullptr;
+            }
+            if (!(fGMuns==nullptr)){
+                delete [] fGMuns;
+                fGMuns=nullptr;
+            }
+            if (!(IDaruns==nullptr)){
+                delete [] IDaruns;
+                IDaruns=nullptr;
+            }
+            if (!(Raruns==nullptr)){
+                delete [] Raruns;
+                Raruns=nullptr;
+            }
+            /*if (key==0){
+                delete [] Dsub;
+                delete [] CFuns;
+                delete [] GMuns;
+                delete [] fGMuns;
+
+                delete [] IDaruns;
+                delete [] Raruns;
+            }*/
+            
             
             delete [] IDar;
             delete [] Rar;
             delete [] nIDar_each;
             delete [] IDarpos;
-            delete [] IDaruns;
-            delete [] Raruns;
+            
         }
     }
 
