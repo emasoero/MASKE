@@ -2540,13 +2540,14 @@ void Fix_nucleate::execute(int pID, int EVafixID, int EVpTYPE,double EVpDIAM,dou
     //lammpsIO->lammpsdo("run 1");
     
     //temp dump to update variables and computes
-    tolmp = "dump tdID all custom 1 dump.tempIN_"+universe->SCnames[universe->color]+" c_cidtemp";
+    tolmp = "dump tdID all custom 1 dump.tempIN_"+universe->SCnames[universe->color]+" id type x y z radius c_cidtemp";
     lammpsIO->lammpsdo(tolmp);
     
     tolmp = "compute cidtt gtempin reduce sum c_cidtemp";
     lammpsIO->lammpsdo(tolmp);
     
     lammpsIO->lammpsdo("run 1");
+    lammpsIO->lammpsdo("unfix fix_dep_temp");
     
     //natoms = static_cast<int> (lammpsIO->lmp->atom->natoms); // total number of atoms in lammps, all groups all fixes)
     //tolmp = "variable natt equal ;
@@ -2574,23 +2575,59 @@ void Fix_nucleate::execute(int pID, int EVafixID, int EVpTYPE,double EVpDIAM,dou
     //tolmp = "variable vidtt equal $(c_cidtemp[1])";
     //tolmp = "variable vidtt equal $(c_cidtt)";
     //lammpsIO->lammpsdo(tolmp);
+
+    tolmp = "set atom $(v_vidtt) diameter ";
+    ss << EVpDIAM;   tolmp += ss.str(); ss.str(""); ss.clear();
+    //fprintf(screen,"\n PROC %d : \"%s\"\n",me,tolmp.c_str());
+    lammpsIO->lammpsdo(tolmp);
+    lammpsIO->lammpsdo("run 0");
+
+    // fprintf(screen,"DEBUG 1: PROC %d : \"%s\"\n",me,tolmp.c_str());
+    // sleep (1);
     
     tolmp = "set atom $(v_vidtt) x ";
     ss << EVpXpos;   tolmp += ss.str(); ss.str(""); ss.clear(); tolmp += " y ";
     ss << EVpYpos;   tolmp += ss.str(); ss.str(""); ss.clear(); tolmp += " z ";
     ss << EVpZpos;   tolmp += ss.str(); ss.str(""); ss.clear();
+    //fprintf(screen,"\n PROC %d : \"%s\"\n",me,tolmp.c_str());
     lammpsIO->lammpsdo(tolmp);
-    
-    tolmp = "set atom $(v_vidtt) diameter ";
-    ss << EVpDIAM;   tolmp += ss.str(); ss.str(""); ss.clear();
+
+
+    // std::ostringstream typ;
+    // typ << fix->fKMCptypeTRY[pos];
+    // tolmp = "group gtemp type "+typ.str();
+    // //tolmp = "group gtemp type 4";
+    // lammpsIO->lammpsdo(tolmp);
+    // tolmp = "displace_atoms gtemp random 1E-8 1E-8 1E-8 12345 units box";
+    // lammpsIO->lammpsdo(tolmp);
+
+    tolmp = "group gtemp type "; 
+    ss << EVpTYPE;   tolmp += ss.str(); ss.str(""); ss.clear();
     lammpsIO->lammpsdo(tolmp);
+    tolmp = "displace_atoms gtemp random 1E-20 1E-20 1E-20 12345 units box";
+    lammpsIO->lammpsdo(tolmp);
+    lammpsIO->lammpsdo("group gtemp delete");
+
+    // fprintf(screen,"DEBUG 2: PROC %d : \"%s\"\n",me,tolmp.c_str());
+    // sleep (1);    
     lammpsIO->lammpsdo("run 0");
+
+    // fprintf(screen,"DEBUG 3: PROC %d : \"%s\"\n",me,tolmp.c_str());
+    // sleep (1);
+    
+    // tolmp = "set atom $(v_vidtt) diameter ";
+    // ss << EVpDIAM;   tolmp += ss.str(); ss.str(""); ss.clear();
+    // //fprintf(screen,"\n PROC %d : \"%s\"\n",me,tolmp.c_str());
+    // lammpsIO->lammpsdo(tolmp);
+    // lammpsIO->lammpsdo("run 0");
+
+    
 
     tolmp = "undump tdID";     // removing temporary dump
     lammpsIO->lammpsdo(tolmp);
     
     
-    lammpsIO->lammpsdo("unfix fix_dep_temp");
+    //lammpsIO->lammpsdo("unfix fix_dep_temp");
     lammpsIO->lammpsdo("variable vidtt delete");
     
     lammpsIO->lammpsdo(lammpsIO->lmpThSt);    //restore original lammps thermo
@@ -2600,6 +2637,7 @@ void Fix_nucleate::execute(int pID, int EVafixID, int EVpTYPE,double EVpDIAM,dou
     lammpsIO->lammpsdo("region tempregg delete");
     lammpsIO->lammpsdo("group gtempin clear");
     lammpsIO->lammpsdo("group gtempin delete");
+
    
     //fprintf(screen,"\n PROC %d restoring lammps thermo command \"%s\"\n",me,lammpsIO->lmpThSt.c_str());
     //   sleep(2);
