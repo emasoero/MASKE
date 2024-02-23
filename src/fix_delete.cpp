@@ -27,6 +27,12 @@ Fix_delete::Fix_delete(MASKE *maske) : Pointers(maske)
     MPI_Comm_rank(MPI_COMM_WORLD, &me);
     EVpID = -1;
     SAR = nullptr;
+    Dsub = nullptr;
+    CFuns = nullptr;
+    GMuns = nullptr;
+    fGMuns = nullptr;
+    IDaruns = nullptr;
+    Raruns = nullptr;
     //Ntrans = 0;
     //Ntsc=0;
 }
@@ -92,7 +98,8 @@ void Fix_delete::sample(int pos)
         output->toplog(msg);
     }
     
-    
+    // fprintf(screen,"\n DEBUG 1: PROC %d \n",me);
+    // sleep (1);
     
     
     
@@ -157,6 +164,8 @@ void Fix_delete::sample(int pos)
         fprintf(screen,"%s",msg.c_str());
         //error->errsimple(msg);
     }
+
+    
     
     natoms = static_cast<int> (lammpsIO->lmp->atom->natoms); // total number of atoms in lammps, all groups all fixes)
     nlocal = static_cast<int> (lammpsIO->lmp->atom->nlocal); // number of atoms in current processore, all types all fixes)
@@ -186,9 +195,14 @@ void Fix_delete::sample(int pos)
             locLMP = ((double **) lammps_extract_compute(lammpsIO->lmp,(char *) "tempPAT",2,2));
             // DIST is a local compute (style = 2 in lammps library) of vector type (type = 1 in lammps library)
             aDIST = ((double *) lammps_extract_compute(lammpsIO->lmp,(char *) "tempDIST",2,1));
+            #ifdef MASKE_WITH_NUFEB 
+            nlocR = *((int*)lammps_extract_compute(lammpsIO->lmp,(char *) "tempPAT",2,0));
+            #else
             nlocR = *((int*)lammps_extract_compute(lammpsIO->lmp,(char *) "tempPAT",2,4));
+            #endif
         }
     }
+    
     
     
     /*if (me==3){
@@ -232,6 +246,7 @@ void Fix_delete::sample(int pos)
             }
         }
         
+        
         /*output->toplog("\nALL IDs FROM LAMMPS \npos aiD atype aR aE");
         for (int i=0; i<natoms; i++){
             ss << i;        msg = ss.str()+" ";   ss.str("");   ss.clear();
@@ -265,6 +280,7 @@ void Fix_delete::sample(int pos)
                 }
             }
         }
+        
        
         
         
@@ -283,6 +299,7 @@ void Fix_delete::sample(int pos)
             lammpsIO->lammpsdo(tolmp);
         }
     }
+    
     
     // END OF READING FROM LAMMPS
     // -----------------------------------------------------------------------------
@@ -312,6 +329,8 @@ void Fix_delete::sample(int pos)
             i++;
         }
     }
+
+    
 
     tIDarr = new int[naP];     // copying local ID vector to array in order to communicate it to submaster later on
     for (int i =0; i<naP; i++) tIDarr[i] = tID[i];
@@ -383,6 +402,7 @@ void Fix_delete::sample(int pos)
             }
         }
     }
+    
     
     
     // END OF RECORDING LAMMPS VALUES INTO VECTORS
@@ -474,27 +494,62 @@ void Fix_delete::sample(int pos)
     if(strcmp((chem->mechstyle[mid]).c_str(),"micro")==0){
         if(strcmp((chem->mechpar[mid][0]).c_str(),"pair")==0){
             
+            
             if (!(SAR == nullptr)){
                 free(SAR[0]);
                 free(SAR);
                 SAR = nullptr;
             }
+            
             delete [] tCF;
             delete [] tGM;
+
+            
             
             delete [] nlocR_each;
             delete [] SARpos;
-            delete [] Dsub;
-            delete [] CFuns;
-            delete [] GMuns;
-            delete [] fGMuns;
+
+            
+
+            if (!(Dsub==nullptr)){
+                delete [] Dsub;
+                Dsub=nullptr;
+            }
+            if (!(CFuns==nullptr)){
+                delete [] CFuns;
+                CFuns=nullptr;
+            }
+            if (!(GMuns==nullptr)){
+                delete [] GMuns;
+                GMuns=nullptr;
+            }
+            if (!(fGMuns==nullptr)){
+                delete [] fGMuns;
+                fGMuns=nullptr;
+            }
+            if (!(IDaruns==nullptr)){
+                delete [] IDaruns;
+                IDaruns=nullptr;
+            }
+            if (!(Raruns==nullptr)){
+                delete [] Raruns;
+                Raruns=nullptr;
+            }
+            // delete [] Dsub;
+            // delete [] CFuns;
+            // delete [] GMuns;
+            // delete [] fGMuns;
+            
             
             delete [] IDar;
             delete [] Rar;
             delete [] nIDar_each;
             delete [] IDarpos;
-            delete [] IDaruns;
-            delete [] Raruns;
+
+            // delete [] IDaruns;
+            // delete [] Raruns;
+            
+            
 
         }
     }

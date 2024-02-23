@@ -25,6 +25,14 @@ Fix_nucleate::Fix_nucleate(MASKE *maske) : Pointers(maske)
     EVpDIAM = -1.;
     EVpTYPE = -1;
 
+    SAR = nullptr;
+    Dsub = nullptr;
+    CFuns = nullptr;
+    GMuns = nullptr;
+    fGMuns = nullptr;
+    IDaruns = nullptr;
+    Raruns = nullptr;
+
     //nmax = 0;
     //nlocal0 = 0;
     //x0 = NULL;
@@ -431,7 +439,11 @@ void Fix_nucleate::sample(int pos)
             locLMP = ((double **) lammps_extract_compute(lammpsIO->lmp,(char *) "tempPAT",2,2));
             // DIST is a local compute (style = 2 in lammps library) of vector type (type = 1 in lammps library)
             aDIST = ((double *) lammps_extract_compute(lammpsIO->lmp,(char *) "tempDIST",2,1));
+            #ifdef MASKE_WITH_NUFEB 
+            nlocR = *((int*)lammps_extract_compute(lammpsIO->lmp,(char *) "tempPAT",2,0));
+            #else
             nlocR = *((int*)lammps_extract_compute(lammpsIO->lmp,(char *) "tempPAT",2,4));
+            #endif
         }
     }
 
@@ -751,17 +763,44 @@ void Fix_nucleate::sample(int pos)
             
             delete [] nlocR_each;
             delete [] SARpos;
-            delete [] Dsub;
-            delete [] CFuns;
-            delete [] GMuns;
-            delete [] fGMuns;
+
+            if (!(Dsub==nullptr)){
+                delete [] Dsub;
+                Dsub=nullptr;
+            }
+            if (!(CFuns==nullptr)){
+                delete [] CFuns;
+                CFuns=nullptr;
+            }
+            if (!(GMuns==nullptr)){
+                delete [] GMuns;
+                GMuns=nullptr;
+            }
+            if (!(fGMuns==nullptr)){
+                delete [] fGMuns;
+                fGMuns=nullptr;
+            }
+            if (!(IDaruns==nullptr)){
+                delete [] IDaruns;
+                IDaruns=nullptr;
+            }
+            if (!(Raruns==nullptr)){
+                delete [] Raruns;
+                Raruns=nullptr;
+            }
+
+
+            // delete [] Dsub;
+            // delete [] CFuns;
+            // delete [] GMuns;
+            // delete [] fGMuns;
             
             delete [] IDar;
             delete [] Rar;
             delete [] nIDar_each;
             delete [] IDarpos;
-            delete [] IDaruns;
-            delete [] Raruns;
+            // delete [] IDaruns;
+            // delete [] Raruns;
         }
     }
 
@@ -2678,7 +2717,7 @@ void Fix_nucleate::execute(int pID, int EVafixID, int EVpTYPE,double EVpDIAM,dou
     tolmp = "variable zrtemp equal zhi-0.1*(zhi-zlo)";
     lammpsIO->lammpsdo(tolmp);
     
-    tolmp = "region tempregg block $(v_xltemp) $(v_xrtemp) $(v_yltemp) $(v_yrtemp) $(v_zltemp) $(v_zrtemp)";
+    tolmp = "region tempregg block $(v_xltemp) $(v_xrtemp) $(v_yltemp) $(v_yrtemp) $(v_zltemp) $(v_zrtemp) units box";
     lammpsIO->lammpsdo(tolmp);
     
     tolmp = "group gtempin empty";
