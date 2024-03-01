@@ -110,6 +110,14 @@ void Krun::proceed(double deltat)
             output->dump_first[i]=false;  // from now on, output->writedump will append to existing dumps
         }   
     
+    // write initial entries in thermo and dump
+    output->writethermo();
+    for (int i = 0; i<output->dumpID.size();i++){
+        output->writedump(i);
+        output->dump_first[i]=false;  // from now on, output->writedump will append to existing dumps
+    }
+    
+    
     
     //**********************************
     // FROM NOW ON, MASKE'S TIME WILL ADVANCE
@@ -118,11 +126,11 @@ void Krun::proceed(double deltat)
         
         msk->step = msk->step+1;
         
-      
         
-    
+        if (me==MASTER) fprintf(screen,"\n\n\n================================================================ \nKrun step %d \nMASKE's current tempo is %e \nThis Krun started at tempo = %e and will end at tenpo = %e\n\n",msk->step,msk->tempo,start_time,end_time);
         
-        if (me==MASTER) fprintf(screen,"\n\n\n================================================================ \nKrun step %d \nMASKE's current tempo is %e \nThis Krun started at tempo = %e and will end at tempo = %e\n\n",msk->step,msk->tempo,start_time,end_time);
+        MPI_Barrier(MPI_COMM_WORLD);
+   ================================================================ \nKrun step %d \nMASKE's current tempo is %e \nThis Krun started at tempo = %e and will end at tempo = %e\n\n",msk->step,msk->tempo,start_time,end_time);
         
         // screen output to debug
         sleep(me);
@@ -524,6 +532,8 @@ void Krun::proceed(double deltat)
         //--------------------------------------------------------
         
         
+        
+        // ENDOFRUN TO BE CHECKED HERE. IF FLAG POSITIVE, THEN SOME STEPS BELOW SHOULD BE SKIPPED, KMC RATES ERASED (EXCEPT IF FLAG TO ENFORCE KMC AT ENDOFRUN), AND CONT PROC ALL BROUGHT TO ENDOFRUN TIME
         
         
         

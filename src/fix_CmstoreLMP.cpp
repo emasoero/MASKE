@@ -58,14 +58,14 @@ double Fix_CmstoreLMP::getDT(int pos)
 void Fix_CmstoreLMP::execute(int pos, int subcomm)
 {
     int gpos;   // global position of local fix CmstoreLMP in fix.cpp, vectors "aC..."
-    int root;   // rank of submaster of subcomm managing this Cont fix (the only one knowing gpos..)
+    //int root;   // rank of submaster of subcomm managing this Cont fix (the only one knowing gpos..)
     
     if (universe->color == subcomm && universe->key == 0) {
-        root = me;
+        //root = me;
         gpos = fix->CglobID[pos];
     }
     
-    MPI_Bcast(&gpos, 1, MPI_INT, root, MPI_COMM_WORLD);
+    MPI_Bcast(&gpos, 1, MPI_INT, universe->subMS[subcomm], MPI_COMM_WORLD);
     
     fprintf(screen,"PROC %d: from broadcast, global ID of fix mstoreLMP to execute is %d\n",me,gpos);
     
