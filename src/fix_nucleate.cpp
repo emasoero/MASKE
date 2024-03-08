@@ -1843,7 +1843,7 @@ void Fix_nucleate::comp_rates_micro(int pos)
         
         double ri=0. , DTi = 0., DTtot = 0.;  // rate of each reaction in sequence, associated time increement and total cumulative time increment
         
-        
+        //=============================================MICRO LAYER-BY-LAYER SLOW RUN (START)===========================================================
         /*for (int j=0; j<nrL-1; j++){
             
             std::string msg;
@@ -1970,6 +1970,9 @@ void Fix_nucleate::comp_rates_micro(int pos)
                 output->toplog(msg);
             }
         }*/
+        //=============================================MICRO LAYER-BY-LAYER SLOW RUN (END)===========================================================
+
+        //=====================================================MICRO FAST RUN (START)==================================================================
 
         // compute rate of reaction sequence
                 for (int k=0; k< nrt; k++) { //all the reaction in series in chain seq.
@@ -2081,6 +2084,8 @@ void Fix_nucleate::comp_rates_micro(int pos)
                 }
         
         DTtot*=(double)((nrL-1)*nrS);
+
+        //=====================================================MICRO FAST RUN (END)==================================================================
         
         
         // Add to Dtot the contribution from the last layer
@@ -2090,6 +2095,7 @@ void Fix_nucleate::comp_rates_micro(int pos)
             std::ostringstream ss;    ss << i;   msg = msg+ss.str()+"; Last layer; ";
         }
         
+        //=============================================MICRO LAYER-BY-LAYER SLOW RUN (START)===========================================================
         /*for (int jj=0; jj<nrS; jj++){
             
             if (msk->wplog) {
@@ -2202,6 +2208,9 @@ void Fix_nucleate::comp_rates_micro(int pos)
             msg+="\n";
             output->toplog(msg);
         }*/
+        //=============================================MICRO LAYER-BY-LAYER SLOW RUN (END)===========================================================
+        
+        //=====================================================MICRO FAST RUN (START)==================================================================
         
         // compute rate of reaction sequence
             for (int k=0; k< nrt; k++) { //all the reaction in series in chain seq.
@@ -2307,6 +2316,8 @@ void Fix_nucleate::comp_rates_micro(int pos)
             msg+="\n";
             output->toplog(msg);
             }
+
+        //=====================================================MICRO FAST RUN (END)==================================================================
         
         if (flag_bulk) rate_each[i] = 0.;
         else rate_each[i] = 1./DTtot;

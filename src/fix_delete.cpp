@@ -1609,25 +1609,27 @@ void Fix_delete::comp_rates_micro(int pos)
         // compute rates for all reaction units (multi-step if a chain), for all layers, for all surface stpes
         
         double ri=0. , DTi = 0., DTtot = 0.;  // rate of each reaction in sequence, associated time increement and total cumulative time increment
+
+        //=============================================MICRO LAYER-BY-LAYER SLOW RUN (START)===========================================================
         
         
         /*for (int j=0; j<nrL-1; j++){
 
             std::string msg;
-            /*if (msk->wplog) {
+            if (msk->wplog) {
                 msg += "PARTICLE ";
                 std::ostringstream ss;    ss << i;   msg = msg+ss.str()+"; Layer ";
                 ss.str("");     ss.clear();   ss << j+1;  msg = msg+ss.str()+" out of ";
                 ss.str("");     ss.clear();   ss << nrL;  msg = msg+ss.str()+"; ";
-            }*/
+            }
             
             for (int jj=0; jj<nrS; jj++){
                 
-                /*if (msk->wplog) {
+                if (msk->wplog) {
                     msg += "On-surface unit number ";
                     std::ostringstream ss;    ss << jj+1;   msg = msg+ss.str()+" out of ";
                     ss.str("");     ss.clear();   ss << nrS;  msg = msg+ss.str()+"; ";
-                }*/
+                }
                 
                 // compute rate of reaction sequence
                 for (int k=0; k< nrt; k++) { //all the reaction in series in chain seq.
@@ -1643,14 +1645,14 @@ void Fix_delete::comp_rates_micro(int pos)
                     double gammax = chem -> compgammax(rxid);
                     double KT = msk->kB * solution->Temp;
                     
-                    /*if (msk->wplog) {
+                    if (msk->wplog) {
                         std::ostringstream ss;
                         msg += "; DG* ";    ss << DGx;   msg += ss.str();    ss.str(""); ss.clear();
                         msg += "; c* ";    ss << cx;   msg += ss.str();    ss.str(""); ss.clear();
                         msg += "; gamma* ";    ss << gammax;   msg += ss.str();    ss.str(""); ss.clear();
                         msg += "; KB ";    ss << (msk->kB);   msg += ss.str();    ss.str(""); ss.clear();
                         msg += "; T ";    ss << (solution->Temp);   msg += ss.str();    ss.str(""); ss.clear();
-                    }*/
+                    }
                     
                     double kappa = 1.;       // transmission coefficient
                     
@@ -1673,13 +1675,13 @@ void Fix_delete::comp_rates_micro(int pos)
                     
                     double r0 = kappa * KT / msk->hpl / gammax * cx * exp(-DGx / KT);
                     
-                    /*if (msk->wplog) {
+                    if (msk->wplog) {
                         std::ostringstream ss;
                         msg += "; r0 ";    ss << r0;   msg += ss.str();    ss.str(""); ss.clear();
                         msg += "; Qreac ";    ss << Qreac;   msg += ss.str();    ss.str(""); ss.clear();
                         msg += "; DUi ";    ss << DUi;   msg += ss.str();    ss.str(""); ss.clear();
                         msg += "; Vti ";    ss << Vt;   msg += ss.str();    ss.str(""); ss.clear();
-                    }*/
+                    }
                     
                     r0 = r0*pow(Vt,dim/3.);
                     
@@ -1697,12 +1699,12 @@ void Fix_delete::comp_rates_micro(int pos)
                         
                         ri -= r0 * Qprod / chem->Keq[rxid] * exp(ki * DUi / KT );
                         
-                        /*if (msk->wplog) {
+                        if (msk->wplog) {
                             std::ostringstream ss;
                             msg += "; ri ";    ss << ri;   msg += ss.str();    ss.str(""); ss.clear();
                             msg += "; Qprod ";    ss << Qprod;   msg += ss.str();    ss.str(""); ss.clear();
                             msg += "; Keq ";    ss << chem->Keq[rxid] ;   msg += ss.str();    ss.str(""); ss.clear();
-                        }*/
+                        }
                         
                     }
                     
@@ -1711,19 +1713,23 @@ void Fix_delete::comp_rates_micro(int pos)
                     DTi = 1./ri;
                     DTtot += DTi;
                     
-                    /*if (msk->wplog) {
+                    if (msk->wplog) {
                         msg += ", DT ";
                         std::ostringstream ss;    ss << DTi;   msg += ss.str(); ss.str("");   ss.clear();
                         msg += ", DTtot ";
                         ss << DTtot;   msg += ss.str();
-                    }*/
+                    }
                 }
             }
-            /*if (msk->wplog){
+            if (msk->wplog){
                 msg+="\n";
                 output->toplog(msg);
             }
         }*/
+
+        //=============================================MICRO LAYER-BY-LAYER SLOW RUN (END)===========================================================
+
+        //=====================================================MICRO FAST RUN (START)================================================================
         
         // compute rate of reaction sequence
                 for (int k=0; k< nrt; k++) { //all the reaction in series in chain seq.
@@ -1823,6 +1829,8 @@ void Fix_delete::comp_rates_micro(int pos)
                 }
 
                 DTtot*=(double)((nrL-1)*nrS);
+
+        //=======================================================MICRO FAST RUN (END)=================================================================
         
         
         // Add to Dtot the contribution from the last layer
@@ -1831,7 +1839,7 @@ void Fix_delete::comp_rates_micro(int pos)
             msg = "PARTICLE ";
             std::ostringstream ss;    ss << i;   msg = msg+ss.str()+"; Last layer; ";
         }
-        
+        //=============================================MICRO LAYER-BY-LAYER SLOW RUN (START)===========================================================
         /*for (int jj=0; jj<nrS; jj++){
             
             if (msk->wplog) {
@@ -1937,6 +1945,10 @@ void Fix_delete::comp_rates_micro(int pos)
                 }
             }
         }*/
+        //=============================================MICRO LAYER-BY-LAYER SLOW RUN (END)===========================================================
+        
+        
+        //=====================================================MICRO FAST RUN (START)================================================================
 
         // compute rate of reaction sequence
             for (int k=0; k< nrt; k++) { //all the reaction in series in chain seq.
@@ -2039,6 +2051,8 @@ void Fix_delete::comp_rates_micro(int pos)
             msg+="\n";
             output->toplog(msg);
         }
+
+        //=====================================================MICRO FAST RUN (END)================================================================
         
         
         
