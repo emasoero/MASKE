@@ -1383,7 +1383,7 @@ void Fix_nucleate::execute(int pID, int EVafixID, int EVpTYPE,double EVpDIAM,dou
     tolmp = "variable zrtemp equal zhi-0.1*(zhi-zlo)";
     lammpsIO->lammpsdo(tolmp);
     
-    tolmp = "region tempregg block $(v_xltemp) $(v_xrtemp) $(v_yltemp) $(v_yrtemp) $(v_zltemp) $(v_zrtemp)";
+    tolmp = "region tempregg block $(v_xltemp) $(v_xrtemp) $(v_yltemp) $(v_yrtemp) $(v_zltemp) $(v_zrtemp) units box";
     lammpsIO->lammpsdo(tolmp);
     
     tolmp = "group gtempin empty";

@@ -118,7 +118,7 @@ void Krun::proceed(double deltat)
         msk->step = msk->step+1;
         
         
-        if (me==MASTER) fprintf(screen,"\n\n\n================================================================ \nKrun step %d \nMASKE's current tempo is %e \nThis Krun started at tempo = %e and will end at tenpo = %e\n\n",msk->step,msk->tempo,start_time,end_time);
+        if (me==MASTER) fprintf(screen,"\n\n\n================================================================ \nKrun step %d \nMASKE's current tempo is %e \nThis Krun started at tempo = %e and will end at tempo = %e\n\n",msk->step,msk->tempo,start_time,end_time);
         
         // screen output to debug
         //sleep(me);
