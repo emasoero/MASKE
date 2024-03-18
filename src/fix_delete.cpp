@@ -1380,6 +1380,14 @@ void Fix_delete::comp_rates_allpar(int pos)
                 if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
                     r0 = kappa * KT / msk->hpl / gammax * cx * exp(-DGx / KT);
                 }
+                else if(strcmp((chem->mechrate[mid]).c_str(),"SiCVD")==0){
+                    std::string msg = "ERROR: rate style SiCVD cannot be used to sample deletion. Check that the mechanism specified in fix_delete does not invoke SiCVD in the chemDB file \n";
+                    error->errsimple(msg);
+                }
+                else {
+                    std::string msg = "ERROR: unknown rate style \""+ chem->mechrate[mid] +"\" specified for mechanism \""+chem->mechnames[mid]+"\" \n";
+                    error->errsimple(msg);
+                }
                 
                 
                 if (msk->wplog) {
@@ -1398,11 +1406,17 @@ void Fix_delete::comp_rates_allpar(int pos)
                // double fa = 1.;
                 //if (dim==2 || dim==1) fa=3.;
                 if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
-                    
                     r0 = r0*pow(Vt,dim/3.);
-                    
                     // Rate equation as per TST (see notes_on_TST.pdf by Masoero, 2019, where ki=0 was assumed as per classical TST)
                     ri = r0 * Qreac * exp((1.-ki)*(-Sen * DSi - DUi)/KT ) ;
+                }
+                else if(strcmp((chem->mechrate[mid]).c_str(),"SiCVD")==0){
+                    std::string msg = "ERROR: rate style SiCVD cannot be used to sample deletion. Check that the mechanism specified in fix_delete does not invoke SiCVD in the chemDB file \n";
+                    error->errsimple(msg);
+                }
+                else {
+                    std::string msg = "ERROR: unknown rate style \""+ chem->mechrate[mid] +"\" specified for mechanism \""+chem->mechnames[mid]+"\" \n";
+                    error->errsimple(msg);
                 }
                 
                 
@@ -1416,6 +1430,15 @@ void Fix_delete::comp_rates_allpar(int pos)
                     if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
                         ri -= r0 * Qprod / chem->Keq[rxid]     * exp(ki*(Sen * DSi + DUi)/KT );
                     }
+                    else if(strcmp((chem->mechrate[mid]).c_str(),"SiCVD")==0){
+                        std::string msg = "ERROR: rate style SiCVD cannot be used to sample deletion. Check that the mechanism specified in fix_delete does not invoke SiCVD in the chemDB file \n";
+                        error->errsimple(msg);
+                    }
+                    else {
+                        std::string msg = "ERROR: unknown rate style \""+ chem->mechrate[mid] +"\" specified for mechanism \""+chem->mechnames[mid]+"\" \n";
+                        error->errsimple(msg);
+                    }
+                    
                     
                     if (msk->wplog) {
                         std::ostringstream ss;
@@ -1737,6 +1760,14 @@ void Fix_delete::comp_rates_micro(int pos)
             if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
                 r0 = kappa * KT / msk->hpl / gammax * cx * exp(-DGx / KT);
             }
+            else if(strcmp((chem->mechrate[mid]).c_str(),"SiCVD")==0){
+                std::string msg = "ERROR: rate style SiCVD cannot be used to sample deletion. Check that the mechanism specified in fix_delete does not invoke SiCVD in the chemDB file \n";
+                error->errsimple(msg);
+            }
+            else {
+                std::string msg = "ERROR: unknown rate style \""+ chem->mechrate[mid] +"\" specified for mechanism \""+chem->mechnames[mid]+"\" \n";
+                error->errsimple(msg);
+            }
              
             if (msk->wplog) {
                 std::ostringstream ss;
@@ -1750,9 +1781,16 @@ void Fix_delete::comp_rates_micro(int pos)
             
             if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
                 r0 = r0*pow(Vt,dim/3.);
-                
                 // Forward rate equation
                 ri = r0 * Qreac * exp((1.-ki)*(- DUi)/KT ) ;
+            }
+            else if(strcmp((chem->mechrate[mid]).c_str(),"SiCVD")==0){
+                std::string msg = "ERROR: rate style SiCVD cannot be used to sample deletion. Check that the mechanism specified in fix_delete does not invoke SiCVD in the chemDB file \n";
+                error->errsimple(msg);
+            }
+            else {
+                std::string msg = "ERROR: unknown rate style \""+ chem->mechrate[mid] +"\" specified for mechanism \""+chem->mechnames[mid]+"\" \n";
+                error->errsimple(msg);
             }
                     
                     
@@ -1764,6 +1802,14 @@ void Fix_delete::comp_rates_micro(int pos)
                 
                 if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
                     ri -= r0 * Qprod / chem->Keq[rxid] * exp(ki * DUi / KT );
+                }
+                else if(strcmp((chem->mechrate[mid]).c_str(),"SiCVD")==0){
+                    std::string msg = "ERROR: rate style SiCVD cannot be used to sample deletion. Check that the mechanism specified in fix_delete does not invoke SiCVD in the chemDB file \n";
+                    error->errsimple(msg);
+                }
+                else {
+                    std::string msg = "ERROR: unknown rate style \""+ chem->mechrate[mid] +"\" specified for mechanism \""+chem->mechnames[mid]+"\" \n";
+                    error->errsimple(msg);
                 }
                 
                 if (msk->wplog) {
@@ -1956,6 +2002,14 @@ void Fix_delete::comp_rates_micro(int pos)
             if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
                  r0 = kappa * KT / msk->hpl / gammax * cx * exp(-DGx / KT);
             }
+            else if(strcmp((chem->mechrate[mid]).c_str(),"SiCVD")==0){
+                std::string msg = "ERROR: rate style SiCVD cannot be used to sample deletion. Check that the mechanism specified in fix_delete does not invoke SiCVD in the chemDB file \n";
+                error->errsimple(msg);
+            }
+            else {
+                std::string msg = "ERROR: unknown rate style \""+ chem->mechrate[mid] +"\" specified for mechanism \""+chem->mechnames[mid]+"\" \n";
+                error->errsimple(msg);
+            }
                 
             if (msk->wplog) {
                 std::ostringstream ss;
@@ -1967,6 +2021,14 @@ void Fix_delete::comp_rates_micro(int pos)
             
             if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
                 r0 = r0*pow(Vt,dim/3.);
+            }
+            else if(strcmp((chem->mechrate[mid]).c_str(),"SiCVD")==0){
+                std::string msg = "ERROR: rate style SiCVD cannot be used to sample deletion. Check that the mechanism specified in fix_delete does not invoke SiCVD in the chemDB file \n";
+                error->errsimple(msg);
+            }
+            else {
+                std::string msg = "ERROR: unknown rate style \""+ chem->mechrate[mid] +"\" specified for mechanism \""+chem->mechnames[mid]+"\" \n";
+                error->errsimple(msg);
             }
             
             double ki = (chem -> ki[rxid]);
@@ -1983,6 +2045,15 @@ void Fix_delete::comp_rates_micro(int pos)
             if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
                 ri = r0 * Qreac * exp((1.-ki)*( - DUi - tGM[i] * uk_area )/KT ) ;
             }
+            else if(strcmp((chem->mechrate[mid]).c_str(),"SiCVD")==0){
+                std::string msg = "ERROR: rate style SiCVD cannot be used to sample deletion. Check that the mechanism specified in fix_delete does not invoke SiCVD in the chemDB file \n";
+                error->errsimple(msg);
+            }
+            else {
+                std::string msg = "ERROR: unknown rate style \""+ chem->mechrate[mid] +"\" specified for mechanism \""+chem->mechnames[mid]+"\" \n";
+                error->errsimple(msg);
+            }
+            
                 
                 
                 
@@ -1994,6 +2065,14 @@ void Fix_delete::comp_rates_micro(int pos)
                 
                 if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
                     ri -= r0 * Qprod / chem->Keq[rxid] * exp(ki * ( DUi + tGM[i] * uk_area)/ KT );
+                }
+                else if(strcmp((chem->mechrate[mid]).c_str(),"SiCVD")==0){
+                    std::string msg = "ERROR: rate style SiCVD cannot be used to sample deletion. Check that the mechanism specified in fix_delete does not invoke SiCVD in the chemDB file \n";
+                    error->errsimple(msg);
+                }
+                else {
+                    std::string msg = "ERROR: unknown rate style \""+ chem->mechrate[mid] +"\" specified for mechanism \""+chem->mechnames[mid]+"\" \n";
+                    error->errsimple(msg);
                 }
                 
                 

@@ -1657,8 +1657,12 @@ void Fix_nucleate::comp_rates_allpar(int pos)
                 }
                 
                 double r0 = -1.;
-                if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
+                if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0 || strcmp((chem->mechrate[mid]).c_str(),"SiCVD")==0){
                     r0 = kappa * KT / msk->hpl / gammax * cx * exp(-DGx / KT);
+                }
+                else {
+                    std::string msg = "ERROR: unknown rate style \""+ chem->mechrate[mid] +"\" specified for mechanism \""+chem->mechnames[mid]+"\" \n";
+                    error->errsimple(msg);
                 }
                 
                 if (msk->wplog) {
@@ -1681,6 +1685,14 @@ void Fix_nucleate::comp_rates_allpar(int pos)
                     // Rate equation as per TST (see notes_on_TST.pdf by Masoero, 2019)
                     ri = r0 * Qreac     *exp(ki*(-Sen * DSi - DUi)/KT) ;
                 }
+                else if(strcmp((chem->mechrate[mid]).c_str(),"SiCVD")==0){
+                    r0 = r0*pow(Vt,(dim/3. - 1.))*DV;
+                    // Rate equation for chemical vapour deposition (CVD) of metal Silicon
+                    // The ki prefactor plays exactly the same role as in TST, i.e. it weights the contribution of excess enthalpy to the precipiation rate
+                    // The last function of DUi/Ukink is a temperature-independent sites density term to differentiate between crystal facets
+                    ri = r0 * Qreac * exp(ki*(- DUi + chem->rx_Uk[rxid])/KT) * (0.*DUi/chem->rx_Uk[rxid]);
+                }
+                
                 
                 if (msk->wplog) {
                     msg += ", ri ";
@@ -1705,6 +1717,7 @@ void Fix_nucleate::comp_rates_allpar(int pos)
                     if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
                         ri -= r0 * Qprod / chem->Keq[rxid] * exp((1.-ki)*(Sen * DSi + DUi)/KT ) ;
                     }
+                    // NB: nothing implemented for SiCVD rate style, because its backward rate (detachment) is assumed to be zero
                     
                 }
                 
@@ -2029,9 +2042,14 @@ void Fix_nucleate::comp_rates_micro(int pos)
             
             
             double r0 = -1.;
-            if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
+            if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0 || strcmp((chem->mechrate[mid]).c_str(),"SiCVD")==0){
                 r0 = kappa * KT / msk->hpl / gammax * cx * exp(-DGx / KT);
             }
+            else {
+                std::string msg = "ERROR: unknown rate style \""+ chem->mechrate[mid] +"\" specified for mechanism \""+chem->mechnames[mid]+"\" \n";
+                error->errsimple(msg);
+            }
+            
             
             if (msk->wplog) {
                 std::ostringstream ss;
@@ -2048,6 +2066,10 @@ void Fix_nucleate::comp_rates_micro(int pos)
                 // Forward rate equation
                 ri = r0 * Qreac * exp(ki * (- DUi)/KT ) ;
             }
+            else if(strcmp((chem->mechrate[mid]).c_str(),"SiCVD")==0){
+                std::string msg = "ERROR: SiCVD rate style invoked by mechanism \""+chem->mechnames[mid]+"\" has not been implemented yet for the micro mechanism\n";
+                error->errsimple(msg);
+            }
 
             
             // if net rate is requested by user in chemDB, then add rate backward
@@ -2060,6 +2082,7 @@ void Fix_nucleate::comp_rates_micro(int pos)
                 if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
                     ri -= r0 * Qprod / chem->Keq[rxid] * exp((1.-ki)*(DUi)/KT ) ;
                 }
+                //N.B. Nothing needed for SiCVD rate style because it assumes zero backward (detachement) rate
                 
                 if (msk->wplog) {
                     std::ostringstream ss;
@@ -2213,6 +2236,7 @@ void Fix_nucleate::comp_rates_micro(int pos)
             output->toplog(msg);
         }*/
         
+        // ADD contributio of outer layer on particle surface, which may be in contact with heterogenous phases
         // compute rate of reaction sequence
         for (int k=0; k< nrt; k++) { //all the reaction in series in chain seq.
                 
@@ -2262,6 +2286,10 @@ void Fix_nucleate::comp_rates_micro(int pos)
             if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
                 r0 = kappa * KT / msk->hpl / gammax * cx * exp(-DGx / KT);
             }
+            else if(strcmp((chem->mechrate[mid]).c_str(),"SiCVD")==0){
+                std::string msg = "ERROR: SiCVD rate style invoked by mechanism \""+chem->mechnames[mid]+"\" has not been implemented yet for the micro mechanism\n";
+                error->errsimple(msg);
+            }
             
             if (msk->wplog) {
                 std::ostringstream ss;
@@ -2300,6 +2328,7 @@ void Fix_nucleate::comp_rates_micro(int pos)
                 if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
                     ri -= r0 * Qprod / chem->Keq[rxid] * exp((1.-ki) * ( DUi + tGM[i] * uk_area)/ KT );
                 }
+                //N.B. nothing to be added for SiCVD rate style, as detachement rate is assumed to be zero
                 
                 if (msk->wplog) {
                     std::ostringstream ss;

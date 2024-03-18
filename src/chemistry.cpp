@@ -239,6 +239,10 @@ void Chemistry::reax_modify()
             ss >> rx_Fk[rxID];
             if (me==MASTER) fprintf(screen," Added property to reaction %s: Fk = %f\n",rxnames[rxID].c_str(),rx_Fk[rxID]);
         }
+        else if (strcmp(newname.c_str(), "Uk") == 0)  {
+            ss >> rx_Uk[rxID];
+            if (me==MASTER) fprintf(screen," Added property to reaction %s: Uk = %f\n",rxnames[rxID].c_str(),rx_Uk[rxID]);
+        }
         else {
             std::string msg = "\nERROR: Unknown reaction property invoked by reaction_modify command for reaction  "+rxnames[rxID]+": "+newname+"\n\n";
             error->errsimple(msg);
@@ -592,6 +596,7 @@ void Chemistry::addreax()
 
         rx_Fk.push_back(1.);     // Initialising kink fraction for new reaction. This can be modified later via the reaction_modify input command
         
+        rx_Uk.push_back(0.);     // Default energy of reaction in kink position in zero
         
         // print read simple reaction to screen to debug
         if (me==MASTER) {

@@ -64,6 +64,7 @@ namespace MASKE_NS {
         std::vector<double> rx_ar_min, rx_ar_max, rx_ar_avg, rx_ar_avv, rx_ar_cum;    // change of foreground length in radial direction due to reaction: min, max, average (sum/N), volume-based average (sumV^1/3), cumulative (sum_ar)
         std::vector<double> rx_ac_min, rx_ac_max, rx_ac_avg, rx_ac_avv, rx_ac_cum;    // same as above, in circumferential direaction
         std::vector<double> rx_Fk;    // Fraction of kinks associated to the reaction (this equals the physical fraction of kink if the reaction is about a monocrystal; if instead multiple solids are defined in the reaction, consider this as a parameter whose inverse (Fk^-1) approximates how many reactions you need to occur in series to dissolve one layer)
+        std::vector<double> rx_Uk;    // Energy of a particle in kink position (set it to twice the LAMMPS per atom energy for pair potentials)
         std::vector<bool> mechchain;   // vector saying whether each mechanisms refers to a chain of reactins (true) or to an individual reaction (false)
         std::vector<int> mechrcID, mechsenID;    // ID of reaction (or chain) and of surface energy calculator corresponding to each mechanism
 
