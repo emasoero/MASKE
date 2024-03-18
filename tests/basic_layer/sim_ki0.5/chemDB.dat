@@ -147,12 +147,13 @@ sen sen_CaCO3 const 120
 # mech   C3Sdel_apnet  allpar net   C3S_dis_Bul  sen_C3S  int_lin
 
 
-mech   CHdel_apnet  allpar net   CH_dis  sen_CH  int_1lin
+mech   CHdel_apnet  allpar net   CH_dis  sen_CH  int_1lin 
 mech   CaCO3nuc_apnet  allpar straight   CaCO3_prec  sen_CaCO3  int_1lin
 mech   CaCO3dis_apnet  allpar straight   CaCO3_diss  sen_CaCO3  int_1lin
 
-
-
+mech_modify CHdel_apnet rate TST
+mech_modify CaCO3nuc_apnet rate melt
+mech_modify CaCO3dis_apnet rate SiCVD
 
 #   "allser" -- an all-series mechanism, where the unit reaction is the reaction or chain provided as input (which may have parallel parts).  4 arguments needed: "straight" or "net" rates, name of reaction (or chain), name of surface energy, algorithm to compute interaction energy (int_no = interactions neglected;   int_lin = linearisation of interaction with number of molecules;   int_1lin and int2lin = artificial linearisations to enforce heterogeneous nucleation in coarse grained allpar: see source code;   int_size = actual size dependence of interactions... may be expensive)
 #mech C3Sdel_aser allser net C3Sdis_ch1 sen_C3S int_no

@@ -87,6 +87,7 @@ void Chemistry::readDB(std::string fname)
             else if (strcmp(word.c_str(), "molecule_modify") == 0)   mol_modify();
             else if (strcmp(word.c_str(), "reaction_modify") == 0)   reax_modify();
             else if (strcmp(word.c_str(), "chain_modify") == 0)   ch_modify();
+            else if (strcmp(word.c_str(), "mech_modify") == 0)   mech_modify();
             else if (!word.empty()){
                 std::string msg = "\nERROR: Unknown command in chemistry database file: "+word+"\n\n";
                 error->errsimple(msg);
@@ -839,6 +840,10 @@ void Chemistry::addmech()
     mechinter.push_back(newname);
     
     
+    // default rate style is TST (with excess enthalpy correction, chi parameter, etc as usual in MASKE)
+    mechrate.push_back("TST");
+    
+    
     std::vector<std::string> tempvec;
     int rows = 0;   // number of raws in e0, ef and gij matrices. This equals the largest particle type among user-listed real and trial types in input file
     
@@ -1086,6 +1091,7 @@ void Chemistry::addmech()
         else fprintf(screen," Reaction is a SINGLE one named : %s\n",rxnames[mechrcID.back()].c_str());
     }
     if (me==MASTER) fprintf(screen," Interaction scaling: %s \n",mechinter[Nmech-1].c_str());
+    if (me==MASTER) fprintf(screen," Rate Style: %s \n",mechrate[Nmech-1].c_str());
     if (me==MASTER) fprintf(screen," Additional parameters:");
     if (me==MASTER) {
         for (int pp=0;pp<mechpar[Nmech-1].size();pp++){
@@ -1194,6 +1200,41 @@ double Chemistry::compSen(int mid)
     return Sen;  // the computed value of surface energy is returned to the rate
     
 }
+
+
+
+// ---------------------------------------------------------------
+// Modify parameters of existing mechanism
+void Chemistry::mech_modify()
+{
+    // read mechanism name
+    std::string newname;
+    ss >> newname;
+    
+    // find mecvhanism ID
+    int mechID = -1;
+    for (int i=0; i<mechnames.size(); i++){
+        if (strcmp(newname.c_str(), mechnames[i].c_str()) == 0) mechID = i;
+    }
+    if (mechID == -1){
+        std::string msg = "\nERROR: Unknown mechanism invoked by molecule_modify command: "+newname+"\n\n";
+        error->errsimple(msg);
+    }
+    
+    // read through the rest of entries and, if recognized, record value for corresponding property
+    while (ss >> newname){
+        if (strcmp(newname.c_str(), "rate") == 0)  {
+            ss >> mechrate[mechID];
+            if (me==MASTER) fprintf(screen," Modified rate style for mechanism: %s %s\n",mechnames[mechID].c_str(),mechrate[mechID].c_str());
+        }
+        else {
+            std::string msg = "\nERROR: Unknown mechanism property invoked by mech_modify command in ChemDB, for mechanism  "+mechnames[mechID]+": "+newname+"\n\n";
+            error->errsimple(msg);
+        }
+    }
+
+}
+
 
 
     

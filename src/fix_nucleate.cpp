@@ -1656,7 +1656,10 @@ void Fix_nucleate::comp_rates_allpar(int pos)
                     if (chem->mechchain[mid]) DUi *= (chem->ch_rdV_fgd[chID][k]);
                 }
                 
-                double r0 = kappa * KT / msk->hpl / gammax * cx * exp(-DGx / KT);
+                double r0 = -1.;
+                if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
+                    r0 = kappa * KT / msk->hpl / gammax * cx * exp(-DGx / KT);
+                }
                 
                 if (msk->wplog) {
                     std::ostringstream ss;
@@ -1672,13 +1675,13 @@ void Fix_nucleate::comp_rates_allpar(int pos)
                 //double fa = 1.;
                 //if (dim == 2 || dim== 1) fa = 3;
                 
-                r0 = r0*pow(Vt,(dim/3. - 1.))*DV;
-                
                 double ki = (chem -> ki[rxid]);
+                if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
+                    r0 = r0*pow(Vt,(dim/3. - 1.))*DV;
+                    // Rate equation as per TST (see notes_on_TST.pdf by Masoero, 2019)
+                    ri = r0 * Qreac     *exp(ki*(-Sen * DSi - DUi)/KT) ;
+                }
                 
-                // Rate equation as per TST (see notes_on_TST.pdf by Masoero, 2019)
-                ri = r0 * Qreac     *exp(ki*(-Sen * DSi - DUi)/KT) ;
-
                 if (msk->wplog) {
                     msg += ", ri ";
                     std::ostringstream ss;    ss << ri;   msg += ss.str(); ss.str("");   ss.clear();
@@ -1699,7 +1702,9 @@ void Fix_nucleate::comp_rates_allpar(int pos)
                     
                     //net = true;
                     //beta = solution->compbeta(rxid,net,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
-                    ri -= r0 * Qprod / chem->Keq[rxid] * exp((1.-ki)*(Sen * DSi + DUi)/KT ) ;
+                    if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
+                        ri -= r0 * Qprod / chem->Keq[rxid] * exp((1.-ki)*(Sen * DSi + DUi)/KT ) ;
+                    }
                     
                 }
                 
@@ -1975,113 +1980,115 @@ void Fix_nucleate::comp_rates_micro(int pos)
         }*/
 
         // compute rate of reaction sequence
-                for (int k=0; k< nrt; k++) { //all the reaction in series in chain seq.
-                    std::string msg;
-                    
-                    if (msk->wplog) { msg += "; rx_step ";    std::ostringstream ss;    ss << k;   msg += ss.str(); }
-                    
-                    // find reaction id if it is a chain, or keep previous one if a single reax
-                    if (chem->mechchain[mid]) rxid = chem->ch_rxID[chID][k];
-                    
-                    double DGx = chem -> compDGx(rxid); // reaction specific
-                    double cx = chem -> cx[chem->rx_DGID[rxid]];
-                    double dim = chem -> dim[chem->rx_DGID[rxid]];
-                    double gammax = chem -> compgammax(rxid);
-                    double KT = msk->kB * solution->Temp;
-                                    
-                    if (msk->wplog) {
-                        std::ostringstream ss;
-                        msg += "; DG* ";    ss << DGx;   msg += ss.str();    ss.str(""); ss.clear();
-                        msg += "; c* ";    ss << cx;   msg += ss.str();    ss.str(""); ss.clear();
-                        msg += "; gamma* ";    ss << gammax;   msg += ss.str();    ss.str(""); ss.clear();
-                        msg += "; KB ";    ss << (msk->kB);   msg += ss.str();    ss.str(""); ss.clear();
-                        msg += "; T ";    ss << (solution->Temp);   msg += ss.str();    ss.str(""); ss.clear();
-                    }
-                    
-                   
-                    double kappa = 1.;  // transmission coefficient
-                    
-                    std::string topass = "reac";
-                    double Qreac = solution->compQ(rxid,topass,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
-                    
-                    double Vt = (chem -> rx_dVt_fgd[rxid]);  // Tributary volume of fgd deleted by the reaction at the current step in the chain.
+        for (int k=0; k< nrt; k++) { //all the reaction in series in chain seq.
+            std::string msg;
+            
+            if (msk->wplog) { msg += "; rx_step ";    std::ostringstream ss;    ss << k;   msg += ss.str(); }
+            
+            // find reaction id if it is a chain, or keep previous one if a single reax
+            if (chem->mechchain[mid]) rxid = chem->ch_rxID[chID][k];
+            
+            double DGx = chem -> compDGx(rxid); // reaction specific
+            double cx = chem -> cx[chem->rx_DGID[rxid]];
+            double dim = chem -> dim[chem->rx_DGID[rxid]];
+            double gammax = chem -> compgammax(rxid);
+            double KT = msk->kB * solution->Temp;
+                            
+            if (msk->wplog) {
+                std::ostringstream ss;
+                msg += "; DG* ";    ss << DGx;   msg += ss.str();    ss.str(""); ss.clear();
+                msg += "; c* ";    ss << cx;   msg += ss.str();    ss.str(""); ss.clear();
+                msg += "; gamma* ";    ss << gammax;   msg += ss.str();    ss.str(""); ss.clear();
+                msg += "; KB ";    ss << (msk->kB);   msg += ss.str();    ss.str(""); ss.clear();
+                msg += "; T ";    ss << (solution->Temp);   msg += ss.str();    ss.str(""); ss.clear();
+            }
+            
+           
+            double kappa = 1.;  // transmission coefficient
+            
+            std::string topass = "reac";
+            double Qreac = solution->compQ(rxid,topass,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
+            
+            double Vt = (chem -> rx_dVt_fgd[rxid]);  // Tributary volume of fgd deleted by the reaction at the current step in the chain.
 
-                    // lattice cell volume: needed for rate
-                    double DV =  fix->fKMC_DV[pos];
-                    
-                    
-                    double DUi = 0.;
-                    if (strcmp(chem->mechinter[mid].c_str(),"int_no")!=0) {
-                        DUi = DUpu;
-                        if (chem->mechchain[mid]) DUi *= (chem->ch_rdV_fgd[chID][k]);
-                        
-                        // Add change in strain energy internal to the molecules
-                        for (int j1=0; j1<chem->fgd_molID[rxid].size(); j1++){
-                            int molid = chem->fgd_molID[rxid][j1];
-                            DUi += chem->mol_Us[molid] * chem->mol_vm[molid] * chem->fgd_nmol[rxid][j1];
-                        }
-                    }
-                    
-                    
-                    
-                    
-                    double r0 = kappa * KT / msk->hpl / gammax * cx * exp(-DGx / KT);
-                    
-                    if (msk->wplog) {
-                        std::ostringstream ss;
-                        msg += "; r0 ";    ss << r0;   msg += ss.str();    ss.str(""); ss.clear();
-                        msg += "; DV ";    ss << DV;   msg += ss.str();    ss.str(""); ss.clear();
-                        msg += "; Qreac ";    ss << Qreac;   msg += ss.str();    ss.str(""); ss.clear();
-                        msg += "; DUi ";    ss << DUi;   msg += ss.str();    ss.str(""); ss.clear();
-                        msg += "; Vti ";    ss << Vt;   msg += ss.str();    ss.str(""); ss.clear();
-                    }
-                    
-                    r0 = r0*pow(Vt,(dim/3. - 1.))*DV;
-                    
-                    double ki = (chem -> ki[rxid]);
-                    
-                    // Forward rate equation
-                    ri = r0 * Qreac * exp(ki * (- DUi)/KT ) ;
-                    
+            // lattice cell volume: needed for rate
+            double DV =  fix->fKMC_DV[pos];
+            
+            
+            double DUi = 0.;
+            if (strcmp(chem->mechinter[mid].c_str(),"int_no")!=0) {
+                DUi = DUpu;
+                if (chem->mechchain[mid]) DUi *= (chem->ch_rdV_fgd[chID][k]);
+                
+                // Add change in strain energy internal to the molecules
+                for (int j1=0; j1<chem->fgd_molID[rxid].size(); j1++){
+                    int molid = chem->fgd_molID[rxid][j1];
+                    DUi += chem->mol_Us[molid] * chem->mol_vm[molid] * chem->fgd_nmol[rxid][j1];
+                }
+            }
+            
+            
+            double r0 = -1.;
+            if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
+                r0 = kappa * KT / msk->hpl / gammax * cx * exp(-DGx / KT);
+            }
+            
+            if (msk->wplog) {
+                std::ostringstream ss;
+                msg += "; r0 ";    ss << r0;   msg += ss.str();    ss.str(""); ss.clear();
+                msg += "; DV ";    ss << DV;   msg += ss.str();    ss.str(""); ss.clear();
+                msg += "; Qreac ";    ss << Qreac;   msg += ss.str();    ss.str(""); ss.clear();
+                msg += "; DUi ";    ss << DUi;   msg += ss.str();    ss.str(""); ss.clear();
+                msg += "; Vti ";    ss << Vt;   msg += ss.str();    ss.str(""); ss.clear();
+            }
+            
+            double ki = (chem -> ki[rxid]);
+            if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
+                r0 = r0*pow(Vt,(dim/3. - 1.))*DV;
+                // Forward rate equation
+                ri = r0 * Qreac * exp(ki * (- DUi)/KT ) ;
+            }
 
-                    
-                    // if net rate is requested by user in chemDB, then add rate backward
-                    if (strcmp((chem->mechmode[mid]).c_str(),"net")==0) {
-                        
-                        
-                        topass = "prod";
-                        double Qprod = solution->compQ(rxid,topass,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
-                        
-                        ri -= r0 * Qprod / chem->Keq[rxid] * exp((1.-ki)*(DUi)/KT ) ;
-                        
-                        if (msk->wplog) {
-                            std::ostringstream ss;
-                            msg += "; ri ";    ss << ri;   msg += ss.str();    ss.str(""); ss.clear();
-                            msg += "; Qprod ";    ss << Qprod;   msg += ss.str();    ss.str(""); ss.clear();
-                            msg += "; Keq ";    ss << chem->Keq[rxid] ;   msg += ss.str();    ss.str(""); ss.clear();
-                        }
-                        
-                    }
-
-                    
-                    if (ri < 0.) ri = 0.;
-                    
-                    DTi = 1./ri;
-                    DTtot += DTi;
-                    
-                    if (msk->wplog) {
-                        msg += ", DT ";
-                        std::ostringstream ss;    ss << DTi;   msg += ss.str(); ss.str("");   ss.clear();
-                        msg += ", DTtot ";
-                        ss << DTtot;   msg += ss.str();
-                    }
+            
+            // if net rate is requested by user in chemDB, then add rate backward
+            if (strcmp((chem->mechmode[mid]).c_str(),"net")==0) {
+                
+                
+                topass = "prod";
+                double Qprod = solution->compQ(rxid,topass,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
+                
+                if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
+                    ri -= r0 * Qprod / chem->Keq[rxid] * exp((1.-ki)*(DUi)/KT ) ;
                 }
                 
-                std::string msg;
                 if (msk->wplog) {
-                msg += "\n";
-                output->toplog(msg);
+                    std::ostringstream ss;
+                    msg += "; ri ";    ss << ri;   msg += ss.str();    ss.str(""); ss.clear();
+                    msg += "; Qprod ";    ss << Qprod;   msg += ss.str();    ss.str(""); ss.clear();
+                    msg += "; Keq ";    ss << chem->Keq[rxid] ;   msg += ss.str();    ss.str(""); ss.clear();
                 }
+                
+            }
+
+            
+            if (ri < 0.) ri = 0.;
+            
+            DTi = 1./ri;
+            DTtot += DTi;
+            
+            if (msk->wplog) {
+                msg += ", DT ";
+                std::ostringstream ss;    ss << DTi;   msg += ss.str(); ss.str("");   ss.clear();
+                msg += ", DTtot ";
+                ss << DTtot;   msg += ss.str();
+            }
+        }
+        
+        std::string msg;
+        if (msk->wplog) {
+        msg += "\n";
+        output->toplog(msg);
+        }
         
         DTtot*=(double)((nrL-1)*nrS);
         
@@ -2207,109 +2214,119 @@ void Fix_nucleate::comp_rates_micro(int pos)
         }*/
         
         // compute rate of reaction sequence
-            for (int k=0; k< nrt; k++) { //all the reaction in series in chain seq.
+        for (int k=0; k< nrt; k++) { //all the reaction in series in chain seq.
                 
-                if (msk->wplog) { msg += "; rx_step ";    std::ostringstream ss;    ss << k;   msg += ss.str();}
+            if (msk->wplog) { msg += "; rx_step ";    std::ostringstream ss;    ss << k;   msg += ss.str();}
+            
+            // find reaction id if it is a chain, or keep previous one if a single reax
+            if (chem->mechchain[mid]) rxid = chem->ch_rxID[chID][k];
+            
+            double DGx = chem -> compDGx(rxid); // reaction specific
+            double cx = chem -> cx[chem->rx_DGID[rxid]];
+            double dim = chem -> dim[chem->rx_DGID[rxid]];
+            double gammax = chem -> compgammax(rxid);
+            double KT = msk->kB * solution->Temp;
+            
+            if (msk->wplog) {
+                std::ostringstream ss;
+                msg += "; DG* ";    ss << DGx;   msg += ss.str();    ss.str(""); ss.clear();
+                msg += "; c* ";    ss << cx;   msg += ss.str();    ss.str(""); ss.clear();
+                msg += "; gamma* ";    ss << gammax;   msg += ss.str();    ss.str(""); ss.clear();
+                msg += "; KB ";    ss << (msk->kB);   msg += ss.str();    ss.str(""); ss.clear();
+                msg += "; T ";    ss << (solution->Temp);   msg += ss.str();    ss.str(""); ss.clear();
+            }
+            
+            double kappa = 1.;       // transmission coefficient
+            
+            std::string topass = "reac";
+            double Qreac = solution->compQ(rxid,topass,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
+            
+            double Vt = (chem -> rx_dVt_fgd[rxid]);  // Tributary volume of fgd created by the reaction at the current step in the chain.
+            
+            // lattice cell volume: needed for rate
+            double DV =  fix->fKMC_DV[pos];
+            
+            double DUi = 0.;
+            if (strcmp(chem->mechinter[mid].c_str(),"int_no")!=0) {
+                DUi = DUpu;
+                if (chem->mechchain[mid]) DUi *= (chem->ch_rdV_fgd[chID][k]);
                 
-                // find reaction id if it is a chain, or keep previous one if a single reax
-                if (chem->mechchain[mid]) rxid = chem->ch_rxID[chID][k];
-                
-                double DGx = chem -> compDGx(rxid); // reaction specific
-                double cx = chem -> cx[chem->rx_DGID[rxid]];
-                double dim = chem -> dim[chem->rx_DGID[rxid]];
-                double gammax = chem -> compgammax(rxid);
-                double KT = msk->kB * solution->Temp;
-                
-                if (msk->wplog) {
-                    std::ostringstream ss;
-                    msg += "; DG* ";    ss << DGx;   msg += ss.str();    ss.str(""); ss.clear();
-                    msg += "; c* ";    ss << cx;   msg += ss.str();    ss.str(""); ss.clear();
-                    msg += "; gamma* ";    ss << gammax;   msg += ss.str();    ss.str(""); ss.clear();
-                    msg += "; KB ";    ss << (msk->kB);   msg += ss.str();    ss.str(""); ss.clear();
-                    msg += "; T ";    ss << (solution->Temp);   msg += ss.str();    ss.str(""); ss.clear();
-                }
-                
-                double kappa = 1.;       // transmission coefficient
-                
-                std::string topass = "reac";
-                double Qreac = solution->compQ(rxid,topass,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
-                
-                double Vt = (chem -> rx_dVt_fgd[rxid]);  // Tributary volume of fgd created by the reaction at the current step in the chain.
-                
-                // lattice cell volume: needed for rate
-                double DV =  fix->fKMC_DV[pos];
-                
-                double DUi = 0.;
-                if (strcmp(chem->mechinter[mid].c_str(),"int_no")!=0) {
-                    DUi = DUpu;
-                    if (chem->mechchain[mid]) DUi *= (chem->ch_rdV_fgd[chID][k]);
-                    
-                    // Add change in strain energy internal to the molecules
-                    for (int j1=0; j1<chem->fgd_molID[rxid].size(); j1++){
-                        int molid = chem->fgd_molID[rxid][j1];
-                        DUi += chem->mol_Us[molid] * chem->mol_vm[molid] * chem->fgd_nmol[rxid][j1];
-                    }
-                }
-                
-                double r0 = kappa * KT / msk->hpl / gammax * cx * exp(-DGx / KT);
-                
-                if (msk->wplog) {
-                    std::ostringstream ss;
-                    msg += "; r0 ";    ss << r0;   msg += ss.str();    ss.str(""); ss.clear();
-                    msg += "; Qreac ";    ss << Qreac;   msg += ss.str();    ss.str(""); ss.clear();
-                    msg += "; DUi ";    ss << DUi;   msg += ss.str();    ss.str(""); ss.clear();
-                    msg += "; Vti ";    ss << Vt;   msg += ss.str();    ss.str(""); ss.clear();
-                }
-                
-                r0 = r0*pow(Vt,(dim/3. - 1.))*DV;
-                
-                double ki = (chem -> ki[rxid]);
-                
-                // Forward rate equation: NB this includes contribution from largest interfacial energy change at contact with other phases (from function computing coverage areas)
-                double uk_area;    // area of a unit kink (assuming cubic units)
-                if (chem->mechchain[mid]) {  //if reaction is a chain
-                    uk_area = pow(chem->ch_dVp_fgd[chID],2./3.) * 3.;
-                }
-                else{ //if instead it is a single reaction
-                    uk_area = pow(chem->rx_dVp_fgd[rxid],2./3.) * 3.;
-                }
-                
-                ri = r0 * Qreac * exp((ki)*( - DUi - tGM[i] * uk_area )/KT ) ;
-                
-                
-                // if net rate is requested by user in chemDB, then add rate backward
-                if (strcmp((chem->mechmode[mid]).c_str(),"net")==0) {
-                    
-                    topass = "prod";
-                    double Qprod = solution->compQ(rxid,topass,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
-                    ri -= r0 * Qprod / chem->Keq[rxid] * exp((1.-ki) * ( DUi + tGM[i] * uk_area)/ KT );
-                    
-                    if (msk->wplog) {
-                        std::ostringstream ss;
-                        msg += "; ri ";    ss << ri;   msg += ss.str();    ss.str(""); ss.clear();
-                        msg += "; Qprod ";    ss << Qprod;   msg += ss.str();    ss.str(""); ss.clear();
-                        msg += "; Keq ";    ss << chem->Keq[rxid] ;   msg += ss.str();    ss.str(""); ss.clear();
-                    }
-                    
-                }
-                
-                if (ri < 0.) ri = 0.;
-                
-                DTi = 1./ri;
-                DTtot += DTi*(double)nrS;
-                
-                if (msk->wplog) {
-                    msg += ", DT ";
-                    std::ostringstream ss;    ss << DTi;   msg += ss.str(); ss.str("");   ss.clear();
-                    msg += ", DTtot ";
-                    ss << DTtot;   msg += ss.str();
+                // Add change in strain energy internal to the molecules
+                for (int j1=0; j1<chem->fgd_molID[rxid].size(); j1++){
+                    int molid = chem->fgd_molID[rxid][j1];
+                    DUi += chem->mol_Us[molid] * chem->mol_vm[molid] * chem->fgd_nmol[rxid][j1];
                 }
             }
             
-            if (msk->wplog){
-            msg+="\n";
-            output->toplog(msg);
+            double r0 = -1.;
+            if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
+                r0 = kappa * KT / msk->hpl / gammax * cx * exp(-DGx / KT);
             }
+            
+            if (msk->wplog) {
+                std::ostringstream ss;
+                msg += "; r0 ";    ss << r0;   msg += ss.str();    ss.str(""); ss.clear();
+                msg += "; Qreac ";    ss << Qreac;   msg += ss.str();    ss.str(""); ss.clear();
+                msg += "; DUi ";    ss << DUi;   msg += ss.str();    ss.str(""); ss.clear();
+                msg += "; Vti ";    ss << Vt;   msg += ss.str();    ss.str(""); ss.clear();
+            }
+            
+            if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
+                r0 = r0*pow(Vt,(dim/3. - 1.))*DV;
+            }
+            
+            double ki = (chem -> ki[rxid]);
+            
+            // Forward rate equation: NB this includes contribution from largest interfacial energy change at contact with other phases (from function computing coverage areas)
+            double uk_area;    // area of a unit kink (assuming cubic units)
+            if (chem->mechchain[mid]) {  //if reaction is a chain
+                uk_area = pow(chem->ch_dVp_fgd[chID],2./3.) * 3.;
+            }
+            else{ //if instead it is a single reaction
+                uk_area = pow(chem->rx_dVp_fgd[rxid],2./3.) * 3.;
+            }
+            
+            if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
+                ri = r0 * Qreac * exp((ki)*( - DUi - tGM[i] * uk_area )/KT ) ;
+            }
+
+            
+            // if net rate is requested by user in chemDB, then add rate backward
+            if (strcmp((chem->mechmode[mid]).c_str(),"net")==0) {
+                
+                topass = "prod";
+                double Qprod = solution->compQ(rxid,topass,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
+                
+                if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
+                    ri -= r0 * Qprod / chem->Keq[rxid] * exp((1.-ki) * ( DUi + tGM[i] * uk_area)/ KT );
+                }
+                
+                if (msk->wplog) {
+                    std::ostringstream ss;
+                    msg += "; ri ";    ss << ri;   msg += ss.str();    ss.str(""); ss.clear();
+                    msg += "; Qprod ";    ss << Qprod;   msg += ss.str();    ss.str(""); ss.clear();
+                    msg += "; Keq ";    ss << chem->Keq[rxid] ;   msg += ss.str();    ss.str(""); ss.clear();
+                }
+                
+            }
+            
+            if (ri < 0.) ri = 0.;
+            
+            DTi = 1./ri;
+            DTtot += DTi*(double)nrS;
+            
+            if (msk->wplog) {
+                msg += ", DT ";
+                std::ostringstream ss;    ss << DTi;   msg += ss.str(); ss.str("");   ss.clear();
+                msg += ", DTtot ";
+                ss << DTtot;   msg += ss.str();
+            }
+        }
+        
+        if (msk->wplog){
+        msg+="\n";
+        output->toplog(msg);
+        }
         
         if (flag_bulk) rate_each[i] = 0.;
         else rate_each[i] = 1./DTtot;
