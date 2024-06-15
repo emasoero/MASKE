@@ -469,6 +469,7 @@ void Inputmsk::execline(std::string read_string)
             fix->add(read_string3);
             
             fprintf(screen,"\n inputmsk -- I am processor %d , part of subcomm %s , and I have %d KMC-free fixes, %d Cont fixes and %d Every fixes defined now \n",me,(universe->SCnames[universe->color]).c_str(),(int)(fix->fKMCtype.size()),(int)(fix->Ctype.size()),(int)(fix->Etype.size()));
+            
         }
         else if (strcmp(word.c_str(), "store") == 0){
             std::string read_string3;

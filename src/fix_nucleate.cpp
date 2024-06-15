@@ -1530,8 +1530,11 @@ void Fix_nucleate::cover_from_submaster(int pos)
 void Fix_nucleate::comp_rates_allpar(int pos)
 {
     
+    
     // for all particles in current ("each") processor
     for (int i =0; i<nID_each[key]; i++) {
+        
+        std::string msg;
         
         if (msk->wplog) {
             std::string msg = "\nPARTICLE ";
@@ -1576,7 +1579,6 @@ void Fix_nucleate::comp_rates_allpar(int pos)
             fprintf(screen,"%s",msg.c_str());
         }
         
-        std::string msg;
         if (msk->wplog) { msg = "\n nrv "; std::ostringstream ss;    ss << nrv;   msg = msg+ss.str(); }
         
         // change of surface energy and interaction energy per reaction unit (single reaction or chain: to be further subdivided per step in chain later on)
@@ -1641,10 +1643,7 @@ void Fix_nucleate::comp_rates_allpar(int pos)
                 std::string topass = "reac";
                 double Qreac = solution->compQ(rxid,topass,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]); // using activity products instead of supersaturation beta, which gives more generality. See Notes_on_TST.pdf document
                 
-                double Vt = (chem -> rx_dVt_fgd[rxid]);  // Volume of fgd created by the reaction at the current step in the chain. Plus sign because dV of fdg > 0 for a proper nucleation reaction.
-
-                
-                double DV =  fix->fKMC_DV[pos];
+                double Vrxp = (chem -> rx_dVp_fgd[rxid]);  // Volume of fgd created by the reaction at the current step in the chain, including pores within the solid phase (assuming ratae constants are per unit surface or volume including pores). Plus sign because dV of fdg > 0 for a proper nucleation reaction.
                 
                 //Delta surface and Delta U are assumed to be proportional to the number of reaction/chain units and relative importance of each step in chain
                 double DSi = DSpu;
@@ -1657,8 +1656,27 @@ void Fix_nucleate::comp_rates_allpar(int pos)
                 }
                 
                 double r0 = -1.;
-                if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0 || strcmp((chem->mechrate[mid]).c_str(),"SiCVD")==0){
-                    r0 = kappa * KT / msk->hpl / gammax * cx * exp(-DGx / KT);
+                double ki = (chem -> ki[rxid]);
+                double Qprod = 0.;
+                
+                r0 = kappa * KT / msk->hpl / gammax * cx * exp(-DGx / KT);
+                
+                if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
+                    // Rate equation as per TST (see notes_on_TST.pdf by Masoero, 2019)
+                    ri = r0 * Qreac     *exp(ki*(-Sen * DSi - DUi)/KT) ;
+                    // if net rate is requested by user in chemDB, then add rate backward
+                    if (strcmp((chem->mechmode[mid]).c_str(),"net")==0) {
+                        topass = "prod";
+                        Qprod = solution->compQ(rxid,topass,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
+                        ri -= r0 * Qprod / chem->Keq[rxid] * exp((1.-ki)*(Sen * DSi + DUi)/KT ) ;
+                    }
+                }
+                else if (strcmp((chem->mechrate[mid]).c_str(),"SiCVD")==0){
+                    // Rate equation for chemical vapour deposition (CVD) of metal Silicon
+                    // The ki prefactor plays exactly the same role as in TST, i.e. it weights the contribution of excess enthalpy to the precipiation rate
+                    // The last function of DUi/Ukink is a temperature-independent sites density term to differentiate between crystal facets
+                    ri = r0 * Qreac * exp(ki*(- DUi + chem->rx_Uk[rxid])/KT) * (1.-0.*DUi/chem->rx_Uk[rxid]);
+                    // no net rate for SiCVD, as detachement rate is assumed to be zero
                 }
                 else {
                     std::string msg = "ERROR: unknown rate style \""+ chem->mechrate[mid] +"\" specified for mechanism \""+chem->mechnames[mid]+"\" \n";
@@ -1668,63 +1686,17 @@ void Fix_nucleate::comp_rates_allpar(int pos)
                 if (msk->wplog) {
                     std::ostringstream ss;
                     msg += "; r0 ";    ss << r0;   msg += ss.str();    ss.str(""); ss.clear();
-                    msg += "; DV ";    ss << DV;   msg += ss.str();    ss.str(""); ss.clear();
                     msg += "; Qreac ";    ss << Qreac;   msg += ss.str();    ss.str(""); ss.clear();
                     msg += "; Sen ";    ss << Sen;   msg += ss.str();    ss.str(""); ss.clear();
                     msg += "; DSi ";    ss << DSi;   msg += ss.str();    ss.str(""); ss.clear();
                     msg += "; DUi ";    ss << DUi;   msg += ss.str();    ss.str(""); ss.clear();
-                    msg += "; Vti ";    ss << Vt;   msg += ss.str();    ss.str(""); ss.clear();
+                    msg += "; Vrxpi ";    ss << Vrxp;   msg += ss.str();    ss.str(""); ss.clear();
+                    msg += ", ri ";     ss << ri;   msg += ss.str(); ss.str("");   ss.clear();
+                    msg += ", Qprod ";  ss << Qprod;   msg += ss.str(); ss.str("");   ss.clear();
+                    msg += ", rinet ";  ss << ri;   msg += ss.str(); ss.str("");   ss.clear();
                 }
-                
-                //double fa = 1.;
-                //if (dim == 2 || dim== 1) fa = 3;
-                
-                double ki = (chem -> ki[rxid]);
-                if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
-                    r0 = r0*pow(Vt,(dim/3. - 1.))*DV;
-                    // Rate equation as per TST (see notes_on_TST.pdf by Masoero, 2019)
-                    ri = r0 * Qreac     *exp(ki*(-Sen * DSi - DUi)/KT) ;
-                }
-                else if(strcmp((chem->mechrate[mid]).c_str(),"SiCVD")==0){
-                    r0 = r0*pow(Vt,(dim/3. - 1.))*DV;
-                    // Rate equation for chemical vapour deposition (CVD) of metal Silicon
-                    // The ki prefactor plays exactly the same role as in TST, i.e. it weights the contribution of excess enthalpy to the precipiation rate
-                    // The last function of DUi/Ukink is a temperature-independent sites density term to differentiate between crystal facets
-                    ri = r0 * Qreac * exp(ki*(- DUi + chem->rx_Uk[rxid])/KT) * (0.*DUi/chem->rx_Uk[rxid]);
-                }
-                
-                
-                if (msk->wplog) {
-                    msg += ", ri ";
-                    std::ostringstream ss;    ss << ri;   msg += ss.str(); ss.str("");   ss.clear();
-                }
-                
-                
-                // if net rate is requested by user in chemDB, then add rate backward
-                if (strcmp((chem->mechmode[mid]).c_str(),"net")==0) {
-                    
-                    
-                    topass = "prod";
-                    double Qprod = solution->compQ(rxid,topass,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
-                    
-                    if (msk->wplog) {
-                        msg += ", Qprod ";
-                        std::ostringstream ss;    ss << Qprod;   msg += ss.str(); ss.str("");   ss.clear();
-                    }
-                    
-                    //net = true;
-                    //beta = solution->compbeta(rxid,net,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
-                    if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
-                        ri -= r0 * Qprod / chem->Keq[rxid] * exp((1.-ki)*(Sen * DSi + DUi)/KT ) ;
-                    }
-                    // NB: nothing implemented for SiCVD rate style, because its backward rate (detachment) is assumed to be zero
-                    
-                }
-                
-                if (msk->wplog) {
-                    msg += ", rinet ";
-                    std::ostringstream ss;    ss << ri;   msg += ss.str(); ss.str("");   ss.clear();
-                }
+            
+                ri *= pow(Vrxp,dim/3.);
                 
                 if (ri < 0.) ri = 0.;
                 
@@ -1744,7 +1716,24 @@ void Fix_nucleate::comp_rates_allpar(int pos)
                 output->toplog(msg);
             }
         }
+        
+        // consider that particle nucleation rate must be scaled times DV/Vt (trial cell over tributary particle volume)
+        double DV = fix->fKMC_DV[pos];
+        double Vt = fix->fKMCVtVp[pos] * Pv;    //tributary particle volume as multiple of particle volume Pv, via factor user-specified for this fix
+        
+        if (msk->wplog) {
+            std::ostringstream ss;
+            msg = "; DV ";      ss << DV;   msg += ss.str();    ss.str(""); ss.clear();
+            msg += ", Vt ";     ss << Vt;   msg += ss.str();    ss.str(""); ss.clear();
+            msg += ", DTtot ";  ss << DTtot;   msg += ss.str();
+            msg += "\n";
+            output->toplog(msg);
+        }
+        
+        DTtot /= (DV/Vt);
+        
         rate_each[i] = 1./DTtot;
+        
         if (rate_each[i]<0.) rate_each[i] = 0.;    // if the backward ri's are > forward ri's the overall rate may end up < 0, which means that the current deletion event should not happen, hence its rate should be zero (not negative..)   CHECK THAT THIS DOES NOT GIVE PROBLEMS WHEN SELECTING THE EVENT TO CARRY OUT FROM CUMULATIVE RATE VECTORS, IN PARTICULAR WITH THE BINARY SEARCH ALGORITHM
         
         
@@ -1865,7 +1854,10 @@ void Fix_nucleate::comp_rates_micro(int pos)
         double ri=0. , DTi = 0., DTtot = 0.;  // rate of each reaction in sequence, associated time increement and total cumulative time increment
         
         
-        /*for (int j=0; j<nrL-1; j++){
+        
+        /*
+         THIS COMMENTED OUT SECTION IS AN IMPLEMENTATION WHERE THE RATE OF EACH REACTION STEP IS EACH CHAIN IN EACH LAYER IS COMPUTED INDIVIDUALLY, IN CASE SOMETHING CHANGES NONLINEARLY WITH THE PARTICLE SIZE (E.G. INTERACTION ENERGY). THIS IS MUCH MORE COMPUTATIONALLY COSTLY THAN ASSUMING SAME RATE FOR ALL THE INVOLVED REACTIONS AND MULTIPLY IT BY THE NUMBER OF REACTIONS IN A SERIES, AS IMPLEMENTED BELOW.
+        for (int j=0; j<nrL-1; j++){
             
             std::string msg;
             if (msk->wplog) {
@@ -2022,10 +2014,7 @@ void Fix_nucleate::comp_rates_micro(int pos)
             std::string topass = "reac";
             double Qreac = solution->compQ(rxid,topass,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
             
-            double Vt = (chem -> rx_dVt_fgd[rxid]);  // Tributary volume of fgd deleted by the reaction at the current step in the chain.
-
-            // lattice cell volume: needed for rate
-            double DV =  fix->fKMC_DV[pos];
+            double Vrxp = (chem -> rx_dVp_fgd[rxid]);  // Tributary volume of fgd deleted by the reaction at the current step in the chain.
             
             
             double DUi = 0.;
@@ -2042,8 +2031,26 @@ void Fix_nucleate::comp_rates_micro(int pos)
             
             
             double r0 = -1.;
-            if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0 || strcmp((chem->mechrate[mid]).c_str(),"SiCVD")==0){
-                r0 = kappa * KT / msk->hpl / gammax * cx * exp(-DGx / KT);
+            double ki = (chem -> ki[rxid]);
+            double Qprod = 0.;
+            
+            r0 = kappa * KT / msk->hpl / gammax * cx * exp(-DGx / KT);
+            
+            if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
+                // Forward rate equation
+                ri = r0 * Qreac * exp(ki * (- DUi)/KT ) ;
+                
+                // if net rate is requested by user in chemDB, then add rate backward
+                if (strcmp((chem->mechmode[mid]).c_str(),"net")==0) {
+                    topass = "prod";
+                    Qprod = solution->compQ(rxid,topass,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
+                    ri -= r0 * Qprod / chem->Keq[rxid] * exp((1.-ki)*(DUi)/KT ) ;
+                }
+                
+            }
+            else if (strcmp((chem->mechrate[mid]).c_str(),"SiCVD")==0){
+                std::string msg = "ERROR: SiCVD rate style invoked by mechanism \""+chem->mechnames[mid]+"\" has not been implemented yet for the micro mechanism\n";
+                error->errsimple(msg);
             }
             else {
                 std::string msg = "ERROR: unknown rate style \""+ chem->mechrate[mid] +"\" specified for mechanism \""+chem->mechnames[mid]+"\" \n";
@@ -2054,45 +2061,15 @@ void Fix_nucleate::comp_rates_micro(int pos)
             if (msk->wplog) {
                 std::ostringstream ss;
                 msg += "; r0 ";    ss << r0;   msg += ss.str();    ss.str(""); ss.clear();
-                msg += "; DV ";    ss << DV;   msg += ss.str();    ss.str(""); ss.clear();
                 msg += "; Qreac ";    ss << Qreac;   msg += ss.str();    ss.str(""); ss.clear();
                 msg += "; DUi ";    ss << DUi;   msg += ss.str();    ss.str(""); ss.clear();
-                msg += "; Vti ";    ss << Vt;   msg += ss.str();    ss.str(""); ss.clear();
+                msg += "; Vrxpi ";    ss << Vrxp;   msg += ss.str();    ss.str(""); ss.clear();
+                msg += "; ri ";    ss << ri;   msg += ss.str();    ss.str(""); ss.clear();
+                msg += "; Qprod ";    ss << Qprod;   msg += ss.str();    ss.str(""); ss.clear();
+                msg += "; Keq ";    ss << chem->Keq[rxid] ;   msg += ss.str();    ss.str(""); ss.clear();
             }
             
-            double ki = (chem -> ki[rxid]);
-            if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
-                r0 = r0*pow(Vt,(dim/3. - 1.))*DV;
-                // Forward rate equation
-                ri = r0 * Qreac * exp(ki * (- DUi)/KT ) ;
-            }
-            else if(strcmp((chem->mechrate[mid]).c_str(),"SiCVD")==0){
-                std::string msg = "ERROR: SiCVD rate style invoked by mechanism \""+chem->mechnames[mid]+"\" has not been implemented yet for the micro mechanism\n";
-                error->errsimple(msg);
-            }
-
-            
-            // if net rate is requested by user in chemDB, then add rate backward
-            if (strcmp((chem->mechmode[mid]).c_str(),"net")==0) {
-                
-                
-                topass = "prod";
-                double Qprod = solution->compQ(rxid,topass,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
-                
-                if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
-                    ri -= r0 * Qprod / chem->Keq[rxid] * exp((1.-ki)*(DUi)/KT ) ;
-                }
-                //N.B. Nothing needed for SiCVD rate style because it assumes zero backward (detachement) rate
-                
-                if (msk->wplog) {
-                    std::ostringstream ss;
-                    msg += "; ri ";    ss << ri;   msg += ss.str();    ss.str(""); ss.clear();
-                    msg += "; Qprod ";    ss << Qprod;   msg += ss.str();    ss.str(""); ss.clear();
-                    msg += "; Keq ";    ss << chem->Keq[rxid] ;   msg += ss.str();    ss.str(""); ss.clear();
-                }
-                
-            }
-
+            ri *= pow(Vrxp,dim/3.);
             
             if (ri < 0.) ri = 0.;
             
@@ -2265,10 +2242,7 @@ void Fix_nucleate::comp_rates_micro(int pos)
             std::string topass = "reac";
             double Qreac = solution->compQ(rxid,topass,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
             
-            double Vt = (chem -> rx_dVt_fgd[rxid]);  // Tributary volume of fgd created by the reaction at the current step in the chain.
-            
-            // lattice cell volume: needed for rate
-            double DV =  fix->fKMC_DV[pos];
+            double Vrxp = (chem -> rx_dVp_fgd[rxid]);  // Tributary volume of fgd created by the reaction at the current step in the chain.
             
             double DUi = 0.;
             if (strcmp(chem->mechinter[mid].c_str(),"int_no")!=0) {
@@ -2283,8 +2257,30 @@ void Fix_nucleate::comp_rates_micro(int pos)
             }
             
             double r0 = -1.;
+            double ki = (chem -> ki[rxid]);
+            double Qprod = 0.;
+            
+            // Forward rate equation: NB this includes contribution from largest interfacial energy change at contact with other phases (from function computing coverage areas)
+            double uk_area;    // area of a unit kink (assuming cubic units)
+            if (chem->mechchain[mid]) {  //if reaction is a chain
+                uk_area = pow(chem->ch_dVp_fgd[chID],2./3.) * 3.;
+            }
+            else{ //if instead it is a single reaction
+                uk_area = pow(chem->rx_dVp_fgd[rxid],2./3.) * 3.;
+            }
+            
+            
+            r0 = kappa * KT / msk->hpl / gammax * cx * exp(-DGx / KT);
+            
             if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
-                r0 = kappa * KT / msk->hpl / gammax * cx * exp(-DGx / KT);
+                ri = r0 * Qreac * exp((ki)*( - DUi - tGM[i] * uk_area )/KT ) ;
+                
+                // if net rate is requested by user in chemDB, then add rate backward
+                if (strcmp((chem->mechmode[mid]).c_str(),"net")==0) {
+                    topass = "prod";
+                    Qprod = solution->compQ(rxid,topass,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
+                    ri -= r0 * Qprod / chem->Keq[rxid] * exp((1.-ki) * ( DUi + tGM[i] * uk_area)/ KT );
+                }
             }
             else if(strcmp((chem->mechrate[mid]).c_str(),"SiCVD")==0){
                 std::string msg = "ERROR: SiCVD rate style invoked by mechanism \""+chem->mechnames[mid]+"\" has not been implemented yet for the micro mechanism\n";
@@ -2296,48 +2292,13 @@ void Fix_nucleate::comp_rates_micro(int pos)
                 msg += "; r0 ";    ss << r0;   msg += ss.str();    ss.str(""); ss.clear();
                 msg += "; Qreac ";    ss << Qreac;   msg += ss.str();    ss.str(""); ss.clear();
                 msg += "; DUi ";    ss << DUi;   msg += ss.str();    ss.str(""); ss.clear();
-                msg += "; Vti ";    ss << Vt;   msg += ss.str();    ss.str(""); ss.clear();
+                msg += "; Vrxpi ";    ss << Vrxp;   msg += ss.str();    ss.str(""); ss.clear();
+                msg += "; ri ";    ss << ri;   msg += ss.str();    ss.str(""); ss.clear();
+                msg += "; Qprod ";    ss << Qprod;   msg += ss.str();    ss.str(""); ss.clear();
+                msg += "; Keq ";    ss << chem->Keq[rxid] ;   msg += ss.str();    ss.str(""); ss.clear();
             }
             
-            if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
-                r0 = r0*pow(Vt,(dim/3. - 1.))*DV;
-            }
-            
-            double ki = (chem -> ki[rxid]);
-            
-            // Forward rate equation: NB this includes contribution from largest interfacial energy change at contact with other phases (from function computing coverage areas)
-            double uk_area;    // area of a unit kink (assuming cubic units)
-            if (chem->mechchain[mid]) {  //if reaction is a chain
-                uk_area = pow(chem->ch_dVp_fgd[chID],2./3.) * 3.;
-            }
-            else{ //if instead it is a single reaction
-                uk_area = pow(chem->rx_dVp_fgd[rxid],2./3.) * 3.;
-            }
-            
-            if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
-                ri = r0 * Qreac * exp((ki)*( - DUi - tGM[i] * uk_area )/KT ) ;
-            }
-
-            
-            // if net rate is requested by user in chemDB, then add rate backward
-            if (strcmp((chem->mechmode[mid]).c_str(),"net")==0) {
-                
-                topass = "prod";
-                double Qprod = solution->compQ(rxid,topass,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
-                
-                if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
-                    ri -= r0 * Qprod / chem->Keq[rxid] * exp((1.-ki) * ( DUi + tGM[i] * uk_area)/ KT );
-                }
-                //N.B. nothing to be added for SiCVD rate style, as detachement rate is assumed to be zero
-                
-                if (msk->wplog) {
-                    std::ostringstream ss;
-                    msg += "; ri ";    ss << ri;   msg += ss.str();    ss.str(""); ss.clear();
-                    msg += "; Qprod ";    ss << Qprod;   msg += ss.str();    ss.str(""); ss.clear();
-                    msg += "; Keq ";    ss << chem->Keq[rxid] ;   msg += ss.str();    ss.str(""); ss.clear();
-                }
-                
-            }
+            ri *= pow(Vrxp,dim/3.);
             
             if (ri < 0.) ri = 0.;
             
@@ -2356,6 +2317,22 @@ void Fix_nucleate::comp_rates_micro(int pos)
         msg+="\n";
         output->toplog(msg);
         }
+        
+        // lattice cell volume: needed for rate
+        double DV = fix->fKMC_DV[pos];
+        double Vt = fix->fKMCVtVp[pos] * Pv;
+        
+        DTtot /= (DV/Pv);
+        
+        if (msk->wplog) {
+            std::ostringstream ss;
+            msg = "; DV ";      ss << DV;   msg += ss.str();    ss.str(""); ss.clear();
+            msg += ", Vt ";     ss << Vt;   msg += ss.str();    ss.str(""); ss.clear();
+            msg += ", DTtot ";  ss << DTtot;   msg += ss.str();
+            msg += "\n";
+            output->toplog(msg);
+        }
+        
         
         if (flag_bulk) rate_each[i] = 0.;
         else rate_each[i] = 1./DTtot;

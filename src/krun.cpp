@@ -122,7 +122,7 @@ void Krun::proceed(double deltat)
         
         // screen output to debug
         //sleep(me);
-        //fprintf(screen,"\n\n Proc %d, SUBCOM %d entering step at tempo %e \n",me,universe->color,msk->tempo);
+        //fprintf(screen,"\n\n DEBUG: Proc %d, SUBCOM %d entering step at tempo %e \n",me,universe->color,msk->tempo);
         MPI_Barrier(MPI_COMM_WORLD);
         //if (me==MASTER) fprintf(screen,"\n\n Let's start the tempo %e iteration \n",msk->tempo );
        // sleep(1);

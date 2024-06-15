@@ -57,7 +57,7 @@ void Fix::add(std::string instr)
     temp_sinbox = "box";
     temp_soutUL = "uniform";
     temp_soutbox = "box";
-    double temp_evt=0., temp_leval=0., temp_dt=0.;
+    double temp_evt=0., temp_leval=0., temp_dt=0., temp_VtVp = 1.;
     int temp_mid=-1, temp_rid=-1, temp_lid=-1, temp_minid=-1, temp_sid=-1, temp_steps=-1, temp_every = 1;
 
     
@@ -164,6 +164,9 @@ void Fix::add(std::string instr)
             else if (strcmp(keyword.c_str(),"sol_out")==0) {
                 ss >> temp_soutUL >> temp_soutbox;
             }
+            else if (strcmp(keyword.c_str(),"VtVp")==0){
+                ss >> temp_VtVp;
+            }
             else if (keyword[0]=='#'){
                 commt_found = true;
             }
@@ -201,8 +204,8 @@ void Fix::add(std::string instr)
         afKMCmid.push_back(temp_mid);
         afKMCeveryt.push_back(temp_evt);
         afKMCleval.push_back(temp_leval);
+        afKMCVtVp.push_back(temp_VtVp);
         afKMCnevents.push_back(0);  //to be computed dynamically during krun
-        afKMCcumRate.push_back(0.);  // to be computed by each fix_ invoked by krun
         afKMCwei.push_back(temp_wtype);
         afKMCwarg.push_back(wargs);
         afKMCsinST.push_back(temp_sinST);
@@ -238,6 +241,7 @@ void Fix::add(std::string instr)
             fKMClid.push_back(temp_lid);
             fKMCeveryt.push_back(temp_evt);
             fKMCleval.push_back(temp_leval);
+            fKMCVtVp.push_back(temp_VtVp);
             fKMCnevents.push_back(0);
             fKMCwei.push_back(temp_wtype);
             fKMCwarg.push_back(wargs);
@@ -264,10 +268,10 @@ void Fix::add(std::string instr)
             
             if (strcmp(fKMCtype[siz].c_str(),"delete")==0)
             {
-                fprintf(screen,"\nAdded fix: KMC-free %s %s %s %d mech %s everyt %f sol_in_style %s sol_in_unif %s sol_in_box %s sol_out_unif %s sol_out_box %s wei %s \n", fKMCtype[siz].c_str(),fKMCname[siz].c_str(),fKMCscom[siz].c_str(),fKMCptype[siz],(chem->mechnames[fKMCmid[siz]]).c_str(),fKMCeveryt[siz],fKMCsinST[siz].c_str(),fKMCsinUL[siz].c_str(),fKMCsinbox[siz].c_str(),fKMCsoutUL[siz].c_str(),fKMCsoutbox[siz].c_str(),fKMCwei[siz].c_str());
+                fprintf(screen,"\nAdded fix: KMC-free %s %s %s %d mech %s everyt %f sol_in_style %s sol_in_unif %s sol_in_box %s sol_out_unif %s sol_out_box %s wei %s VtVp %f\n", fKMCtype[siz].c_str(),fKMCname[siz].c_str(),fKMCscom[siz].c_str(),fKMCptype[siz],(chem->mechnames[fKMCmid[siz]]).c_str(),fKMCeveryt[siz],fKMCsinST[siz].c_str(),fKMCsinUL[siz].c_str(),fKMCsinbox[siz].c_str(),fKMCsoutUL[siz].c_str(),fKMCsoutbox[siz].c_str(),fKMCwei[siz].c_str(),fKMCVtVp[siz]);
             }
             else if (strcmp(fKMCtype[siz].c_str(),"nucleate")==0){
-                    fprintf(screen,"\nAdded fix: KMC-free %s %s %s %s %s %s %d %d %s %f mech %s everyt %f sol_in_style %s sol_in_unif %s sol_in_box %s sol_out_unif %s sol_out_box %s wei %s \n", fKMCtype[siz].c_str(),fKMCname[siz].c_str(),fKMCscom[siz].c_str(),(store->RegNames[fKMCrid[siz]]).c_str(),(store->LatNames[fKMClid[siz]]).c_str(),(store->MinNames[fKMClid[siz]]).c_str(),fKMCptypeTRY[siz],fKMCptype[siz],fKMCpgeom[siz].c_str(),fKMCpdiam[siz],(chem->mechnames[fKMCmid[siz]]).c_str(),fKMCeveryt[siz],fKMCsinST[siz].c_str(),fKMCsinUL[siz].c_str(),fKMCsinbox[siz].c_str(),fKMCsoutUL[siz].c_str(),fKMCsoutbox[siz].c_str(),fKMCwei[siz].c_str());
+                    fprintf(screen,"\nAdded fix: KMC-free %s %s %s %s %s %s %d %d %s %f mech %s everyt %f sol_in_style %s sol_in_unif %s sol_in_box %s sol_out_unif %s sol_out_box %s wei %s VtVp %f\n", fKMCtype[siz].c_str(),fKMCname[siz].c_str(),fKMCscom[siz].c_str(),(store->RegNames[fKMCrid[siz]]).c_str(),(store->LatNames[fKMClid[siz]]).c_str(),(store->MinNames[fKMClid[siz]]).c_str(),fKMCptypeTRY[siz],fKMCptype[siz],fKMCpgeom[siz].c_str(),fKMCpdiam[siz],(chem->mechnames[fKMCmid[siz]]).c_str(),fKMCeveryt[siz],fKMCsinST[siz].c_str(),fKMCsinUL[siz].c_str(),fKMCsinbox[siz].c_str(),fKMCsoutUL[siz].c_str(),fKMCsoutbox[siz].c_str(),fKMCwei[siz].c_str(),fKMCVtVp[siz]);
             }
             int nargs = 0;
             if (strcmp(temp_wtype.c_str(),"simple")==0) nargs = 1;

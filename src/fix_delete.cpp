@@ -1363,22 +1363,33 @@ void Fix_delete::comp_rates_allpar(int pos)
                 std::string topass = "reac";
                 double Qreac = solution->compQ(rxid,topass,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
                 
-                double Vt = - (chem -> rx_dVt_fgd[rxid]);  // Tributary volume of fgd deleted by the reaction at the current step in the chain. Minus sign because dV of fdg < 0 for a proper dissolution reaction.
+                double Vrxp = - (chem -> rx_dVp_fgd[rxid]);  // Volume change accompanying the chemical reaction at at the current step in the chain, including any internal porosity in the particle (this assumes that the rate prefactor is based on data for reaction per unit area or volume of porous solid, not for its solid part only). Minus sign because dV of fdg < 0 for a proper dissolution reaction.
                 
                //Delta surface and Delta U are assumed to be proportional to the number of reaction/chain units and relative importance of each step in chain
                 double DSi = DSpu;
-                if (chem->mechchain[mid]) DSi *= (chem->ch_rdVp_fgd[chID][k]);
+                if (chem->mechchain[mid]) DSi *= (chem->ch_rdVp_fgd[chID][k]);   // using relative rates including pores means that surface energies in input should be per unit area of poros phase, not of solid only
                 
                 double DUi = 0.;
                 if (strcmp(chem->mechinter[mid].c_str(),"int_no")!=0) {
                     DUi = DUpu;
-                    if (chem->mechchain[mid]) DUi *= (chem->ch_rdV_fgd[chID][k]);
+                    if (chem->mechchain[mid]) DUi *= (chem->ch_rdV_fgd[chID][k]);   //NB: here distributed from relative volumes of solids only involved in reactions. No special reason to do so I think: to be rethought if/when reaction chains will be tested more in detail
                 }
                 
-                double r0 = -1.;
+                double ki = (chem -> ki[rxid]);
                 
+                double r0 = -1.;
+                double Qprod = 0.;
                 if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
+                    // Rate equation as per TST (see notes_on_TST.pdf by Masoero, 2019, where ki=0 was assumed as per classical TST)
                     r0 = kappa * KT / msk->hpl / gammax * cx * exp(-DGx / KT);
+                    ri = r0 * Qreac * exp((1.-ki)*(-Sen * DSi - DUi)/KT ) ;
+                    if (strcmp((chem->mechmode[mid]).c_str(),"net")==0) {
+                        // if net rate is requested by user in chemDB, then add rate backward
+                        topass = "prod";
+                        Qprod = solution->compQ(rxid,topass,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
+                        solution->compQ(rxid,topass,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
+                        ri -= r0 * Qprod / chem->Keq[rxid]     * exp(ki*(Sen * DSi + DUi)/KT );
+                    }
                 }
                 else if(strcmp((chem->mechrate[mid]).c_str(),"SiCVD")==0){
                     std::string msg = "ERROR: rate style SiCVD cannot be used to sample deletion. Check that the mechanism specified in fix_delete does not invoke SiCVD in the chemDB file \n";
@@ -1397,59 +1408,14 @@ void Fix_delete::comp_rates_allpar(int pos)
                     msg += "; Sen ";    ss << Sen;   msg += ss.str();    ss.str(""); ss.clear();
                     msg += "; DSi ";    ss << DSi;   msg += ss.str();    ss.str(""); ss.clear();
                     msg += "; DUi ";    ss << DUi;   msg += ss.str();    ss.str(""); ss.clear();
-                    msg += "; Vti ";    ss << Vt;   msg += ss.str();    ss.str(""); ss.clear();
+                    msg += "; Vrxp ";    ss << Vrxp;   msg += ss.str();    ss.str(""); ss.clear();
+                    msg += "; ri ";    ss << ri;   msg += ss.str();    ss.str(""); ss.clear();
+                    msg += "; Qprod ";    ss << Qprod;   msg += ss.str();    ss.str(""); ss.clear();
+                    msg += "; Keq ";    ss << chem->Keq[rxid] ;   msg += ss.str();    ss.str(""); ss.clear();
                 }
                 
-                
-                double ki = (chem -> ki[rxid]);
-                
-               // double fa = 1.;
-                //if (dim==2 || dim==1) fa=3.;
-                if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
-                    r0 = r0*pow(Vt,dim/3.);
-                    // Rate equation as per TST (see notes_on_TST.pdf by Masoero, 2019, where ki=0 was assumed as per classical TST)
-                    ri = r0 * Qreac * exp((1.-ki)*(-Sen * DSi - DUi)/KT ) ;
-                }
-                else if(strcmp((chem->mechrate[mid]).c_str(),"SiCVD")==0){
-                    std::string msg = "ERROR: rate style SiCVD cannot be used to sample deletion. Check that the mechanism specified in fix_delete does not invoke SiCVD in the chemDB file \n";
-                    error->errsimple(msg);
-                }
-                else {
-                    std::string msg = "ERROR: unknown rate style \""+ chem->mechrate[mid] +"\" specified for mechanism \""+chem->mechnames[mid]+"\" \n";
-                    error->errsimple(msg);
-                }
-                
-                
-                
-                // if net rate is requested by user in chemDB, then add rate backward
-                if (strcmp((chem->mechmode[mid]).c_str(),"net")==0) {
-                    
-                    topass = "prod";
-                    double Qprod = solution->compQ(rxid,topass,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
-                    
-                    if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
-                        ri -= r0 * Qprod / chem->Keq[rxid]     * exp(ki*(Sen * DSi + DUi)/KT );
-                    }
-                    else if(strcmp((chem->mechrate[mid]).c_str(),"SiCVD")==0){
-                        std::string msg = "ERROR: rate style SiCVD cannot be used to sample deletion. Check that the mechanism specified in fix_delete does not invoke SiCVD in the chemDB file \n";
-                        error->errsimple(msg);
-                    }
-                    else {
-                        std::string msg = "ERROR: unknown rate style \""+ chem->mechrate[mid] +"\" specified for mechanism \""+chem->mechnames[mid]+"\" \n";
-                        error->errsimple(msg);
-                    }
-                    
-                    
-                    if (msk->wplog) {
-                        std::ostringstream ss;
-                        msg += "; ri ";    ss << ri;   msg += ss.str();    ss.str(""); ss.clear();
-                        msg += "; Qprod ";    ss << Qprod;   msg += ss.str();    ss.str(""); ss.clear();
-                        msg += "; Keq ";    ss << chem->Keq[rxid] ;   msg += ss.str();    ss.str(""); ss.clear();
-                    }
-                    
-                }
-                
-                
+                // each reaction in the chain is multiplied times its area or volume, depending on rate dimensionality
+                ri *= pow(Vrxp,dim/3.);
                 
                 if (ri < 0.) ri = 0.;
                 
@@ -1575,6 +1541,7 @@ void Fix_delete::comp_rates_micro(int pos)
             unit_thick = pow(- chem->rx_dVp_fgd[rxid],1./3.);
         }
         
+        // the coverage factor of a particle determines whether it has to dissolve all way along a diameter or, from multiple sides at once, so only along one radius
         if (tCF[i] < 0.5) nrL = round(tR[i]/unit_thick);
         else if (tCF[i] <= lim_CF) nrL = round(2.*tR[i]/unit_thick);
         
@@ -1598,7 +1565,9 @@ void Fix_delete::comp_rates_micro(int pos)
         
         double ri=0. , DTi = 0., DTtot = 0.;  // rate of each reaction in sequence, associated time increement and total cumulative time increment
         
-        /*for (int j=0; j<nrL-1; j++){
+        /*
+         THIS COMMENTED OUT SECTION IS AN IMPLEMENTATION WHERE THE RATE OF EACH REACTION STEP IS EACH CHAIN IN EACH LAYER IS COMPUTED INDIVIDUALLY, IN CASE SOMETHING CHANGES NONLINEARLY WITH THE PARTICLE SIZE (E.G. INTERACTION ENERGY). THIS IS MUCH MORE COMPUTATIONALLY COSTLY THAN ASSUMING SAME RATE FOR ALL THE INVOLVED REACTIONS AND MULTIPLY IT BY THE NUMBER OF REACTIONS IN A SERIES, AS IMPLEMENTED BELOW.
+         for (int j=0; j<nrL-1; j++){
 
             std::string msg;
             if (msk->wplog) {
@@ -1712,13 +1681,13 @@ void Fix_delete::comp_rates_micro(int pos)
             }
         }*/
         
-        // compute rate of reaction sequence
-        for (int k=0; k< nrt; k++) { //all the reaction in series in chain seq.
+        // compute rate of reaction sequence assuming that all identical reactions in the series have same rate
+        for (int k=0; k< nrt; k++) { //all the reactions in series in chain sequence
             std::string msg;
                     
             if (msk->wplog) { msg += "; rx_step ";    std::ostringstream ss;    ss << k;   msg += ss.str();}
                     
-                    // find reaction id if it is a chain, or keep previous one if a single reax
+            // find reaction id if it is a chain, or keep previous one if a single reax
             if (chem->mechchain[mid]) rxid = chem->ch_rxID[chID][k];
                     
             double DGx = chem -> compDGx(rxid); // reaction specific
@@ -1741,7 +1710,7 @@ void Fix_delete::comp_rates_micro(int pos)
             std::string topass = "reac";
             double Qreac = solution->compQ(rxid,topass,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
                     
-            double Vt = - (chem -> rx_dVt_fgd[rxid]);  // Tributary volume of fgd deleted by the reaction at the current step in the chain. Minus sign because dV of fdg < 0 for a proper dissolution reaction.
+            double Vrxp = - (chem -> rx_dVp_fgd[rxid]);  // Volume of fgd change induced by reaction, inclduing porosity: see allpar mechanism for more details. Minus sign because dV of fdg < 0 for a proper dissolution reaction.
                     
             double DUi = 0.;
             if (strcmp(chem->mechinter[mid].c_str(),"int_no")!=0) {
@@ -1756,9 +1725,18 @@ void Fix_delete::comp_rates_micro(int pos)
             }
             
             double r0 = -1.;
+            double ki = (chem -> ki[rxid]);
+            double Qprod =0.;
             
             if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
                 r0 = kappa * KT / msk->hpl / gammax * cx * exp(-DGx / KT);
+                
+                ri = r0 * Qreac * exp((1.-ki)*(- DUi)/KT );
+                if (strcmp((chem->mechmode[mid]).c_str(),"net")==0) {
+                    topass = "prod";
+                    Qprod = solution->compQ(rxid,topass,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
+                    ri -= r0 * Qprod / chem->Keq[rxid] * exp(ki * DUi / KT );
+                }
             }
             else if(strcmp((chem->mechrate[mid]).c_str(),"SiCVD")==0){
                 std::string msg = "ERROR: rate style SiCVD cannot be used to sample deletion. Check that the mechanism specified in fix_delete does not invoke SiCVD in the chemDB file \n";
@@ -1774,52 +1752,15 @@ void Fix_delete::comp_rates_micro(int pos)
                 msg += "; r0 ";    ss << r0;   msg += ss.str();    ss.str(""); ss.clear();
                 msg += "; Qreac ";    ss << Qreac;   msg += ss.str();    ss.str(""); ss.clear();
                 msg += "; DUi ";    ss << DUi;   msg += ss.str();    ss.str(""); ss.clear();
-                msg += "; Vti ";    ss << Vt;   msg += ss.str();    ss.str(""); ss.clear();
+                msg += "; Vrxpi ";    ss << Vrxp;   msg += ss.str();    ss.str(""); ss.clear();
+                msg += "; ri ";    ss << ri;   msg += ss.str();    ss.str(""); ss.clear();
+                msg += "; Qprod ";    ss << Qprod;   msg += ss.str();    ss.str(""); ss.clear();
+                msg += "; Keq ";    ss << chem->Keq[rxid] ;   msg += ss.str();    ss.str(""); ss.clear();
             }
-                    
-            double ki = (chem -> ki[rxid]);
             
-            if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
-                r0 = r0*pow(Vt,dim/3.);
-                // Forward rate equation
-                ri = r0 * Qreac * exp((1.-ki)*(- DUi)/KT ) ;
-            }
-            else if(strcmp((chem->mechrate[mid]).c_str(),"SiCVD")==0){
-                std::string msg = "ERROR: rate style SiCVD cannot be used to sample deletion. Check that the mechanism specified in fix_delete does not invoke SiCVD in the chemDB file \n";
-                error->errsimple(msg);
-            }
-            else {
-                std::string msg = "ERROR: unknown rate style \""+ chem->mechrate[mid] +"\" specified for mechanism \""+chem->mechnames[mid]+"\" \n";
-                error->errsimple(msg);
-            }
-                    
-                    
-            // if net rate is requested by user in chemDB, then add rate backward
-            if (strcmp((chem->mechmode[mid]).c_str(),"net")==0) {
-                
-                topass = "prod";
-                double Qprod = solution->compQ(rxid,topass,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
-                
-                if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
-                    ri -= r0 * Qprod / chem->Keq[rxid] * exp(ki * DUi / KT );
-                }
-                else if(strcmp((chem->mechrate[mid]).c_str(),"SiCVD")==0){
-                    std::string msg = "ERROR: rate style SiCVD cannot be used to sample deletion. Check that the mechanism specified in fix_delete does not invoke SiCVD in the chemDB file \n";
-                    error->errsimple(msg);
-                }
-                else {
-                    std::string msg = "ERROR: unknown rate style \""+ chem->mechrate[mid] +"\" specified for mechanism \""+chem->mechnames[mid]+"\" \n";
-                    error->errsimple(msg);
-                }
-                
-                if (msk->wplog) {
-                    std::ostringstream ss;
-                    msg += "; ri ";    ss << ri;   msg += ss.str();    ss.str(""); ss.clear();
-                    msg += "; Qprod ";    ss << Qprod;   msg += ss.str();    ss.str(""); ss.clear();
-                    msg += "; Keq ";    ss << chem->Keq[rxid] ;   msg += ss.str();    ss.str(""); ss.clear();
-                }
-            }
-                    
+            // each reaction in the chain is multiplied times its area or volume, depending on rate dimensionality
+            ri *= pow(Vrxp,dim/3.);
+            
             if (ri < 0.) ri = 0.;
                     
             DTi = 1./ri;
@@ -1839,6 +1780,7 @@ void Fix_delete::comp_rates_micro(int pos)
             output->toplog(msg);
         }
         
+        // all chains in sequence along thickness to dissolve, i.e. number of layers nrL minus the last one, which may be in contact with other phases
         DTtot*=(double)((nrL-1)*nrS);
         
         
@@ -1984,7 +1926,7 @@ void Fix_delete::comp_rates_micro(int pos)
             std::string topass = "reac";
             double Qreac = solution->compQ(rxid,topass,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
                 
-            double Vt = - (chem -> rx_dVt_fgd[rxid]);  // Tributary volume of fgd deleted by the reaction at the current step in the chain. Minus sign because dV of fdg < 0 for a proper dissolution reaction.
+            double Vrxp = - (chem -> rx_dVp_fgd[rxid]);  // See description of same term above. Minus sign because dV of fdg < 0 for a proper dissolution reaction.
                 
             double DUi = 0.;
             if (strcmp(chem->mechinter[mid].c_str(),"int_no")!=0) {
@@ -1998,9 +1940,29 @@ void Fix_delete::comp_rates_micro(int pos)
                 }
             }
             
+            // The rate equations include contribution from largest interfacial energy at contact with other phases (from function computing coverage areas)
+            double uk_area;    // area of a unit kink (assuming cubic units)
+            if (chem->mechchain[mid]) {  //if reaction is a chain
+                uk_area = pow(- chem->ch_dVp_fgd[chID],2./3.) * 3.;
+            }
+            else{ //if instead it is a single reaction
+                uk_area = pow(- chem->rx_dVp_fgd[rxid],2./3.) * 3.;
+            }
+            
+            
             double r0 = -1.;
+            double ki = (chem -> ki[rxid]);
+            double Qprod = 0.;
+            
+ 
             if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
-                 r0 = kappa * KT / msk->hpl / gammax * cx * exp(-DGx / KT);
+                r0 = kappa * KT / msk->hpl / gammax * cx * exp(-DGx / KT);
+                ri = r0 * Qreac * exp((1.-ki)*( - DUi - tGM[i] * uk_area )/KT ) ;
+                if (strcmp((chem->mechmode[mid]).c_str(),"net")==0) {
+                    topass = "prod";
+                    Qprod = solution->compQ(rxid,topass,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
+                    ri -= r0 * Qprod / chem->Keq[rxid] * exp(ki * ( DUi + tGM[i] * uk_area)/ KT );
+                }
             }
             else if(strcmp((chem->mechrate[mid]).c_str(),"SiCVD")==0){
                 std::string msg = "ERROR: rate style SiCVD cannot be used to sample deletion. Check that the mechanism specified in fix_delete does not invoke SiCVD in the chemDB file \n";
@@ -2016,74 +1978,15 @@ void Fix_delete::comp_rates_micro(int pos)
                 msg += "; r0 ";    ss << r0;   msg += ss.str();    ss.str(""); ss.clear();
                 msg += "; Qreac ";    ss << Qreac;   msg += ss.str();    ss.str(""); ss.clear();
                 msg += "; DUi ";    ss << DUi;   msg += ss.str();    ss.str(""); ss.clear();
-                msg += "; Vti ";    ss << Vt;   msg += ss.str();    ss.str(""); ss.clear();
+                msg += "; Vrxpi ";    ss << Vrxp;   msg += ss.str();    ss.str(""); ss.clear();
+                msg += "; ri ";    ss << ri;   msg += ss.str();    ss.str(""); ss.clear();
+                msg += "; Qprod ";    ss << Qprod;   msg += ss.str();    ss.str(""); ss.clear();
+                msg += "; Keq ";    ss << chem->Keq[rxid] ;   msg += ss.str();    ss.str(""); ss.clear();
             }
+  
+            // scale each reaction in chain by its surfafce area or volume, depending on dim
+            ri *= pow(Vrxp,dim/3.);
             
-            if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
-                r0 = r0*pow(Vt,dim/3.);
-            }
-            else if(strcmp((chem->mechrate[mid]).c_str(),"SiCVD")==0){
-                std::string msg = "ERROR: rate style SiCVD cannot be used to sample deletion. Check that the mechanism specified in fix_delete does not invoke SiCVD in the chemDB file \n";
-                error->errsimple(msg);
-            }
-            else {
-                std::string msg = "ERROR: unknown rate style \""+ chem->mechrate[mid] +"\" specified for mechanism \""+chem->mechnames[mid]+"\" \n";
-                error->errsimple(msg);
-            }
-            
-            double ki = (chem -> ki[rxid]);
-                
-            // Forward rate equation: NB this includes contribution from largest interfacial energy at contact with other phases (from function computing coverage areas)
-            double uk_area;    // area of a unit kink (assuming cubic units)
-            if (chem->mechchain[mid]) {  //if reaction is a chain
-                uk_area = pow(- chem->ch_dVp_fgd[chID],2./3.) * 3.;
-            }
-            else{ //if instead it is a single reaction
-                uk_area = pow(- chem->rx_dVp_fgd[rxid],2./3.) * 3.;
-            }
-            
-            if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
-                ri = r0 * Qreac * exp((1.-ki)*( - DUi - tGM[i] * uk_area )/KT ) ;
-            }
-            else if(strcmp((chem->mechrate[mid]).c_str(),"SiCVD")==0){
-                std::string msg = "ERROR: rate style SiCVD cannot be used to sample deletion. Check that the mechanism specified in fix_delete does not invoke SiCVD in the chemDB file \n";
-                error->errsimple(msg);
-            }
-            else {
-                std::string msg = "ERROR: unknown rate style \""+ chem->mechrate[mid] +"\" specified for mechanism \""+chem->mechnames[mid]+"\" \n";
-                error->errsimple(msg);
-            }
-            
-                
-                
-                
-            // if net rate is requested by user in chemDB, then add rate backward
-            if (strcmp((chem->mechmode[mid]).c_str(),"net")==0) {
-                
-                topass = "prod";
-                double Qprod = solution->compQ(rxid,topass,fix->fKMCsinST[pos],fix->fKMCsinUL[pos]);
-                
-                if(strcmp((chem->mechrate[mid]).c_str(),"TST")==0){
-                    ri -= r0 * Qprod / chem->Keq[rxid] * exp(ki * ( DUi + tGM[i] * uk_area)/ KT );
-                }
-                else if(strcmp((chem->mechrate[mid]).c_str(),"SiCVD")==0){
-                    std::string msg = "ERROR: rate style SiCVD cannot be used to sample deletion. Check that the mechanism specified in fix_delete does not invoke SiCVD in the chemDB file \n";
-                    error->errsimple(msg);
-                }
-                else {
-                    std::string msg = "ERROR: unknown rate style \""+ chem->mechrate[mid] +"\" specified for mechanism \""+chem->mechnames[mid]+"\" \n";
-                    error->errsimple(msg);
-                }
-                
-                
-                if (msk->wplog) {
-                    std::ostringstream ss;
-                    msg += "; ri ";    ss << ri;   msg += ss.str();    ss.str(""); ss.clear();
-                    msg += "; Qprod ";    ss << Qprod;   msg += ss.str();    ss.str(""); ss.clear();
-                    msg += "; Keq ";    ss << chem->Keq[rxid] ;   msg += ss.str();    ss.str(""); ss.clear();
-                }
-            }
-                
             if (ri < 0.) ri = 0.;
                 
             DTi = 1./ri;

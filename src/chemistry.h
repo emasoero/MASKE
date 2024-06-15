@@ -55,7 +55,7 @@ namespace MASKE_NS {
         std::vector<int> rx_gxID,rx_DGID;   // pointers to gammax and DG calculators, specified for each simple reaction
         std::vector<double> Keq;    // vectors of equilibrium constants of chemical reactions
         std::vector<double> ki;    // vectors of energy penalty factors for chemical reactions (0 = no penalty, suggested < 1)
-        std::vector<double> rx_dV_fgd, rx_dV_bkg, rx_dVt_fgd;    // change of foreground and backgroun volume due to reaction. Change of tributary foreground volume too. dV only includes volume of molecules, excluding splid phase porosity. dVt instead includes porosity and ratio between equilibrium distance and interaction cutoff of solid phas (r0rc above)
+        std::vector<double> rx_dV_fgd, rx_dV_bkg, rx_dVt_fgd;    // change of foreground and backgroun volume due to reaction. Change of tributary foreground volume too. dV only includes volume of molecules, excluding solid phase porosity. dVt instead includes porosity and ratio between equilibrium distance and interaction cutoff of solid phas (r0rc above)
         std::vector<double> rx_dVp_fgd;   // same as dV above, but including solid phase porosity
         std::vector<double> ch_dV_fgd, ch_dV_bkg, ch_dVp_fgd;   // change of foreground and background volume due to reaction chain. dV does not include solid phase porosities, while dVp does
         std::vector<double> ch_Fk;   // Fraction of kinks associated to a reaction chain (consider this as a parameter whose inverse (Fk^-1) approximates how many chains of reactions you need to carry in series to dissolve one layer). THIS OVERRIDES per-reaction Fk's

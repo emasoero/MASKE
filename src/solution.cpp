@@ -95,6 +95,11 @@ void Solution::computeNmol(void)
         lammpsIO->lammpsdo(tolmp);
         
        
+        //sleep(me);
+        //fprintf(screen,"\n DEBUG: Proc %d is OK",me);
+        //MPI_Barrier(MPI_COMM_WORLD);
+    
+        
         int natoms  = static_cast<int> (lammpsIO->lmp->atom->natoms);
         BoxV = *((double *) lammps_extract_variable(lammpsIO->lmp,(char *)"Bvol",0));
 
@@ -110,10 +115,7 @@ void Solution::computeNmol(void)
             SolidV += 4. / 3. * M_PI * aR[i] * aR[i] * aR[i];   // ATTENTION: ONLY TRUE FOR SPHERICAL PARTICLES!
         }*/
         
-       /* sleep(2);
-        fprintf(screen,"\n Proc %d is OK",me);
-        MPI_Barrier(MPI_COMM_WORLD);
-        */
+        
         PackF = SolidV/BoxV;
         
         //tolmp = "uncompute tempRAD";
