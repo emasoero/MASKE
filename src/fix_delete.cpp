@@ -1730,6 +1730,7 @@ void Fix_delete::comp_rates_micro(int pos)
         //=============================================MICRO LAYER-BY-LAYER SLOW RUN (END)===========================================================
 
         //=====================================================MICRO FAST RUN (START)================================================================
+        if (nrL>1){ //this if condition is here to ensure that the DTtot doesn't become -nan in cases where there is only one layer i.e. while using molecule sized particle with micro mechanism.
         
         // compute rate of reaction sequence
                 for (int k=0; k< nrt; k++) { //all the reaction in series in chain seq.
@@ -1829,12 +1830,13 @@ void Fix_delete::comp_rates_micro(int pos)
                 }
 
                 DTtot*=(double)((nrL-1)*nrS);
+        }
 
         //=======================================================MICRO FAST RUN (END)=================================================================
         
         
         // Add to Dtot the contribution from the last layer
-        //std::string msg;
+        std::string msg;
         if (msk->wplog) {
             msg = "PARTICLE ";
             std::ostringstream ss;    ss << i;   msg = msg+ss.str()+"; Last layer; ";

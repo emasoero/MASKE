@@ -1969,14 +1969,18 @@ void Fix_nucleate::comp_rates_micro(int pos)
                 msg += "\n";
                 output->toplog(msg);
             }
-        }*/
+        }
+        */
+        
         //=============================================MICRO LAYER-BY-LAYER SLOW RUN (END)===========================================================
 
         //=====================================================MICRO FAST RUN (START)==================================================================
+        if (nrL>1){     //this if condition is here to ensure that the DTtot doesn't become -nan in cases where there is only one layer i.e. while using molecule sized particle with micro mechanism.
+        std::string msg;
 
         // compute rate of reaction sequence
                 for (int k=0; k< nrt; k++) { //all the reaction in series in chain seq.
-                    std::string msg;
+                    
                     
                     if (msk->wplog) { msg += "; rx_step ";    std::ostringstream ss;    ss << k;   msg += ss.str(); }
                     
@@ -2077,27 +2081,32 @@ void Fix_nucleate::comp_rates_micro(int pos)
                     }
                 }
                 
-                std::string msg;
+                //std::string msg;
                 if (msk->wplog) {
                 msg += "\n";
                 output->toplog(msg);
                 }
         
         DTtot*=(double)((nrL-1)*nrS);
-
+        }
+        
+        
+        
         //=====================================================MICRO FAST RUN (END)==================================================================
+    
         
         
+        //=============================================MICRO LAYER-BY-LAYER SLOW RUN (START)===========================================================
+        /*
         // Add to Dtot the contribution from the last layer
-        //std::string msg;
+        std::string msg;
         if (msk->wplog) {
             msg += "PARTICLE ";
             std::ostringstream ss;    ss << i;   msg = msg+ss.str()+"; Last layer; ";
         }
-        
-        //=============================================MICRO LAYER-BY-LAYER SLOW RUN (START)===========================================================
-        /*for (int jj=0; jj<nrS; jj++){
-            
+
+        for (int jj=0; jj<nrS; jj++){
+            //std::string msg;
             if (msk->wplog) {
                 msg += "On-surface unit number ";
                 std::ostringstream ss;    ss << jj+1;   msg = msg+ss.str()+" out of ";
@@ -2207,11 +2216,16 @@ void Fix_nucleate::comp_rates_micro(int pos)
         if (msk->wplog){
             msg+="\n";
             output->toplog(msg);
-        }*/
+        }
+        */
         //=============================================MICRO LAYER-BY-LAYER SLOW RUN (END)===========================================================
         
         //=====================================================MICRO FAST RUN (START)==================================================================
-        
+        std::string msg;
+        if (msk->wplog) {
+            msg += "PARTICLE ";
+            std::ostringstream ss;    ss << i;   msg = msg+ss.str()+"; Last layer; ";
+        }
         // compute rate of reaction sequence
             for (int k=0; k< nrt; k++) { //all the reaction in series in chain seq.
                 
@@ -2225,6 +2239,8 @@ void Fix_nucleate::comp_rates_micro(int pos)
                 double dim = chem -> dim[chem->rx_DGID[rxid]];
                 double gammax = chem -> compgammax(rxid);
                 double KT = msk->kB * solution->Temp;
+
+
                 
                 if (msk->wplog) {
                     std::ostringstream ss;
@@ -2295,6 +2311,7 @@ void Fix_nucleate::comp_rates_micro(int pos)
                         msg += "; ri ";    ss << ri;   msg += ss.str();    ss.str(""); ss.clear();
                         msg += "; Qprod ";    ss << Qprod;   msg += ss.str();    ss.str(""); ss.clear();
                         msg += "; Keq ";    ss << chem->Keq[rxid] ;   msg += ss.str();    ss.str(""); ss.clear();
+                        msg += ", nrS ";          ss << nrS;   msg += ss.str();
                     }
                     
                 }
@@ -2302,13 +2319,14 @@ void Fix_nucleate::comp_rates_micro(int pos)
                 if (ri < 0.) ri = 0.;
                 
                 DTi = 1./ri;
+                //if (isinf(DTi)) DTtot=inf;
                 DTtot += DTi*(double)nrS;
                 
                 if (msk->wplog) {
                     msg += ", DT ";
                     std::ostringstream ss;    ss << DTi;   msg += ss.str(); ss.str("");   ss.clear();
-                    msg += ", DTtot ";
-                    ss << DTtot;   msg += ss.str();
+                    msg += ", DTtot ";          ss << DTtot;   msg += ss.str(); ss.str("");   ss.clear();
+                    msg += ", nrS ";          ss << nrS;   msg += ss.str();
                 }
             }
             
@@ -2316,7 +2334,7 @@ void Fix_nucleate::comp_rates_micro(int pos)
             msg+="\n";
             output->toplog(msg);
             }
-
+        
         //=====================================================MICRO FAST RUN (END)==================================================================
         
         if (flag_bulk) rate_each[i] = 0.;
