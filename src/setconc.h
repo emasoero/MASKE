@@ -27,6 +27,12 @@ namespace MASKE_NS {
         //std::vector<std::string> setnames;   //names of all user-defined setconc commands
         std::vector<std::string> molnames;   //names of molecule set by each setconc command
         std::vector<double> molconcs;       // concentrations of molecule to be set
+
+        std::vector<std::string> Cmolnames;   //names of current molecule set by each setconc command
+        std::vector<double> Cmolconcs;       // concentrations of current molecule to be set
+        std::vector<int> CmolID;       // IDs of current molecule to be set
+
+        std::vector<std::string> molminfix;       // flag of whether a concentration is fixed or assigned a minimum value
         int vevery;       // integer with frequency of calls of commands
         bool ctr_flags;        // flags if counterions to be added in each command
         std::string ctr_mols;  // names of counterions
@@ -34,8 +40,11 @@ namespace MASKE_NS {
             
         std::vector<int> molID;   //IDs of molecule to be set
         int ctrID;     // IDs of counterion to be set
+
+        bool isminfixdef;
+        std::string nextmolname;
         
-        void add_conc(std::string ,double);  // add set concentration
+        void add_conc(std::string ,double, std::string);  // add set concentration
         void exec(void);   // sets the concentrations
         void printall();
         

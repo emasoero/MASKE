@@ -35,11 +35,25 @@ Setconc::~Setconc()
 
 // ---------------------------------------------------------------
 // record new relaxer
-void Setconc::add_conc(std::string mname,double mconc)
+void Setconc::add_conc(std::string mname,double mconc, std::string minfix)
 {   
     
     molnames.push_back(mname);
     molconcs.push_back(mconc);
+
+    isminfixdef = 1;
+
+    if( strcmp(minfix.c_str(),"min")==0 || strcmp(minfix.c_str(),"fixed")==0){
+        molminfix.push_back(minfix);
+    }
+    else {
+        isminfixdef = 0;
+        molminfix.push_back("fixed");
+        nextmolname = minfix;
+        fprintf(screen,"\n DEBUG: Check nextmolname = %s \n",nextmolname.c_str());
+    }
+
+    // molminfix.push_back(minfix);
     // vevery.push_back(every);
     // ctr_flags.push_back(flag_ctr);
     // ctr_mols.push_back(cmol);
@@ -85,6 +99,28 @@ void Setconc::add_conc(std::string mname,double mconc)
     // fprintf(screen,"\n DEBUG: Initial SolVol = %e \n",solution->SVol);
     // fprintf(screen,"\n\n DEBUG setconc1: Proc %d, concentration of nutrient (%d) mapped to molecule (%d) is %e \n",me, chem->mol_nufeb[3], 3, chem->mol_cins[3]);
     // sleep(1);
+
+    Cmolnames.clear();
+    Cmolconcs.clear();
+    CmolID.clear();
+
+    for (int i=0 ; i<molnames.size(); i++){
+        if (strcmp(molminfix[i].c_str(),"fixed")==0){
+            Cmolnames.push_back(molnames[i]);
+            Cmolconcs.push_back(molconcs[i]);
+            CmolID.push_back(molID[i]);
+        }
+        else if (strcmp(molminfix[i].c_str(),"min")==0){
+            if (chem->mol_cins[molID[i]]<molconcs[i]){
+                Cmolnames.push_back(molnames[i]);
+                Cmolconcs.push_back(molconcs[i]);
+                CmolID.push_back(molID[i]);
+            }
+        }
+    }
+
+        
+
     double temp =0;
         for(int i=0;i<chem->Nmol;i++){
         
@@ -95,7 +131,7 @@ void Setconc::add_conc(std::string mname,double mconc)
 
 
     int up1;
-    up1=molnames.size()+1;
+    up1=Cmolnames.size()+1;
 //    double** A;
 //    memory->create(A,up1,up1);
 
@@ -109,14 +145,14 @@ void Setconc::add_conc(std::string mname,double mconc)
 
     for (int i=0; i<up1-1; i++){
         for (int j=0; j<up1-1; j++){
-            if (i==j) A[i][j]=1-molconcs[i]*chem->mol_vapp[molID[j]]* nAvo * solution->unitC;
-            else A[i][j]=-molconcs[i]*chem->mol_vapp[molID[j]]* nAvo * solution->unitC;
+            if (i==j) A[i][j]=1-Cmolconcs[i]*chem->mol_vapp[CmolID[j]]* nAvo * solution->unitC;
+            else A[i][j]=-Cmolconcs[i]*chem->mol_vapp[CmolID[j]]* nAvo * solution->unitC;
         }
-        A[i][up1-1]=-molconcs[i]*chem->mol_vapp[ctrID]* nAvo * solution->unitC;
+        A[i][up1-1]=-Cmolconcs[i]*chem->mol_vapp[ctrID]* nAvo * solution->unitC;
     }
 
 
-    for(int j=0;j<up1-1;j++) A[up1-1][j]=chem->mol_z[molID[j]];
+    for(int j=0;j<up1-1;j++) A[up1-1][j]=chem->mol_z[CmolID[j]];
     A[up1-1][up1-1]=chem->mol_z[ctrID];
 
     double sum_volknown=0;
@@ -127,8 +163,8 @@ void Setconc::add_conc(std::string mname,double mconc)
         
         bool skip=false;
         
-        for(int j=0;j<molID.size();j++){
-            if (i==molID[j]) skip=true;
+        for(int j=0;j<CmolID.size();j++){
+            if (i==CmolID[j]) skip=true;
         }
         if (i==ctrID) skip=true;
             
@@ -144,13 +180,13 @@ void Setconc::add_conc(std::string mname,double mconc)
 
     double sum_volunknown=0;
     for(int i=0; i<up1-1;i++){
-        sum_volunknown+=chem->mol_nins[molID[i]]*chem->mol_vapp[molID[i]];
+        sum_volunknown+=chem->mol_nins[CmolID[i]]*chem->mol_vapp[CmolID[i]];
     }
     // fprintf(screen,"\n DEBUG: UnknownVol pre-gauss = %e \n",sum_volunknown);
 
     for(int i=0; i<up1-1;i++){
 
-        b[i]=molconcs[i]*sum_volknown * nAvo * solution->unitC;
+        b[i]=Cmolconcs[i]*sum_volknown * nAvo * solution->unitC;
     }
     b[up1-1]=sum_charge;
   
@@ -181,7 +217,7 @@ void Setconc::add_conc(std::string mname,double mconc)
     //Assign the unknown values to the corresponding number of ion values and concentration values in chemistry 
     for(int i=0; i<up1-1;i++){
         // chem->mol_cins[molID[i]] = molconcs[i];
-        chem->mol_nins[molID[i]] = x[i];
+        chem->mol_nins[CmolID[i]] = x[i];
     }
     chem->mol_nins[ctrID]=x[up1-1];
     
@@ -190,7 +226,7 @@ void Setconc::add_conc(std::string mname,double mconc)
 
     sum_volunknown=0;
     for(int i=0; i<up1-1;i++){
-        sum_volunknown+=chem->mol_nins[molID[i]]*chem->mol_vapp[molID[i]];
+        sum_volunknown+=chem->mol_nins[CmolID[i]]*chem->mol_vapp[CmolID[i]];
     }
 
 
@@ -220,8 +256,8 @@ void Setconc::add_conc(std::string mname,double mconc)
             
             bool skip=false;
             
-            for(int j=0;j<molID.size();j++){
-                if (i==molID[j]) skip=true;
+            for(int j=0;j<CmolID.size();j++){
+                if (i==CmolID[j]) skip=true;
             }
             if (i==ctrID) skip=true;
                 
@@ -233,7 +269,7 @@ void Setconc::add_conc(std::string mname,double mconc)
         }
         for(int i=0; i<up1-1;i++){
 
-            b[i]=molconcs[i]*sum_volknown * nAvo * solution->unitC;
+            b[i]=Cmolconcs[i]*sum_volknown * nAvo * solution->unitC;
         }
         b[up1-1]=sum_charge;
 
@@ -262,7 +298,7 @@ void Setconc::add_conc(std::string mname,double mconc)
         //Assign the unknown values to the corresponding number of ion values and concentration values in chemistry 
         for(int i=0; i<up1-1;i++){
             // chem->mol_cins[molID[i]] = molconcs[i];
-            chem->mol_nindV[molID[i]] = x[i];
+            chem->mol_nindV[CmolID[i]] = x[i];
         }
         chem->mol_nindV[ctrID]=x[up1-1];
         
@@ -270,7 +306,7 @@ void Setconc::add_conc(std::string mname,double mconc)
 
         sum_volunknown=0;
         for(int i=0; i<up1-1;i++){
-            sum_volunknown+=chem->mol_nindV[molID[i]]*chem->mol_vapp[molID[i]];
+            sum_volunknown+=chem->mol_nindV[CmolID[i]]*chem->mol_vapp[CmolID[i]];
         }
         
         sum_volctr=chem->mol_nindV[ctrID]*chem->mol_vapp[ctrID];

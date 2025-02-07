@@ -547,14 +547,34 @@ void Inputmsk::execline(std::string read_string)
             int nmol;
             lss >> nmol;
             for (int i=0; i<nmol; i++){
-                std::string molname;
+                std::string molname, minfix;
                 double molconc;
-                lss >> molname >> molconc;
-                setconc->add_conc(molname,molconc);
-            }
 
-            int every;
-            lss >> every;
+                if (i == 0 ){
+                    lss >> molname >> molconc >> minfix; // logic is good
+                    fprintf(screen,"\n DEBUG: Check molname = %s molconc = %f  minfix = %s \n",molname.c_str(), molconc, minfix.c_str());
+                }
+                else {
+                    if (setconc->isminfixdef == 0) {
+                        molname = setconc->nextmolname;
+                        lss >> molconc >> minfix;
+                        fprintf(screen,"\n DEBUG: Check molname = %s molconc = %f  minfix = %s \n",molname.c_str(), molconc, minfix.c_str());
+                    }
+                    else{
+                        lss >> molname>> molconc >> minfix;
+                        fprintf(screen,"\n DEBUG: Check molname = %s molconc = %f  minfix = %s \n",molname.c_str(), molconc, minfix.c_str());            
+                    }
+                }
+                setconc->add_conc(molname,molconc,minfix); // so far logic is good
+            }
+int every;
+
+            if (setconc->isminfixdef == 1 ) {
+                lss >> every;
+            } else {
+                every = std::stoi(setconc->nextmolname);
+                fprintf(screen,"\n DEBUG: Check every = %d \n",every);
+            }
             setconc->vevery=every;
             bool flag_ctr = false;
             std::string counter,ctr_mol,boxdV;
