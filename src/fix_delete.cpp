@@ -1587,7 +1587,7 @@ void Fix_delete::comp_rates_micro(int pos)
             unit_thick = pow(- chem->rx_dVp_fgd[rxid],1./3.);
         }
         
-        if (tCF[i] < 0.5) nrL = round(tR[i]/unit_thick);
+        if (tCF[i] <= 0.5) nrL = round(tR[i]/unit_thick);
         else if (tCF[i] <= lim_CF) nrL = round(2.*tR[i]/unit_thick);
         
         bool flag_bulk = false;
@@ -1732,9 +1732,11 @@ void Fix_delete::comp_rates_micro(int pos)
         //=====================================================MICRO FAST RUN (START)================================================================
         if (nrL>1){ //this if condition is here to ensure that the DTtot doesn't become -nan in cases where there is only one layer i.e. while using molecule sized particle with micro mechanism.
         
+        std::string msg;
+        msg=" AA ";
         // compute rate of reaction sequence
                 for (int k=0; k< nrt; k++) { //all the reaction in series in chain seq.
-                    std::string msg;
+                    
                     
                     if (msk->wplog) { msg += "; rx_step ";    std::ostringstream ss;    ss << k;   msg += ss.str();}
                     
@@ -1823,13 +1825,20 @@ void Fix_delete::comp_rates_micro(int pos)
                     }
                 }
 
-                std::string msg;
+                
+
+                DTtot*=(double)((nrL-1)*nrS);
+                
+                if (msk->wplog) {
+                        
+                        msg += ", DTtot_f ";
+                        std::ostringstream ss; ss << DTtot;   msg += ss.str(); ss.str("");   ss.clear();
+                    }
+             
                 if (msk->wplog){
                 msg+="\n";
                 output->toplog(msg);
                 }
-
-                DTtot*=(double)((nrL-1)*nrS);
         }
 
         //=======================================================MICRO FAST RUN (END)=================================================================

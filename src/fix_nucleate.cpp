@@ -1825,7 +1825,7 @@ void Fix_nucleate::comp_rates_micro(int pos)
             unit_thick = pow(chem->rx_dVp_fgd[rxid],1./3.);
         }
         
-        if (tCF[i] > 0.5) nrL = round(tR[i]/unit_thick);
+        if (tCF[i] >= 0.5) nrL = round(tR[i]/unit_thick);
         else if (tCF[i] >= lim_CF) nrL = round(2.*tR[i]/unit_thick);
         
         bool flag_bulk = false;
@@ -1917,13 +1917,13 @@ void Fix_nucleate::comp_rates_micro(int pos)
                     if (msk->wplog) {
                         std::ostringstream ss;
                         msg += "; r0 ";    ss << r0;   msg += ss.str();    ss.str(""); ss.clear();
-                        msg += "; DV ";    ss << DV;   msg += ss.str();    ss.str(""); ss.clear();
+                        //msg += "; DV ";    ss << DV;   msg += ss.str();    ss.str(""); ss.clear();
                         msg += "; Qreac ";    ss << Qreac;   msg += ss.str();    ss.str(""); ss.clear();
                         msg += "; DUi ";    ss << DUi;   msg += ss.str();    ss.str(""); ss.clear();
                         msg += "; Vti ";    ss << Vt;   msg += ss.str();    ss.str(""); ss.clear();
                     }
                     
-                    r0 = r0*pow(Vt,(dim/3. - 1.))*DV;
+                    r0 = r0*pow(Vt,(dim/3.));
                     
                     double ki = (chem -> ki[rxid]);
                     
@@ -1977,6 +1977,7 @@ void Fix_nucleate::comp_rates_micro(int pos)
         //=====================================================MICRO FAST RUN (START)==================================================================
         if (nrL>1){     //this if condition is here to ensure that the DTtot doesn't become -nan in cases where there is only one layer i.e. while using molecule sized particle with micro mechanism.
         std::string msg;
+        msg=" AA ";
 
         // compute rate of reaction sequence
                 for (int k=0; k< nrt; k++) { //all the reaction in series in chain seq.
@@ -2010,8 +2011,7 @@ void Fix_nucleate::comp_rates_micro(int pos)
                     
                     double Vt = (chem -> rx_dVt_fgd[rxid]);  // Tributary volume of fgd deleted by the reaction at the current step in the chain.
 
-                    // lattice cell volume: needed for rate
-                    double DV =  fix->fKMC_DV[pos];
+
                     
                     
                     double DUi = 0.;
@@ -2034,13 +2034,13 @@ void Fix_nucleate::comp_rates_micro(int pos)
                     if (msk->wplog) {
                         std::ostringstream ss;
                         msg += "; r0 ";    ss << r0;   msg += ss.str();    ss.str(""); ss.clear();
-                        msg += "; DV ";    ss << DV;   msg += ss.str();    ss.str(""); ss.clear();
+                        //msg += "; DV ";    ss << DV;   msg += ss.str();    ss.str(""); ss.clear();
                         msg += "; Qreac ";    ss << Qreac;   msg += ss.str();    ss.str(""); ss.clear();
                         msg += "; DUi ";    ss << DUi;   msg += ss.str();    ss.str(""); ss.clear();
                         msg += "; Vti ";    ss << Vt;   msg += ss.str();    ss.str(""); ss.clear();
                     }
                     
-                    r0 = r0*pow(Vt,(dim/3. - 1.))*DV;
+                    r0 = r0*pow(Vt,(dim/3.));
                     
                     double ki = (chem -> ki[rxid]);
                     
@@ -2168,7 +2168,7 @@ void Fix_nucleate::comp_rates_micro(int pos)
                     msg += "; Vti ";    ss << Vt;   msg += ss.str();    ss.str(""); ss.clear();
                 }
                 
-                r0 = r0*pow(Vt,(dim/3. - 1.))*DV;
+                r0 = r0*pow(Vt,(dim/3.));
                 
                 double ki = (chem -> ki[rxid]);
                 
@@ -2258,8 +2258,7 @@ void Fix_nucleate::comp_rates_micro(int pos)
                 
                 double Vt = (chem -> rx_dVt_fgd[rxid]);  // Tributary volume of fgd created by the reaction at the current step in the chain.
                 
-                // lattice cell volume: needed for rate
-                double DV =  fix->fKMC_DV[pos];
+                
                 
                 double DUi = 0.;
                 if (strcmp(chem->mechinter[mid].c_str(),"int_no")!=0) {
@@ -2283,7 +2282,7 @@ void Fix_nucleate::comp_rates_micro(int pos)
                     msg += "; Vti ";    ss << Vt;   msg += ss.str();    ss.str(""); ss.clear();
                 }
                 
-                r0 = r0*pow(Vt,(dim/3. - 1.))*DV;
+                r0 = r0*pow(Vt,(dim/3.));
                 
                 double ki = (chem -> ki[rxid]);
                 
@@ -2336,9 +2335,11 @@ void Fix_nucleate::comp_rates_micro(int pos)
             }
         
         //=====================================================MICRO FAST RUN (END)==================================================================
-        
+        // lattice cell volume: needed for rate
+        double DV =  fix->fKMC_DV[pos];
+
         if (flag_bulk) rate_each[i] = 0.;
-        else rate_each[i] = 1./DTtot;
+        else rate_each[i] = 1./DTtot*(DV/Pv);
         
         if (rate_each[i]<0.) rate_each[i] = 0.;    // if the backward ri's are > forward ri's the overall rate may end up < 0, which means that the current deletion event should not happen, hence its rate should be zero (not negative..)   CHECK THAT THIS DOES NOT GIVE PROBLEMS WHEN SELECTING THE EVENT TO CARRY OUT FROM CUMULATIVE RATE VECTORS, IN PARTICULAR WITH THE BINARY SEARCH ALGORITHM
         

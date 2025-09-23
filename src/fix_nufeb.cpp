@@ -298,7 +298,7 @@ void Fix_nufeb::execute(int pos, int subcomm, int init)
   std::ostringstream ss2;
   ss2 << "run " << fix->Csteps[pos];
   if (!init)
-    ss2 << " pre no";
+  ss2 << " pre no";
   ss2 << " post no";
   lammpsIO->lammpsdo(ss2.str());
   lammpsIO->lammpsdo("timestep 0");
@@ -377,8 +377,16 @@ void Fix_nufeb::exchange(int id, int subcomm)
     // pack atoms inside the subdomain of other processes
     nsend.resize(procs.size());
     nsend.assign(nsend.size(), 0);
-    int group = lammpsIO->lmp->group->find(fix->Cgroups[id].c_str());
+
+    int group = lammpsIO->lmp->group->find(fix->Cgroups[id].c_str()); 
     int bitmask = lammpsIO->lmp->group->bitmask[group];
+
+    // int group1 = lammpsIO->lmp->group->find("het");
+    // int bitmask1 = lammpsIO->lmp->group->bitmask[group1];
+
+    // int group2 = lammpsIO->lmp->group->find("inert");
+    // int bitmask2 = lammpsIO->lmp->group->bitmask[group2];
+
     LAMMPS_NS::Atom *atom = lammpsIO->lmp->atom;
     int *mask = atom->mask;
     double **x = atom->x;
@@ -390,7 +398,10 @@ void Fix_nufeb::exchange(int id, int subcomm)
         if (x[i][0] >= sublo[3*r] && x[i][0] < subhi[3*r]
             && x[i][1] >= sublo[3*r+1] && x[i][1] < subhi[3*r+1]
             && x[i][2] >= sublo[3*r+2] && x[i][2] < subhi[3*r+2]) {
+
           if (mask[i] & bitmask) {
+          //if ((mask[i] & bitmask1) || (mask[i] & bitmask2)){  
+
             if (buf.size() < total + 1024) {
               buf.resize(2*buf.size());
             }
@@ -453,6 +464,14 @@ void Fix_nufeb::exchange(int id, int subcomm)
     std::stringstream ss;
     ss << "delete_atoms group " << fix->aCgroups[id] << " compress no";
     lammpsIO->lammpsdo(ss.str());
+
+    //ss << "delete_atoms group het compress no";
+    //lammpsIO->lammpsdo(ss.str());
+    //ss.str("");     ss.clear();
+    //ss << "delete_atoms group inert compress no";
+    //lammpsIO->lammpsdo(ss.str());
+    //ss.str("");     ss.clear();
+
     // unpack received atoms
     int m = 0;
     while (m < total) {
