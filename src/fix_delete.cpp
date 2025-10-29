@@ -1587,7 +1587,9 @@ void Fix_delete::comp_rates_micro(int pos)
             unit_thick = pow(- chem->rx_dVp_fgd[rxid],1./3.);
         }
         
-        if (tCF[i] <= 0.5) nrL = round(tR[i]/unit_thick);
+        if (tCF[i] <= 0.5) {
+            nrL = round(tR[i]/unit_thick);
+            if (nrL == 0) nrL = 1;} //for a unimolecular system this ensures for kink particles nRL is atleast 1
         else if (tCF[i] <= lim_CF) nrL = round(2.*tR[i]/unit_thick);
         
         bool flag_bulk = false;
